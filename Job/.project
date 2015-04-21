@@ -3,6 +3,7 @@
 	<name>Job</name>
 	<comment></comment>
 	<projects>
+		<project>breaking-C-library</project>
 	</projects>
 	<buildSpec>
 		<buildCommand>

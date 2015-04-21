@@ -4,11 +4,11 @@
 		<item value="110" key="DIALOG_Y_ORIGIN"/>
 		<item value="371" key="DIALOG_X_ORIGIN"/>
 	</section>
+	<section name="ExternalProjectImportWizard">
+	</section>
 	<section name="WORKBENCH_SETTINGS">
 		<list key="ENABLED_TRANSFERS">
 		</list>
-	</section>
-	<section name="ExternalProjectImportWizard">
 	</section>
 	<section name="NewWizardAction">
 		<item value="org.eclipse.cdt.ui.wizards.NewCWizard2" key="NewWizardSelectionPage.STORE_SELECTED_ID"/>
