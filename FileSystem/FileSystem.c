@@ -3,8 +3,9 @@
 
 //#include <breaking-C-library/>
 
-main(){
+int main(void){
 	printf("Hola breaking c!\n");
 	printf("hola que haces!\n");
+	return 0;
 }
 
