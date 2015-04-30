@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <commons/log.h>
 #include <stdlib.h>
 
 //#include <breaking-C-library/>
