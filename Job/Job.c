@@ -15,7 +15,7 @@ t_config* configurador;
 
 int main(void){
 	configurar();
-	conectaraMarta(); //por el momento, solamente se implementa el Log
+	conectaraMarta(); //Se conecta a MaRTA y se guarda en el Log
 	desconectarDeMarta(); //solo log
 	return 0;
 }
