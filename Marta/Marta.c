@@ -3,6 +3,9 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 
+//Defino mi IP
+#define MI_IP "192.168.0.6"
+
 //Defino puerto donde va a estar escuchando procesos Job
 #define PUERTO_JOBS 5000
 
@@ -28,7 +31,7 @@ void escucharConeccionesJob(){
 
 	my_addr.sin_family = AF_INET;         		// Ordenación de bytes de la máquina
 	my_addr.sin_port = htons(PUERTO_JOBS);     	// Puerto de escucha de Jobs. short, ordenación de bytes de la red
-	my_addr.sin_addr.s_addr = inet_addr("127.0.0.1"); 	// Mi dirección IP
+	my_addr.sin_addr.s_addr = inet_addr(MI_IP); 	// Mi dirección IP
 	memset(&(my_addr.sin_zero), '\0', 8); 				// Poner a cero el resto de la estructura
 
 	if (bind(sockfd, (struct sockaddr *)&my_addr, sizeof(struct sockaddr))== -1) { //Si la función bind devuelve -1 es error
@@ -45,6 +48,6 @@ void escucharConeccionesJob(){
 	if (new_fd == -1) {   //si accept devuelve -1 es error
 		perror("accept");
 	}
-	printf("server: got connection from IP:%d\n",inet_ntoa(their_addr.sin_addr));
+	printf("server: got connection from IP:%s\n",inet_aton(their_addr.sin_addr));
 
 }

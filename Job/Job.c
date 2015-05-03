@@ -45,7 +45,7 @@ void conectaraMarta(){
 
 	t_log* logger;
 	logger = log_create("./jobLog.log", "Job", true, LOG_LEVEL_INFO); //se crea la instancia de log, que tambien imprimira en pantalla
-	log_info(logger,"Se conectó a MaRTA. IP: %s, Puerto: %d\n",config_get_string_value(configurador,"IP_MARTA"),config_get_int_value(configurador,"PUERTO_MARTA")); //se agrega al log en modo de informacion la coneccion con MaRTA
+	log_info(logger,"Se conectó a MaRTA. IP: %s, Puerto: %d",config_get_string_value(configurador,"IP_MARTA"),config_get_int_value(configurador,"PUERTO_MARTA")); //se agrega al log en modo de informacion la coneccion con MaRTA
 	log_destroy(logger); //se elimina la instancia de log
 	return;
 }
@@ -53,7 +53,7 @@ void conectaraMarta(){
 void desconectarDeMarta(){
 	t_log* logger;
 	logger = log_create("./jobLog.log", "Job", true, LOG_LEVEL_INFO); //se crea la instancia de log, que tambien imprimira en pantalla
-	log_info(logger,"Se desconectó de MaRTA. IP: a.x.y.z, Puerto: xxxx\n"); //se agrega al log en modo de informacion la coneccion con MaRTA
+	log_info(logger,"Se desconectó de MaRTA. IP: %s, Puerto: %d",config_get_string_value(configurador,"IP_MARTA"),config_get_int_value(configurador,"PUERTO_MARTA")); //se agrega al log en modo de informacion la coneccion con MaRTA
 	log_destroy(logger); //se elimina la instancia de log
 	return;
 }
