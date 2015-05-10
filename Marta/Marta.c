@@ -4,7 +4,7 @@
 #include <netinet/in.h>
 
 //Defino mi IP
-#define MI_IP "192.168.0.6"
+#define MI_IP "10.27.61.61"
 
 //Defino puerto donde va a estar escuchando procesos Job
 #define PUERTO_JOBS 5000
@@ -48,6 +48,6 @@ void escucharConeccionesJob(){
 	if (new_fd == -1) {   //si accept devuelve -1 es error
 		perror("accept");
 	}
-	printf("server: got connection from IP:%s\n",inet_aton(their_addr.sin_addr));
+	printf("server: got connection from IP:%s\n",inet_ntoa(their_addr.sin_addr));
 
 }

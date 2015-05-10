@@ -1,16 +1,34 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <commons/log.h>
+#include <commons/config.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
 
-//Prototipos
+#define BLOCK_SIZE 20971520
+
+
+//Declaración de Funciones
 int Menu();
 void DibujarMenu();
+void configurar();
 
+//Declaración de variables
+t_config * configurador;
 
 int main(void){
+	configurar();
 	Menu();
 	return 0;
 }
+
+void configurar(){
+	configurador= config_create("resources/fsConfig.conf"); //se asigna el archivo de configuración especificado en la ruta
+	printf("COMBINER=%s\n",config_get_string_value(configurador,"COMBINER")); //para probar que realmente tomó al archivo de configuración
+}
+
+
 
 
 //Consola Menu
