@@ -1,10 +1,13 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <unistd.h>
 #include <commons/log.h>
 #include <commons/config.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <commons/collections/list.h>
+#include "FS_MDFS.h"
 
 #define BLOCK_SIZE 20971520
 
