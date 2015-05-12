@@ -77,8 +77,9 @@ int main(int argc , char *argv[]){
 	// seguir la pista del descriptor de fichero mayor
 	fdmax = listener; // por ahora es éste el ultimo socket
 	addrlen = sizeof(struct sockaddr_in);
-
-	while (nodos_iniciales != config_get_int_value(configurador,"CANTIDAD_NODOS")){
+	int numero_nodos;
+	numero_nodos=config_get_int_value(configurador,"CANTIDAD_NODOS");
+	while (nodos_iniciales != numero_nodos){
 		if ((newfd = accept(listener, (struct sockaddr*)&nodo, (socklen_t*)&addrlen)) == -1) {
 			perror ("accept");
 			log_info(logger,"FALLO el ACCEPT");
@@ -87,7 +88,6 @@ int main(int argc , char *argv[]){
 		nodos_iniciales++;
 		FD_SET(newfd, &master);
 		fdmax = newfd;
-		close(newfd);
 	}
 
 	//Cuando sale de este ciclo el proceso FileSystem ya se encuentra en condiciones de iniciar sus tareas
