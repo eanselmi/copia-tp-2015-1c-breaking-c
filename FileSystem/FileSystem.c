@@ -36,14 +36,12 @@ int main(int argc , char *argv[]){
 	int fdmax; // número máximo de descriptores de fichero
 	int listener; // descriptor de socket a la escucha
 	int newfd; // descriptor de socket de nueva conexión aceptada
+	int addrlen;
 	unsigned char identificacion[BUF_SIZE]; // buffer para datos del cliente
 	int yes=1; // para setsockopt() SO_REUSEADDR, más abajo
 	int i, j;
 	int nodos_iniciales=0;
-	int control_nodos=0;
-	char ** lista_ips;
 	configurador= config_create("resources/fsConfig.conf"); //se asigna el archivo de configuración especificado en la ruta
-	lista_ips = config_get_array_value (configurador,"LISTA_NODOS");
 
 	//....................................................................................
 
@@ -78,26 +76,18 @@ int main(int argc , char *argv[]){
 	FD_SET(listener, &master);
 	// seguir la pista del descriptor de fichero mayor
 	fdmax = listener; // por ahora es éste el ultimo socket
+	addrlen = sizeof(struct sockaddr_in);
 
-	while (nodos_iniciales != strlen(lista_ips)){
-		if ((newfd = accept(listener, (struct sockaddr*)&nodo,&nodo)) == -1) {
+	while (nodos_iniciales != config_get_int_value(configurador,"CANTIDAD_NODOS")){
+		if ((newfd = accept(listener, (struct sockaddr*)&nodo, (socklen_t*)&addrlen)) == -1) {
 			perror ("accept");
 			log_info(logger,"FALLO el ACCEPT");
 		   	exit (-1);
 		}
-		for (i=1;i<=strlen(lista_ips);i++){
-			if (strcmp(inet_ntoa(nodo.sin_addr),lista_ips[i]))
-			//if (inet_ntoa(nodo.sin_addr)==config_get_array_value[i])
-				nodos_iniciales++;
-		}
-		if (nodos_iniciales == control_nodos)
-			free(newfd);
-		else {
-			control_nodos++;
-			FD_SET(newfd, &master);
-			fdmax = newfd;
-			free (newfd);
-		}
+		nodos_iniciales++;
+		FD_SET(newfd, &master);
+		fdmax = newfd;
+		close(newfd);
 	}
 
 	//Cuando sale de este ciclo el proceso FileSystem ya se encuentra en condiciones de iniciar sus tareas
