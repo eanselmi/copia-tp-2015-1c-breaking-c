@@ -8,15 +8,15 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <string.h>
+#include <commons/string.h>
 
 #define BLOCK_SIZE 20971520
 #define BUF_SIZE 50
 
 //Declaración de funciones
 char* mapearFileDeDatos();
-//void pruebammap(); la comente porque como no esta desarrollada me da mensajes que no me gustan
-
-//void leerDeMmap(); la comente porque como no esta desarrollada me da mensajes que no me gustan
+void escribirEnArchivo();
+void leerDeArchivo();
 
 //Declaración de variables Globales
 t_config* configurador;
@@ -56,14 +56,14 @@ int main(int argc , char *argv[]){
 	log_info(logger,"Se conectó al FS IP: %s, en el puerto: %d",config_get_string_value(configurador,"IP_FS"),config_get_int_value(configurador,"PUERTO_FS"));
 	// aca revisaria si el nodo es nuevo o si es un nodo que se esta reconectando y dependiendo el caso, envia un mensaje y otro
 
-	if (1){ //algo que verifique si el nodo es nuevo o si esta reconectando, pongo 1 para que haga algo
-			//si el if da verdadero por nodo nuevo
+	if (string_equals_ignore_case(config_get_string_value(configurador,"NODO_NUEVO"),"SI")){ //verifica si el nodo es nuevo
 			strcpy(identificacion,"nuevo");
 			if((send(sockfd,identificacion,sizeof(identificacion),0))==-1) {
 					perror("send");
 					log_info(logger,"FALLO el envio del saludo al FS");
 					exit(-1);
 			}
+			//aca se debería modificar el valor del archivo de configuracion a NO ... ¿como? mail a Dios
 		}
 		else {
 			//si el if da da falso por nodo existente que se esta reconectando
