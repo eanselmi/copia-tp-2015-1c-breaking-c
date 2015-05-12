@@ -10,7 +10,7 @@
 #include <string.h>
 #include <commons/string.h>
 
-#define BLOCK_SIZE 20971520
+#define BLOCK_SIZE 10 //block size 10 bytes para hacer las pruebas, luego será 20971520
 #define BUF_SIZE 50
 
 //Declaración de funciones
@@ -21,10 +21,10 @@ void leerDeArchivo();
 //Declaración de variables Globales
 t_config* configurador;
 t_log* logger;
+char* fileDeDatos;
 int sizeFileDatos;
 
 int main(int argc , char *argv[]){
-	char* fileDeDatos;
 	configurador= config_create("resources/nodoConfig.conf"); //se asigna el archivo de configuración especificado en la ruta
 
 	//-------------------------- Cuerpo ppal del programa ---------------------------------------
@@ -75,7 +75,7 @@ int main(int argc , char *argv[]){
 			}
 		}
 
-	fileDeDatos= mapearFileDeDatos(); //va a mapear el archivo de datos a memoria, y asignarle al puntero fileDeDatos la direccion donde arranca el file
+	fileDeDatos=mapearFileDeDatos(); //va a mapear el archivo de datos a memoria, y asignarle al puntero fileDeDatos la direccion donde arranca el file
 	escribirEnArchivo(fileDeDatos); //Escribe en la direccion de memoria que apunta fileDeDatos
 	leerDeArchivo(fileDeDatos); //Lee desde la direccion de memoria que apunta fileDeDatos
 	log_destroy(logger);
@@ -84,32 +84,56 @@ int main(int argc , char *argv[]){
 
 char* mapearFileDeDatos(){
 	char* fileDatos;
-	int fileDescriptor = open((config_get_string_value(configurador,"ARCHIVO_BIN")),O_RDWR); //Abro el archivo de datos
+
+	/*
+	 * Abro el archivo de datos. Éste archivo se crea localmente en la máquina que ejecutará el proceso Nodo
+	 * y luego se configura el nombre en el archivo de configuracion(ARCHIVO_BIN).
+	 * Una manera sencilla de crearlo es truncate -s "tamaño" nombrearchivo.bin
+	 * Por ejemplo el que use para las pruebas: truncate -s 50 datos.bin --> crea un file de 50 bytes
+	 */
+
+
+	int fileDescriptor = open((config_get_string_value(configurador,"ARCHIVO_BIN")),O_RDWR);
 	struct stat estadoDelFile; //declaro una estructura que guarda el estado de un archivo
 	fstat(fileDescriptor,&estadoDelFile); //guardo el estado del archivo de datos en la estructura
-	sizeFileDatos=estadoDelFile.st_size;
-	printf("size:%d\n",sizeFileDatos); // corroboro que imprima el size
-	fileDatos=mmap(0,sizeFileDatos,(PROT_WRITE|PROT_READ|PROT_EXEC),MAP_SHARED,fileDescriptor,0);//leyendo explicación
-	//Explicacion mmap--> http://www.devshed.com/c/a/braindump/the-mmap-system-call-in-linux/
-	//Ejemplo: https://www.cs.purdue.edu/homes/fahmy/cs503/mmap.txt
-	//Open() : http://en.wikipedia.org/wiki/Open_(system_call)
-	//fstat() : http://linux.die.net/man/2/fstat
+	sizeFileDatos=estadoDelFile.st_size; // guardo el tamaño (necesario para el mmap)
+
+	/*se mapea a memoria,fileDatos apuntará a una direccion en donde empieza el archivo, con permisos de
+	lectura escritura y ejecucion, los cambios en las direcciones de memoria a donde apunta se verán reflejados
+	 en el archivo*/
+
+	fileDatos=mmap(0,sizeFileDatos,(PROT_WRITE|PROT_READ|PROT_EXEC),MAP_SHARED,fileDescriptor,0);
 	close(fileDescriptor); //Cierro el archivo
 	return fileDatos;
 }
 
 void escribirEnArchivo(char* fileDeDatos){
-	printf("Hola\n");
+	/*
+	* El puntero ubicacionEnElFile, se va a posicionar en el bloque que se desea escribir el archivo
+	* El puntero datos, tiene los datos que quiero escribir (probablemente la funcion los reciba por parametro)
+	* Con el memcpy a ubicacionEnElFile, escribo en ese bloque
+	*/
 	char *datos;
+	char *ubicacionEnElFile;
+	ubicacionEnElFile=malloc(BLOCK_SIZE);
+	ubicacionEnElFile=fileDeDatos+(BLOCK_SIZE*4);
 	datos=malloc(BLOCK_SIZE);
-	*datos=1000110111111110101010101;
-	memcpy(fileDeDatos,datos,BLOCK_SIZE); //Copia el valor de BLOCK_SIZE bytes desde la direccion de memoria apuntada por datos a la direccion de memoria apuntada por fileDeDatos
+	memcpy(datos,"987654321",BLOCK_SIZE);
+	memcpy(ubicacionEnElFile,datos,BLOCK_SIZE); //Copia el valor de BLOCK_SIZE bytes desde la direccion de memoria apuntada por datos a la direccion de memoria apuntada por fileDeDatos
 	return;
 }
 
 void leerDeArchivo(char* fileDeDatos){
+	/*
+	* El puntero ubicacionEnElFile, se va a posicionar en el bloque de donde deseo leer los datos
+	* El puntero datosLeidos, tiene los datos que lei, probablemente sea devuelto por la función en el futuro
+	* Con el memcpy a datosLeidos, leo ese bloque
+	*/
 	char* datosLeidos;
+	char *ubicacionEnElFile;
 	datosLeidos=malloc(BLOCK_SIZE);
-	memcpy(datosLeidos,fileDeDatos,BLOCK_SIZE); //Copia el valor de BLOCK_SIZE bytes desde la direccion de memoria apuntada por fileDeDatos a la direccion de memoria apuntada por datosLeidos
-	//puts(*datosLeidos);
+	ubicacionEnElFile=malloc(BLOCK_SIZE);
+	ubicacionEnElFile=fileDeDatos+(BLOCK_SIZE*1);
+	memcpy(datosLeidos,ubicacionEnElFile,BLOCK_SIZE); //Copia el valor de BLOCK_SIZE bytes desde la direccion de memoria apuntada por fileDeDatos a la direccion de memoria apuntada por datosLeidos
+	return;
 }
