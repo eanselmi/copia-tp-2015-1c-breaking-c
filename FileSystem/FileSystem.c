@@ -37,9 +37,10 @@ int main(int argc , char *argv[]){
 	int listener; // descriptor de socket a la escucha
 	int newfd; // descriptor de socket de nueva conexión aceptada
 	int addrlen;
-	unsigned char identificacion[BUF_SIZE]; // buffer para datos del cliente
+	char identificacion[BUF_SIZE]; // buffer para datos del cliente
 	int yes=1; // para setsockopt() SO_REUSEADDR, más abajo
 	int i, j;
+	int read_size;
 	int nodos_iniciales=0;
 	configurador= config_create("resources/fsConfig.conf"); //se asigna el archivo de configuración especificado en la ruta
 
@@ -77,23 +78,32 @@ int main(int argc , char *argv[]){
 	// seguir la pista del descriptor de fichero mayor
 	fdmax = listener; // por ahora es éste el ultimo socket
 	addrlen = sizeof(struct sockaddr_in);
-	int numero_nodos;
-	numero_nodos=config_get_int_value(configurador,"CANTIDAD_NODOS");
-	while (nodos_iniciales != numero_nodos){
+	printf ("Esperando las conexiones de los nodos iniciales\n");
+	while (nodos_iniciales != config_get_int_value(configurador,"CANTIDAD_NODOS")){
 		if ((newfd = accept(listener, (struct sockaddr*)&nodo, (socklen_t*)&addrlen)) == -1) {
 			perror ("accept");
 			log_info(logger,"FALLO el ACCEPT");
 		   	exit (-1);
 		}
-		nodos_iniciales++;
-		FD_SET(newfd, &master);
-		fdmax = newfd;
+		if ((read_size = recv(newfd, identificacion , 50 , 0))==-1) {
+			perror ("recv");
+			log_info(logger,"FALLO el RECV");
+			exit (-1);
+		}
+		if (read_size > 0 && strncmp(identificacion,"nuevo",5)==0){
+			nodos_iniciales++;
+			FD_SET(newfd, &master);
+			fdmax = newfd;
+			printf ("Se conecto el nodo %s\n",inet_ntoa(nodo.sin_addr));
+		}
+		else{
+			printf ("Marta se quiso conectar antes de tiempo\n");
+			close(newfd);
+		}
 	}
-
+	printf ("%d Nodos conectados, Estado del FileSystem: OPERATIVO\n", nodos_iniciales);
+	sleep(5);
 	//Cuando sale de este ciclo el proceso FileSystem ya se encuentra en condiciones de iniciar sus tareas
-
-
-
 
 
 	//................................................................................
