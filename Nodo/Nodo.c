@@ -15,8 +15,8 @@
 
 //Declaración de funciones
 char* mapearFileDeDatos();
-void escribirEnArchivo();
-void leerDeArchivo();
+void setBloque(int bloque,char* datos);
+char* getBloque(int bloque);
 
 //Declaración de variables Globales
 t_config* configurador;
@@ -75,9 +75,30 @@ int main(int argc , char *argv[]){
 			}
 		}
 
-	fileDeDatos=mapearFileDeDatos(); //va a mapear el archivo de datos a memoria, y asignarle al puntero fileDeDatos la direccion donde arranca el file
-	escribirEnArchivo(fileDeDatos); //Escribe en la direccion de memoria que apunta fileDeDatos
-	leerDeArchivo(fileDeDatos); //Lee desde la direccion de memoria que apunta fileDeDatos
+	/*
+	 *La siguiente función va a mapear el archivo de datos que esta especificado en el archivo conf
+	 * a memoria, y asignarle al puntero fileDeDatos la direccion donde arranca el file. Utilizando mmap()
+	 */
+
+	fileDeDatos=mapearFileDeDatos();
+
+	/*Generacion de datos para probar el funcionamiento de la funcion setBloque*/
+		char* datosAEscribir;
+		datosAEscribir=malloc(BLOCK_SIZE);
+		memcpy(datosAEscribir,"Hola hola",BLOCK_SIZE);
+		int bloqueAEscribir=2;
+	//
+
+	setBloque(bloqueAEscribir,datosAEscribir); // Grabará los datos enviados en el bloque solicitado
+
+	/*Generación de datos para probar la funcion getBloque*/
+
+		char* datosLeidos;
+		datosLeidos=malloc(BLOCK_SIZE);
+		int bloqueALeer=1;
+	//
+
+	datosLeidos=getBloque(bloqueALeer); // Devolverá el contenido del bloque solicitado
 	log_destroy(logger);
 	return 0;
 }
@@ -107,33 +128,32 @@ char* mapearFileDeDatos(){
 	return fileDatos;
 }
 
-void escribirEnArchivo(char* fileDeDatos){
+void setBloque(int numBloque,char* datosAEscribir){
 	/*
 	* El puntero ubicacionEnElFile, se va a posicionar en el bloque que se desea escribir el archivo
-	* El puntero datos, tiene los datos que quiero escribir (probablemente la funcion los reciba por parametro)
+	* datosAEscribir, recibido por parametro, tiene los datos que quiero escribir
 	* Con el memcpy a ubicacionEnElFile, escribo en ese bloque
 	*/
-	char *datos;
+
 	char *ubicacionEnElFile;
 	ubicacionEnElFile=malloc(BLOCK_SIZE);
-	ubicacionEnElFile=fileDeDatos+(BLOCK_SIZE*4);
-	datos=malloc(BLOCK_SIZE);
-	memcpy(datos,"987654321",BLOCK_SIZE);
-	memcpy(ubicacionEnElFile,datos,BLOCK_SIZE); //Copia el valor de BLOCK_SIZE bytes desde la direccion de memoria apuntada por datos a la direccion de memoria apuntada por fileDeDatos
+	ubicacionEnElFile=fileDeDatos+(BLOCK_SIZE*(numBloque-1));
+	memcpy(ubicacionEnElFile,datosAEscribir,BLOCK_SIZE); //Copia el valor de BLOCK_SIZE bytes desde la direccion de memoria apuntada por datos a la direccion de memoria apuntada por fileDeDatos
 	return;
 }
 
-void leerDeArchivo(char* fileDeDatos){
+char* getBloque(int numBloque){
 	/*
 	* El puntero ubicacionEnElFile, se va a posicionar en el bloque de donde deseo leer los datos
-	* El puntero datosLeidos, tiene los datos que lei, probablemente sea devuelto por la función en el futuro
-	* Con el memcpy a datosLeidos, leo ese bloque
+	* El puntero datosLeidos, tendrá los datos que lei, y será devuelto por la funcion
+	* Con el memcpy a datosLeidos, copio ese bloque
 	*/
+
 	char* datosLeidos;
 	char *ubicacionEnElFile;
 	datosLeidos=malloc(BLOCK_SIZE);
 	ubicacionEnElFile=malloc(BLOCK_SIZE);
-	ubicacionEnElFile=fileDeDatos+(BLOCK_SIZE*1);
+	ubicacionEnElFile=fileDeDatos+(BLOCK_SIZE*(numBloque-1));
 	memcpy(datosLeidos,ubicacionEnElFile,BLOCK_SIZE); //Copia el valor de BLOCK_SIZE bytes desde la direccion de memoria apuntada por fileDeDatos a la direccion de memoria apuntada por datosLeidos
-	return;
+	return datosLeidos;
 }
