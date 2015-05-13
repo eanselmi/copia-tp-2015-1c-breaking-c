@@ -1,21 +1,22 @@
 #define FILENAME 50
 
-typedef uint32_t t_bloque;
+//se creara una lista de archivos, que contendra elementos del tipo "t_archivo"
 
 typedef struct estructura_filesystem {
-unsigned char NomArchivo[FILENAME];
-uint32_t DirectorioPadre;
-uint32_t Tamanio;
-uint32_t EstadoArchivo;
-t_bloque * Bloques;
-struct estructura_filesystem * Anterior;
-struct estructura_filesystem * Siguiente;
-} mdfs_struct;
+	char nombre[FILENAME];
+	uint32_t padre;
+	uint32_t tamanio;
+	uint32_t estado;
+	t_list bloques; //Se debe crear una lista de tipo "t_bloque" y agregarla acá
+} t_archivo;
+
+typedef struct estructura_copia {
+	char nodo[80];
+	int bloqueNodo;
+} t_copias;
 
 typedef struct estructura_bloque {
-// uint32_t Nodo_Bloque [3][3];
-uint32_t IdNodo[3];
-uint32_t IdBloque[3];
-struct estructura_bloque * Anterior;
-struct estructura_bloque * Siguiente;
-} BStruct;
+	t_copias copias[3];
+} t_bloque;
+
+
