@@ -27,7 +27,7 @@ unsigned int sizeFileDatos;
 int main(int argc , char *argv[]){
 	configurador= config_create("resources/nodoConfig.conf"); //se asigna el archivo de configuración especificado en la ruta
 	logger = log_create("./nodoLog.log", "Nodo", true, LOG_LEVEL_INFO);
-/*
+
 	//-------------------------- Cuerpo ppal del programa ---------------------------------------
 
 	//------------ Variables locales a la funcion main --------------------
@@ -74,7 +74,7 @@ int main(int argc , char *argv[]){
 					exit(-1);
 			}
 		}
-*/
+
 	/*
 	 *La siguiente función va a mapear el archivo de datos que esta especificado en el archivo conf
 	 * a memoria, y asignarle al puntero fileDeDatos la direccion donde arranca el file. Utilizando mmap()
