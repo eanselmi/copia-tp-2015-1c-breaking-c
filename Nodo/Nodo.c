@@ -10,7 +10,7 @@
 #include <string.h>
 #include <commons/string.h>
 
-#define BLOCK_SIZE 10 //block size 10 bytes para hacer las pruebas, luego será 20971520
+#define BLOCK_SIZE 20971520 //block size 10 bytes para hacer las pruebas, luego será 20971520
 #define BUF_SIZE 50
 
 //Declaración de funciones
@@ -27,7 +27,7 @@ unsigned int sizeFileDatos;
 int main(int argc , char *argv[]){
 	configurador= config_create("resources/nodoConfig.conf"); //se asigna el archivo de configuración especificado en la ruta
 	logger = log_create("./nodoLog.log", "Nodo", true, LOG_LEVEL_INFO);
-
+/*
 	//-------------------------- Cuerpo ppal del programa ---------------------------------------
 
 	//------------ Variables locales a la funcion main --------------------
@@ -74,7 +74,7 @@ int main(int argc , char *argv[]){
 					exit(-1);
 			}
 		}
-
+*/
 	/*
 	 *La siguiente función va a mapear el archivo de datos que esta especificado en el archivo conf
 	 * a memoria, y asignarle al puntero fileDeDatos la direccion donde arranca el file. Utilizando mmap()
@@ -85,20 +85,23 @@ int main(int argc , char *argv[]){
 	/*Generacion de datos para probar el funcionamiento de la funcion setBloque*/
 		char* datosAEscribir;
 		datosAEscribir=malloc(BLOCK_SIZE);
-		memcpy(datosAEscribir,"123456789",BLOCK_SIZE);
-		int bloqueAEscribir=4;
+		memset(datosAEscribir,'A',BLOCK_SIZE);
+		int bloqueAEscribir=3;
 	//
 
-	setBloque(bloqueAEscribir,datosAEscribir); // Grabará los datos enviados en el bloque solicitado
+	// Grabará los datos enviados en el bloque solicitado
+	setBloque(bloqueAEscribir,datosAEscribir);
+
 
 	/*Generación de datos para probar la funcion getBloque*/
 
 		char* datosLeidos;
 		datosLeidos=malloc(BLOCK_SIZE);
-		int bloqueALeer=1;
+		int bloqueALeer=3;
 	//
 
 	datosLeidos=getBloque(bloqueALeer); // Devolverá el contenido del bloque solicitado
+
 	log_destroy(logger);
 	config_destroy(configurador);
 	return 0;
