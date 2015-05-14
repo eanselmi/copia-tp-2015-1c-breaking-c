@@ -7,7 +7,7 @@ typedef struct estructura_filesystem {
 	uint32_t padre;
 	uint32_t tamanio;
 	uint32_t estado;
-	t_list bloques; //Se debe crear una lista de tipo "t_bloque" y agregarla acá
+	t_list* bloques; //Se debe crear una lista de tipo "t_bloque" y agregarla acá
 } t_archivo;
 
 typedef struct estructura_copia {
