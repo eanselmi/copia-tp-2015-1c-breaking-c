@@ -22,10 +22,11 @@ char* getBloque(int bloque);
 t_config* configurador;
 t_log* logger;
 char* fileDeDatos;
-int sizeFileDatos;
+unsigned int sizeFileDatos;
 
 int main(int argc , char *argv[]){
 	configurador= config_create("resources/nodoConfig.conf"); //se asigna el archivo de configuración especificado en la ruta
+	logger = log_create("./nodoLog.log", "Nodo", true, LOG_LEVEL_INFO);
 
 	//-------------------------- Cuerpo ppal del programa ---------------------------------------
 
@@ -33,7 +34,6 @@ int main(int argc , char *argv[]){
 	int sockfd;
 	unsigned char identificacion[BUF_SIZE]; //para el mensaje que envie al conectarse para identificarse, puede cambiar
 	struct sockaddr_in filesystem;
-	logger = log_create("./nodoLog.log", "Nodo", true, LOG_LEVEL_INFO);
 	memset(&filesystem, 0, sizeof(filesystem));
 	//---------------------------------------------------------------------
 
@@ -45,12 +45,12 @@ int main(int argc , char *argv[]){
 
 	if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
 		perror ("socket");
-		log_info(logger,"FALLO la creacion del socket");
+		log_error(logger,"FALLO la creacion del socket");
 		exit (-1);
 	}
 	if (connect(sockfd, (struct sockaddr *)&filesystem,sizeof(struct sockaddr)) == -1) {
 		perror ("connect");
-		log_info(logger,"FALLO la conexion con el FS");
+		log_error(logger,"FALLO la conexion con el FS");
 		exit (-1);
 	}
 	log_info(logger,"Se conectó al FS IP: %s, en el puerto: %d",config_get_string_value(configurador,"IP_FS"),config_get_int_value(configurador,"PUERTO_FS"));
@@ -60,7 +60,7 @@ int main(int argc , char *argv[]){
 			strcpy(identificacion,"nuevo");
 			if((send(sockfd,identificacion,sizeof(identificacion),0))==-1) {
 					perror("send");
-					log_info(logger,"FALLO el envio del saludo al FS");
+					log_error(logger,"FALLO el envio del saludo al FS");
 					exit(-1);
 			}
 			//aca se debería modificar el valor del archivo de configuracion a NO ... ¿como? mail a Dios
@@ -70,7 +70,7 @@ int main(int argc , char *argv[]){
 			strcpy(identificacion,"reconectado");
 			if((send(sockfd,identificacion,sizeof(identificacion),0))==-1) {
 					perror("send");
-					log_info(logger,"FALLO el envio del saludo al FS");
+					log_error(logger,"FALLO el envio del saludo al FS");
 					exit(-1);
 			}
 		}
@@ -85,8 +85,8 @@ int main(int argc , char *argv[]){
 	/*Generacion de datos para probar el funcionamiento de la funcion setBloque*/
 		char* datosAEscribir;
 		datosAEscribir=malloc(BLOCK_SIZE);
-		memcpy(datosAEscribir,"Hola hola",BLOCK_SIZE);
-		int bloqueAEscribir=2;
+		memcpy(datosAEscribir,"123456789",BLOCK_SIZE);
+		int bloqueAEscribir=4;
 	//
 
 	setBloque(bloqueAEscribir,datosAEscribir); // Grabará los datos enviados en el bloque solicitado
@@ -100,6 +100,7 @@ int main(int argc , char *argv[]){
 
 	datosLeidos=getBloque(bloqueALeer); // Devolverá el contenido del bloque solicitado
 	log_destroy(logger);
+	config_destroy(configurador);
 	return 0;
 }
 
@@ -113,10 +114,18 @@ char* mapearFileDeDatos(){
 	 * Por ejemplo el que use para las pruebas: truncate -s 50 datos.bin --> crea un file de 50 bytes
 	 */
 
-
 	int fileDescriptor = open((config_get_string_value(configurador,"ARCHIVO_BIN")),O_RDWR);
+	/*Chequeo de apertura del file exitosa*/
+		if (fileDescriptor==-1){
+			perror("open");
+			log_error(logger,"Fallo la apertura del file de datos");
+			exit(-1);
+		}
 	struct stat estadoDelFile; //declaro una estructura que guarda el estado de un archivo
-	fstat(fileDescriptor,&estadoDelFile); //guardo el estado del archivo de datos en la estructura
+	if(fstat(fileDescriptor,&estadoDelFile)==-1){//guardo el estado del archivo de datos en la estructura
+		perror("fstat");
+		log_error(logger,"Falló el fstat");
+	}
 	sizeFileDatos=estadoDelFile.st_size; // guardo el tamaño (necesario para el mmap)
 
 	/*se mapea a memoria,fileDatos apuntará a una direccion en donde empieza el archivo, con permisos de
@@ -124,6 +133,12 @@ char* mapearFileDeDatos(){
 	 en el archivo*/
 
 	fileDatos=mmap(0,sizeFileDatos,(PROT_WRITE|PROT_READ|PROT_EXEC),MAP_SHARED,fileDescriptor,0);
+	/*Chequeo de mmap exitoso*/
+		if (fileDatos==MAP_FAILED){
+			perror("mmap");
+			log_error(logger,"Falló el mmap, no se pudo asignar la direccion de memoria para el archivo de datos");
+			exit(-1);
+		}
 	close(fileDescriptor); //Cierro el archivo
 	return fileDatos;
 }
