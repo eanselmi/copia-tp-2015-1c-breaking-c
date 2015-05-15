@@ -19,4 +19,11 @@ typedef struct estructura_bloque {
 	t_copias copias[3];
 } t_bloque;
 
+typedef struct estructura_manejo_nodos {
+	int socket;
+	char *ip;
+	int estado;
+	int bloques_libres;
+} t_nodo;
+
 

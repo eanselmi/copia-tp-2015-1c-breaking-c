@@ -16,35 +16,39 @@
 
 #define BUF_SIZE 50
 #define BLOCK_SIZE 20971520
-
+#define MENSAJE_SIZE 4096
 
 //Declaración de Funciones
 int Menu();
 void DibujarMenu();
+void *connection_handler_escucha(); // Esta funcion escucha continuamente si recibo nuevos mensajes
+static t_nodo *agregar_nodo_a_lista(int socket,char *ip,int est,int bloques_lib);
 
-//Declaración de variables globales
-t_config * configurador;
-t_log* logger;
 fd_set master; // conjunto maestro de descriptores de fichero
 fd_set read_fds; // conjunto temporal de descriptores de fichero para select()
-t_list* archivos; //lista de archivos del FS
+t_log* logger;
+t_list *nodos; //lista de nodos conectados al fs
+int fdmax; // número máximo de descriptores de fichero
+int listener; // descriptor de socket a la escucha
+int marta_sock; //Socket exclusivo para marta
+struct sockaddr_in filesystem; // dirección del servidor
+struct sockaddr_in remote_client; // dirección del cliente
+char identificacion[BUF_SIZE]; // buffer para datos del cliente
+char mensaje[MENSAJE_SIZE];
 
 
 int main(int argc , char *argv[]){
-	FD_ZERO(&master); // borra los conjuntos maestro y temporal
-	FD_ZERO(&read_fds);
-	struct sockaddr_in filesystem; // dirección del servidor
-	struct sockaddr_in nodo; // dirección del cliente
-	int fdmax; // número máximo de descriptores de fichero
-	int listener; // descriptor de socket a la escucha
-	int newfd; // descriptor de socket de nueva conexión aceptada
+	t_config * configurador;
+	pthread_t escucha; //Hilo que va a manejar los mensajes recibidos
+	t_list* archivos; //lista de archivos del FS
+	int newfd;
 	int addrlen;
-	char identificacion[BUF_SIZE]; // buffer para datos del cliente
 	int yes=1; // para setsockopt() SO_REUSEADDR, más abajo
-	int i, j;
 	int read_size;
 	int nodos_iniciales=0;
 	configurador= config_create("resources/fsConfig.conf"); //se asigna el archivo de configuración especificado en la ruta
+	FD_ZERO(&master); // borra los conjuntos maestro y temporal
+	FD_ZERO(&read_fds);
 
 	//....................................................................................
 
@@ -77,12 +81,14 @@ int main(int argc , char *argv[]){
 	}
 	// añadir listener al conjunto maestro
 	FD_SET(listener, &master);
+
 	// seguir la pista del descriptor de fichero mayor
 	fdmax = listener; // por ahora es éste el ultimo socket
 	addrlen = sizeof(struct sockaddr_in);
+	nodos=list_create(); //Crea la lista de que va a manejar la lista de nodos
 	printf ("Esperando las conexiones de los nodos iniciales\n");
 	while (nodos_iniciales != config_get_int_value(configurador,"CANTIDAD_NODOS")){
-		if ((newfd = accept(listener, (struct sockaddr*)&nodo, (socklen_t*)&addrlen)) == -1) {
+		if ((newfd = accept(listener, (struct sockaddr*)&remote_client, (socklen_t*)&addrlen)) == -1) {
 			perror ("accept");
 			log_info(logger,"FALLO el ACCEPT");
 		   	exit (-1);
@@ -96,17 +102,25 @@ int main(int argc , char *argv[]){
 			nodos_iniciales++;
 			FD_SET(newfd, &master);
 			fdmax = newfd;
-			printf ("Se conecto el nodo %s\n",inet_ntoa(nodo.sin_addr));
+			list_add (nodos, agregar_nodo_a_lista(newfd,inet_ntoa(remote_client.sin_addr),1,50));
+			printf ("Se conecto el nodo %s\n",inet_ntoa(remote_client.sin_addr));
 		}
 		else{
 			printf ("Marta se quiso conectar antes de tiempo\n");
 			close(newfd);
 		}
 	}
-	printf ("%d Nodos conectados, Estado del FileSystem: OPERATIVO\n", nodos_iniciales);
+	printf ("Nodos conectados %d\n",list_size(nodos));
+	printf ("Informacion del nodo 2\n");
+	printf ("Socket %d, ip %s, Estado %d, Nodos Libres %d\n",((t_nodo*)list_get(nodos,1))->socket,((t_nodo*)list_get(nodos,1))->ip,((t_nodo*)list_get(nodos,1))->estado,((t_nodo*)list_get(nodos,1))->bloques_libres);
 	sleep(5);
 	//Cuando sale de este ciclo el proceso FileSystem ya se encuentra en condiciones de iniciar sus tareas
 
+	//Este hilo va a manejar las conexiones de forma paralela a la ejecucion del proceso
+	if( pthread_create( &escucha , NULL ,  connection_handler_escucha , NULL) < 0){
+	       perror("could not create thread");
+	       return 1;
+	}
 
 	//................................................................................
 
@@ -158,43 +172,137 @@ int main(int argc , char *argv[]){
 
 //Consola Menu
 void DibujarMenu(void){
-	printf("################################################################\n");
-	printf("# Ingrese una opción para continuar:                           #\n");
-	printf("# 1) Formatear el MDFS                                         #\n");
-	printf("# 2) Eliminar, Renombrar o Mover archivos                      #\n");
-	printf("# 3) Crear, Eliminar, Renombrar o Mover directorios            #\n");
-	printf("# 4) Copiar un archivo local al MDFS                           #\n");
-	printf("# 5) Copiar un archivo del MDFS al filesystem local            #\n");
-	printf("# 6) Solicitar el MD5 de un archivo en MDFS                    #\n");
-	printf("# 7) Ver, Borrar, Copiar los bloques que componen un archivo   #\n");
-	printf("# 8) Agregar un nodo de datos                                  #\n");
-	printf("# 9) Eliminar un nodo de datos                                 #\n");
-	printf("# 10) Salir                                                    #\n");
-	printf("################################################################\n");
+	void DibujarMenu(void){
+	  printf("################################################################\n");
+	  printf("# Ingrese una opción para continuar:                           #\n");
+	  printf("#  1) Formatear el MDFS                                        #\n");
+	  printf("#  2) Eliminar archivos                                        #\n");
+	  printf("#  3) Renombrar archivos                                       #\n");
+	  printf("#  4) Mover archivos                                           #\n");
+	  printf("#  5) Crear directorios                                        #\n");
+	  printf("#  6) Eliminar directorios                                     #\n");
+	  printf("#  7) Renombrar directorios                                    #\n");
+	  printf("#  8) Mover directorios                                        #\n");
+	  printf("#  9) Copiar un archivo local al MDFS                          #\n");
+	  printf("# 10) Copiar un archivo del MDFS al filesystem local           #\n");
+	  printf("# 11) Solicitar el MD5 de un archivo en MDFS                   #\n");
+	  printf("# 12) Ver los bloques que componen un archivo                  #\n");
+	  printf("# 13) Borrar los bloques que componen un archivo               #\n");
+	  printf("# 14) Copiar los bloques que componen un archivo               #\n");
+	  printf("# 15) Agregar un nodo de datos                                 #\n");
+	  printf("# 16) Eliminar un nodo de datos                                #\n");
+	  printf("# 17) Salir                                                    #\n");
+	  printf("################################################################\n");
+	}
 }
 
 int Menu(void){
 	char opchar[20];
 	int opcion=0;
-	while (opcion !=10){
-		sleep(1);
-		DibujarMenu();
-		printf("Ingrese opción: ");
-		scanf ("%s", opchar);
-		opcion = atoi (opchar);
-		switch (opcion){
-			case 1: printf("Eligió  Formatear el MDFS\n"); break;
-			case 2: printf("Eligió Eliminar, Renombrar o Mover archivos\n"); break;
-			case 3: printf("Eligió Crear, Eliminar, Renombrar o Mover directorios\n"); break;
-			case 4: printf("Eligió Copiar un archivo local al MDFS\n"); break;
-			case 5: printf("Eligió Copiar un archivo del MDFS al filesystem local\n"); break;
-			case 6: printf("Eligió Solicitar el MD5 de un archivo en MDFS\n"); break;
-			case 7: printf("Eligió Ver, Borrar, Copiar los bloques que componen un archivo\n"); break;
-			case 8: printf("Eligió Agregar un nodo de datos\n"); break;
-			case 9: printf("Eligió Eliminar un nodo de datos\n"); break;
-			case 10: printf("Eligió Salir\n"); break;
-			default: printf("Opción incorrecta. Por favor ingrese una opción del 1 al 10\n");break;
+	while (opcion !=17){
+	    sleep(1);
+	    DibujarMenu();
+	    printf("Ingrese opción: ");
+	    scanf ("%s", opchar);
+	    opcion = atoi (opchar);
+	    switch (opcion){
+	      case 1: printf("Eligió  Formatear el MDFS\n"); break;
+	      case 2: printf("Eligió Eliminar archivos \n"); break;
+	      case 3: printf("Eligió Renombrar archivos\n"); break;
+	      case 4: printf("Eligió Mover archivos\n"); break;
+	      case 5: printf("Eligió Crear directorios\n"); break;
+	      case 6: printf("Eligió Eliminar directorios\n"); break;
+	      case 7: printf("Eligió Renombrar directorios\n"); break;
+	      case 8: printf("Eligió Mover directorios\n"); break;
+	      case 9: printf("Eligió Copiar un archivo local al MDFS\n"); break;
+	      case 10: printf("Eligió Copiar un archivo del MDFS al filesystem local\n"); break;
+	      case 11: printf("Eligió Solicitar el MD5 de un archivo en MDFS\n"); break;
+	      case 12: printf("Eligió Ver los bloques que componen un archivo\n"); break;
+	      case 13: printf("Eligió Borrar los bloques que componen un archivo\n"); break;
+	      case 14: printf("Eligió Copiar los bloques que componen un archivo\n"); break;
+	      case 15: printf("Eligió Agregar un nodo de datos\n"); break;
+	      case 16: printf("Eligió Eliminar un nodo de datos\n"); break;
+	      case 17: printf("Eligió Salir\n"); break;
+	      default: printf("Opción incorrecta. Por favor ingrese una opción del 1 al 17\n");break;
 		}
 	}
 	return 0;
+}
+static t_nodo *agregar_nodo_a_lista(int socket,char *ip,int est,int bloques_lib){
+	t_nodo *nodo_temporal = malloc (sizeof(t_nodo));
+	nodo_temporal->socket = socket;
+	nodo_temporal->ip = strdup(ip);
+	nodo_temporal->estado = est;
+	nodo_temporal->bloques_libres = bloques_lib;
+	return nodo_temporal;
+}
+
+void *connection_handler_escucha(void){
+	int i,nbytes,newfd,addrlen;
+	while(1) {
+		read_fds = master;
+		if (select(fdmax+1, &read_fds, NULL, NULL, NULL) == -1) {
+			perror("select");
+			log_info(logger,"FALLO el Select");
+			exit(-1);
+		}
+		// explorar conexiones existentes en busca de datos que leer
+		for(i = 0; i <= fdmax; i++) {
+			if (FD_ISSET(i, &read_fds)) { // ¡¡tenemos datos!!
+				if (i == listener) {
+					// gestionar nuevas conexiones, primero hay que aceptarlas
+					addrlen = sizeof(struct sockaddr_in);
+					if ((newfd = accept(listener, (struct sockaddr*)&remote_client,(socklen_t*)&addrlen)) == -1) {
+						perror("accept");
+						log_info(logger,"FALLO el ACCEPT");
+						exit(-1);
+					}
+					else //llego una nueva conexion, se acepto y ahora tengo que tratarla
+					{
+						FD_SET(newfd, &master); // añadir al conjunto maestro
+						if (newfd > fdmax) { // actualizar el máximo
+							fdmax = newfd;
+						}
+						if ((nbytes = recv(newfd, mensaje, sizeof(mensaje), 0)) <= 0) { //si entra aca es porque hubo un error, no considero desconexion porque es nuevo
+							{
+								perror("recv");
+								log_info(logger,"FALLO el Recv");
+								exit(-1);
+							}
+						} else {
+							// el nuevo conectado me manda algo, se identifica como nodo o como marta
+							// luego de que se identifique lo agregare a la lista de nodos si es nodo
+							// si es marta solo lo acepto y guardo las variables necesarias para despues conectar a marta
+						}
+					}
+					printf("select: conexion desde %s en socket %d\n", inet_ntoa(remote_client.sin_addr),newfd);
+
+
+				//.................................................
+				//hasta aca, es el tratamiento de conexiones nuevas
+				//.................................................
+
+				} else { //si entra aca no es un cliente nuevo, es uno que ya tenia y me esta mandando algo
+					// gestionar datos de un cliente
+					if ((nbytes = recv(i, mensaje, sizeof(mensaje), 0)) <= 0) { //si entra aca es porque se desconecto o hubo un error
+						if (nbytes == 0) {
+							// conexión cerrada, ver quien fue y si fue un nodo, anular al nodo de la lista
+							//............................
+							//............................
+
+						} else {
+							perror("recv");
+							log_info(logger,"FALLO el Recv");
+							exit(-1);
+						}
+						close(i); // ¡Hasta luego!
+						FD_CLR(i, &master); // eliminar del conjunto maestro
+					} else {
+						// tenemos datos de algún cliente
+						// ...... Tratamiento del mensaje nuevo
+					}
+				}
+			}
+		}
+	}
 }
