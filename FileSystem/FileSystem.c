@@ -24,6 +24,7 @@ void DibujarMenu();
 void *connection_handler_escucha(); // Esta funcion escucha continuamente si recibo nuevos mensajes
 static t_nodo *agregar_nodo_a_lista(int socket,char *ip,int est,int bloques_lib);
 
+
 fd_set master; // conjunto maestro de descriptores de fichero
 fd_set read_fds; // conjunto temporal de descriptores de fichero para select()
 t_log* logger;
@@ -206,22 +207,22 @@ int Menu(void){
 	    scanf ("%s", opchar);
 	    opcion = atoi (opchar);
 	    switch (opcion){
-	      case 1: printf("Eligió  Formatear el MDFS\n"); break;
-	      case 2: printf("Eligió Eliminar archivos \n"); break;
-	      case 3: printf("Eligió Renombrar archivos\n"); break;
-	      case 4: printf("Eligió Mover archivos\n"); break;
-	      case 5: printf("Eligió Crear directorios\n"); break;
-	      case 6: printf("Eligió Eliminar directorios\n"); break;
-	      case 7: printf("Eligió Renombrar directorios\n"); break;
-	      case 8: printf("Eligió Mover directorios\n"); break;
-	      case 9: printf("Eligió Copiar un archivo local al MDFS\n"); break;
-	      case 10: printf("Eligió Copiar un archivo del MDFS al filesystem local\n"); break;
-	      case 11: printf("Eligió Solicitar el MD5 de un archivo en MDFS\n"); break;
-	      case 12: printf("Eligió Ver los bloques que componen un archivo\n"); break;
-	      case 13: printf("Eligió Borrar los bloques que componen un archivo\n"); break;
-	      case 14: printf("Eligió Copiar los bloques que componen un archivo\n"); break;
-	      case 15: printf("Eligió Agregar un nodo de datos\n"); break;
-	      case 16: printf("Eligió Eliminar un nodo de datos\n"); break;
+	      case 1: void FormatearFilesystem (); break;
+	      case 2: int EliminarArchivo(); break;
+	      case 3: void RenombrarArchivo (); break;
+	      case 4: void MoverArchivo(); break;
+	      case 5: void CrearDirectorio(); break;
+	      case 6: void EliminarDirectorio(); break;
+	      case 7: void RenombrarDirectorio(); break;
+	      case 8: void MoverDirectorio(); break;
+	      case 9: void CopiarArchivoAMDFS(); break;
+	      case 10: void CopiarArchivoDelMDFS(); break;
+	      case 11: void MD5DeArchivo(); break;
+	      case 12: void VerBloques(); break;
+	      case 13: void BorrarBloques(); break;
+	      case 14: void CopiarBloques(); break;
+	      case 15: void AgregarNodo(); break;
+	      case 16: void EliminarNodo(); break;
 	      case 17: printf("Eligió Salir\n"); break;
 	      default: printf("Opción incorrecta. Por favor ingrese una opción del 1 al 17\n");break;
 		}
@@ -305,4 +306,86 @@ void *connection_handler_escucha(void){
 			}
 		}
 	}
+}
+
+int BuscarArchivo (char nombreArchivo [FILENAME]){
+	t_archivo* ListaArchivos;
+	int pos = 0;
+	while (ListaArchivos->nombre != nombreArchivo){
+		ListaArchivos->siguiente;
+		pos++;
+		if (ListaArchivos->siguiente == NULL){
+			printf("No se encontró el archivo \n");
+			break;
+		}
+	}
+	return pos;
+}
+
+int EliminarArchivo(){
+	char nombreArchivo [FILENAME];
+	printf ("Ingrese el nombre del archivo \n");
+	scanf ("%s", nombreArchivo);
+	int buscar = BuscarArchivo (nombreArchivo);
+	void list_remove_and_destroy_element(t_list *, buscar, void(*element_destroyer)(void*));
+	return 0;
+}
+void FormatearFilesystem (){
+	printf("Eligió  Formatear el MDFS\n");
+}
+
+void RenombrarArchivo (){
+	printf("Eligió Renombrar archivos\n");
+}
+
+void MoverArchivo(){
+	 printf("Eligió Mover archivos\n");
+}
+
+void CrearDirectorio(){
+	printf("Eligió Crear directorios\n");
+}
+
+void EliminarDirectorio(){
+	printf("Eligió Eliminar directorios\n");
+}
+
+void RenombrarDirectorio(){
+	printf("Eligió Renombrar directorios\n");
+}
+
+void MoverDirectorio(){
+	printf("Eligió Mover directorios\n");
+}
+
+void CopiarArchivoAMDFS(){
+	printf("Eligió Copiar un archivo local al MDFS\n");
+}
+
+void CopiarArchivoDelMDFS(){
+	printf("Eligió Copiar un archivo del MDFS al filesystem local\n");
+}
+
+void MD5DeArchivo(){
+	printf("Eligió Solicitar el MD5 de un archivo en MDFS\n");
+}
+
+void VerBloques(){
+	printf("Eligió Ver los bloques que componen un archivo\n");
+}
+
+void BorrarBloques(){
+	printf("Eligió Borrar los bloques que componen un archivo\n");
+}
+
+void CopiarBloques(){
+	printf("Eligió Copiar los bloques que componen un archivo\n");
+}
+
+void AgregarNodo(){
+	printf("Eligió Agregar un nodo de datos\n");
+}
+
+void EliminarNodo(){
+	printf("Eligió Eliminar un nodo de datos\n");
 }
