@@ -191,7 +191,6 @@ int main(int argc , char *argv[]){
 
 //Consola Menu
 void DibujarMenu(void){
-	void DibujarMenu(void){
 	  printf("################################################################\n");
 	  printf("# Ingrese una opción para continuar:                           #\n");
 	  printf("#  1) Formatear el MDFS                                        #\n");
@@ -212,7 +211,6 @@ void DibujarMenu(void){
 	  printf("# 16) Eliminar un nodo de datos                                #\n");
 	  printf("# 17) Salir                                                    #\n");
 	  printf("################################################################\n");
-	}
 }
 
 int Menu(void){
