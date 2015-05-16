@@ -308,27 +308,28 @@ void *connection_handler_escucha(void){
 	}
 }
 
-int BuscarArchivo (char nombreArchivo [FILENAME]){
-	t_archivo* ListaArchivos;
-	int pos = 0;
-	while (ListaArchivos->nombre != nombreArchivo){
-		ListaArchivos->siguiente;
-		pos++;
-		if (ListaArchivos->siguiente == NULL){
-			printf("No se encontró el archivo \n");
-			break;
-		}
-	}
-	return pos;
-}
+//int BuscarArchivo (char nombreArchivo [FILENAME]){
+//	t_archivo* ListaArchivos;
+//	int pos = 0;
+//	while (ListaArchivos->nombre != nombreArchivo){
+//		ListaArchivos->siguiente;
+//		pos++;
+//		if (ListaArchivos->siguiente == NULL){
+//			printf("No se encontró el archivo \n");
+//			break;
+//		}
+//	}
+//	return pos;
+//}
 
-int EliminarArchivo(){
-	char nombreArchivo [FILENAME];
-	printf ("Ingrese el nombre del archivo \n");
-	scanf ("%s", nombreArchivo);
-	int buscar = BuscarArchivo (nombreArchivo);
-	void list_remove_and_destroy_element(t_list *, buscar, void(*element_destroyer)(void*));
-	return 0;
+void EliminarArchivo(){
+	printf("Eligió  Eliminar archivo\n");
+//	char nombreArchivo [FILENAME];
+//	printf ("Ingrese el nombre del archivo \n");
+//	scanf ("%s", nombreArchivo);
+//	int buscar = BuscarArchivo (nombreArchivo);
+//	void list_remove_and_destroy_element(t_list *, buscar, void(*element_destroyer)(void*));
+//	return 0;
 }
 void FormatearFilesystem (){
 	printf("Eligió  Formatear el MDFS\n");
