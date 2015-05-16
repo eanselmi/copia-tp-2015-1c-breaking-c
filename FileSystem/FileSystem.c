@@ -23,6 +23,24 @@ int Menu();
 void DibujarMenu();
 void *connection_handler_escucha(); // Esta funcion escucha continuamente si recibo nuevos mensajes
 static t_nodo *agregar_nodo_a_lista(int socket,char *ip,int est,int bloques_lib);
+void FormatearFilesystem ();
+void EliminarArchivo();
+void RenombrarArchivo ();
+void MoverArchivo();
+void CrearDirectorio();
+void EliminarDirectorio();
+void RenombrarDirectorio();
+void MoverDirectorio();
+void CopiarArchivoAMDFS();
+void CopiarArchivoDelMDFS();
+void MD5DeArchivo();
+void VerBloques();
+void BorrarBloques();
+void CopiarBloques();
+void AgregarNodo();
+void EliminarNodo();
+
+
 
 
 fd_set master; // conjunto maestro de descriptores de fichero
@@ -207,22 +225,22 @@ int Menu(void){
 	    scanf ("%s", opchar);
 	    opcion = atoi (opchar);
 	    switch (opcion){
-	      case 1: void FormatearFilesystem (); break;
-	      case 2: int EliminarArchivo(); break;
-	      case 3: void RenombrarArchivo (); break;
-	      case 4: void MoverArchivo(); break;
-	      case 5: void CrearDirectorio(); break;
-	      case 6: void EliminarDirectorio(); break;
-	      case 7: void RenombrarDirectorio(); break;
-	      case 8: void MoverDirectorio(); break;
-	      case 9: void CopiarArchivoAMDFS(); break;
-	      case 10: void CopiarArchivoDelMDFS(); break;
-	      case 11: void MD5DeArchivo(); break;
-	      case 12: void VerBloques(); break;
-	      case 13: void BorrarBloques(); break;
-	      case 14: void CopiarBloques(); break;
-	      case 15: void AgregarNodo(); break;
-	      case 16: void EliminarNodo(); break;
+	      case 1: FormatearFilesystem (); break;
+	      case 2: EliminarArchivo(); break;
+	      case 3: RenombrarArchivo (); break;
+	      case 4: MoverArchivo(); break;
+	      case 5: CrearDirectorio(); break;
+	      case 6:  EliminarDirectorio(); break;
+	      case 7: RenombrarDirectorio(); break;
+	      case 8:  MoverDirectorio(); break;
+	      case 9:  CopiarArchivoAMDFS(); break;
+	      case 10: CopiarArchivoDelMDFS(); break;
+	      case 11: MD5DeArchivo(); break;
+	      case 12: VerBloques(); break;
+	      case 13: BorrarBloques(); break;
+	      case 14: CopiarBloques(); break;
+	      case 15: AgregarNodo(); break;
+	      case 16: EliminarNodo(); break;
 	      case 17: printf("Eligió Salir\n"); break;
 	      default: printf("Opción incorrecta. Por favor ingrese una opción del 1 al 17\n");break;
 		}
