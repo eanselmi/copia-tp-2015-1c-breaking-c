@@ -18,35 +18,37 @@
 #define BLOCK_SIZE 20971520
 #define MENSAJE_SIZE 4096
 
-//Declaración de Funciones
+//Prototipos de Funciones
 int Menu();
 void DibujarMenu();
 void *connection_handler_escucha(); // Esta funcion escucha continuamente si recibo nuevos mensajes
-static t_nodo *agregar_nodo_a_lista(int socket,char *ip,int est,int bloques_lib);
-void FormatearFilesystem ();
-void EliminarArchivo();
-void RenombrarArchivo ();
-void MoverArchivo();
-void CrearDirectorio();
-void EliminarDirectorio();
-void RenombrarDirectorio();
-void MoverDirectorio();
-void CopiarArchivoAMDFS();
-void CopiarArchivoDelMDFS();
-void MD5DeArchivo();
-void VerBloques();
-void BorrarBloques();
-void CopiarBloques();
-void AgregarNodo();
-void EliminarNodo();
-
-
-
+static t_nodo *agregar_nodo_a_lista(int socket,char *nodo_id,int est,char *ip, int port, int bloques_lib, int bloques_tot);
+char *asignar_nombre_a_nodo();
+void modificar_estado_nodo (int socket,char *ip,int port,int estado);
+void formatear_nodos(void);
+void FormatearFilesystem ();		//TODAVIA NO DESARROLLADA
+void EliminarArchivo();				//TODAVIA NO DESARROLLADA
+void RenombrarArchivo ();			//TODAVIA NO DESARROLLADA
+void MoverArchivo();				//TODAVIA NO DESARROLLADA
+void CrearDirectorio();				//TODAVIA NO DESARROLLADA
+void EliminarDirectorio();			//TODAVIA NO DESARROLLADA
+void RenombrarDirectorio();			//TODAVIA NO DESARROLLADA
+void MoverDirectorio();				//TODAVIA NO DESARROLLADA
+void CopiarArchivoAMDFS();			//TODAVIA NO DESARROLLADA
+void CopiarArchivoDelMDFS();		//TODAVIA NO DESARROLLADA
+void MD5DeArchivo();				//TODAVIA NO DESARROLLADA
+void VerBloques();					//TODAVIA NO DESARROLLADA
+void BorrarBloques();				//TODAVIA NO DESARROLLADA
+void CopiarBloques();				//TODAVIA NO DESARROLLADA
+void AgregarNodo();					//TODAVIA NO DESARROLLADA
+void EliminarNodo();  				//TODAVIA NO DESARROLLADA
 
 fd_set master; // conjunto maestro de descriptores de fichero
 fd_set read_fds; // conjunto temporal de descriptores de fichero para select()
 t_log* logger;
 t_list *nodos; //lista de nodos conectados al fs
+t_list* archivos; //lista de archivos del FS
+t_config * configurador;
 int fdmax; // número máximo de descriptores de fichero
 int listener; // descriptor de socket a la escucha
 int marta_sock; //Socket exclusivo para marta
@@ -54,22 +56,19 @@ struct sockaddr_in filesystem; // dirección del servidor
 struct sockaddr_in remote_client; // dirección del cliente
 char identificacion[BUF_SIZE]; // buffer para datos del cliente
 char mensaje[MENSAJE_SIZE];
-
+int cantidad_nodos=0;
+int cantidad_nodos_historico=0;
+int read_size;
 
 int main(int argc , char *argv[]){
-	t_config * configurador;
+
 	pthread_t escucha; //Hilo que va a manejar los mensajes recibidos
-	t_list* archivos; //lista de archivos del FS
 	int newfd;
 	int addrlen;
 	int yes=1; // para setsockopt() SO_REUSEADDR, más abajo
-	int read_size;
-	int nodos_iniciales=0;
 	configurador= config_create("resources/fsConfig.conf"); //se asigna el archivo de configuración especificado en la ruta
 	FD_ZERO(&master); // borra los conjuntos maestro y temporal
 	FD_ZERO(&read_fds);
-
-	//....................................................................................
 
 	if ((listener = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
 		perror("socket");
@@ -106,7 +105,7 @@ int main(int argc , char *argv[]){
 	addrlen = sizeof(struct sockaddr_in);
 	nodos=list_create(); //Crea la lista de que va a manejar la lista de nodos
 	printf ("Esperando las conexiones de los nodos iniciales\n");
-	while (nodos_iniciales != config_get_int_value(configurador,"CANTIDAD_NODOS")){
+	while (cantidad_nodos != config_get_int_value(configurador,"CANTIDAD_NODOS")){
 		if ((newfd = accept(listener, (struct sockaddr*)&remote_client, (socklen_t*)&addrlen)) == -1) {
 			perror ("accept");
 			log_info(logger,"FALLO el ACCEPT");
@@ -118,10 +117,11 @@ int main(int argc , char *argv[]){
 			exit (-1);
 		}
 		if (read_size > 0 && strncmp(identificacion,"nuevo",5)==0){
-			nodos_iniciales++;
+			cantidad_nodos++;
+			cantidad_nodos_historico=cantidad_nodos;
 			FD_SET(newfd, &master);
 			fdmax = newfd;
-			list_add (nodos, agregar_nodo_a_lista(newfd,inet_ntoa(remote_client.sin_addr),1,50));
+			list_add (nodos, agregar_nodo_a_lista(newfd,asignar_nombre_a_nodo(),0,inet_ntoa(remote_client.sin_addr),remote_client.sin_port,50,50));
 			printf ("Se conecto el nodo %s\n",inet_ntoa(remote_client.sin_addr));
 		}
 		else{
@@ -140,50 +140,7 @@ int main(int argc , char *argv[]){
 	       perror("could not create thread");
 	       return 1;
 	}
-
-	//................................................................................
-
 	archivos=list_create(); //Crea la lista de archivos
-
-	/*Desarrollo de un ejemplo para la estructura del fs*/
-	t_archivo* archivoDeEjemplo;
-	archivoDeEjemplo=malloc(sizeof(t_archivo));
-	strcpy(archivoDeEjemplo->nombre,"ArchEjemplo14032015.txt");
-	archivoDeEjemplo->padre=0; //sería un archivo en la raíz ("/")
-	archivoDeEjemplo->tamanio=41943040; //40 MB --> 2 Bloques
-	archivoDeEjemplo->bloques=list_create();
-	archivoDeEjemplo->estado=1; //asumiendo que estado 1 sería disponible
-	//Creo el bloqueUno y asigno el nodo y bloque del nodo de cada copia
-	t_bloque* bloqueUno;
-	bloqueUno=malloc(sizeof(t_bloque));
-	strcpy(bloqueUno->copias[0].nodo,"NodoA");
-	bloqueUno->copias[0].bloqueNodo=30;
-	strcpy(bloqueUno->copias[1].nodo,"NodoF");
-	bloqueUno->copias[1].bloqueNodo=12;
-	strcpy(bloqueUno->copias[2].nodo,"NodoU");
-	bloqueUno->copias[2].bloqueNodo=20;
-	//Creo el bloqueDos y asigno el nodo y bloque del nodo de cada copia
-	t_bloque* bloqueDos;
-	bloqueDos=malloc(sizeof(t_bloque));
-	strcpy(bloqueDos->copias[0].nodo,"NodoC");
-	bloqueDos->copias[0].bloqueNodo=3;
-	strcpy(bloqueDos->copias[1].nodo,"NodoD");
-	bloqueDos->copias[1].bloqueNodo=34;
-	strcpy(bloqueDos->copias[2].nodo,"NodoA");
-	bloqueDos->copias[2].bloqueNodo=50;
-
-	list_add(archivoDeEjemplo->bloques,bloqueUno); //Mediante las commons, agrego el bloqueUno a la lista de bloques
-	list_add(archivoDeEjemplo->bloques,bloqueDos); //Mediante las commons, agrego el bloqueUno a la lista de bloques
-	list_add(archivos,archivoDeEjemplo); //Mediante las commons agrego a la lista de archivos del FS el archivoDeEjemplo
-
-	printf("En la lista de archivos hay: %d archivos\n",list_size(archivos));
-	t_archivo* primerArchivoDeLaListaDeArchivos	= list_get(archivos,0);
-	printf("El nombre del primer archivo es: %s\n",primerArchivoDeLaListaDeArchivos->nombre);
-	printf("En el %s hay: %d bloques\n",primerArchivoDeLaListaDeArchivos->nombre,list_size(primerArchivoDeLaListaDeArchivos->bloques));
-	t_bloque* bloqueUnoDeArchivoUno=list_get(primerArchivoDeLaListaDeArchivos->bloques,0);
-	printf("El primer bloque del %s, tiene su copia numero 2 en el %s bloque %d\n",primerArchivoDeLaListaDeArchivos->nombre,bloqueUnoDeArchivoUno->copias[1].nodo,bloqueUnoDeArchivoUno->copias[1].bloqueNodo);
-	/*Fin del ejemplo de la estructura del FS*/
-
 	Menu();
 	log_destroy(logger);
 	return 0;
@@ -245,12 +202,15 @@ int Menu(void){
 	}
 	return 0;
 }
-static t_nodo *agregar_nodo_a_lista(int socket,char *ip,int est,int bloques_lib){
+static t_nodo *agregar_nodo_a_lista(int socket,char *nodo_id,int est,char *ip, int port, int bloques_lib, int bloques_tot){
 	t_nodo *nodo_temporal = malloc (sizeof(t_nodo));
 	nodo_temporal->socket = socket;
-	nodo_temporal->ip = strdup(ip);
+	nodo_temporal->nodo_id = strdup(ip);
 	nodo_temporal->estado = est;
+	nodo_temporal->ip = strdup (ip);
+	nodo_temporal->puerto = port;
 	nodo_temporal->bloques_libres = bloques_lib;
+	nodo_temporal->bloques_totales = bloques_tot;
 	return nodo_temporal;
 }
 
@@ -287,9 +247,24 @@ void *connection_handler_escucha(void){
 								exit(-1);
 							}
 						} else {
-							// el nuevo conectado me manda algo, se identifica como nodo o como marta
-							// luego de que se identifique lo agregare a la lista de nodos si es nodo
-							// si es marta solo lo acepto y guardo las variables necesarias para despues conectar a marta
+							// el nuevo conectado me manda algo, se identifica como nodo nuevo o nodo reconectado
+							// luego de que se identifique lo agregare a la lista de nodos si es nodo nuevo
+							// si es nodo reconectado hay que cambiarle el estado
+							if (read_size > 0 && strncmp(identificacion,"nuevo",5)==0){
+								cantidad_nodos++;
+								cantidad_nodos_historico=cantidad_nodos;
+								FD_SET(newfd, &master);
+								fdmax = newfd;
+								list_add (nodos, agregar_nodo_a_lista(newfd,asignar_nombre_a_nodo(),0,inet_ntoa(remote_client.sin_addr),remote_client.sin_port,50,50));
+								printf ("Se conecto el nodo %s\n",inet_ntoa(remote_client.sin_addr));
+							}
+							if (read_size > 0 && strncmp(identificacion,"reconectado",11)==0){
+								cantidad_nodos++;
+								FD_SET(newfd, &master);
+								fdmax = newfd;
+								modificar_estado_nodo (i,inet_ntoa(remote_client.sin_addr),remote_client.sin_port,1); //cambio su estado de la lista a 1 que es activo
+								printf ("Se conecto el nodo %s\n",inet_ntoa(remote_client.sin_addr));
+							}
 						}
 					}
 					printf("select: conexion desde %s en socket %d\n", inet_ntoa(remote_client.sin_addr),newfd);
@@ -303,9 +278,10 @@ void *connection_handler_escucha(void){
 					// gestionar datos de un cliente
 					if ((nbytes = recv(i, mensaje, sizeof(mensaje), 0)) <= 0) { //si entra aca es porque se desconecto o hubo un error
 						if (nbytes == 0) {
-							// conexión cerrada, ver quien fue y si fue un nodo, anular al nodo de la lista
+							// Un nodo cerro su conexion, actualizo la lista de nodos
 							//............................
 							//............................
+							modificar_estado_nodo (i,NULL,-1,0);
 
 						} else {
 							perror("recv");
@@ -322,6 +298,35 @@ void *connection_handler_escucha(void){
 			}
 		}
 	}
+}
+
+char *asignar_nombre_a_nodo(void){
+	char *nombre_temporal;
+	char *numero_nodo = malloc (1);
+	sprintf(numero_nodo,"%d",cantidad_nodos_historico);
+	nombre_temporal=malloc(4+strlen(numero_nodo));
+	strcat(nombre_temporal,"nodo");
+	strcat(nombre_temporal,numero_nodo);
+	return nombre_temporal;
+}
+
+void modificar_estado_nodo (int socket,char *ip,int port,int estado){
+	int i;
+	t_nodo *tmp;
+	for (i=0;i<list_size(nodos);i++){
+		tmp = list_get(nodos,i);
+		if ((ip==NULL && port==-1) && tmp->socket==socket)
+			tmp->estado=estado;
+		else if ((strcmp(tmp->ip,ip)==1) && tmp->puerto==port){
+			tmp->estado=estado;
+			tmp->socket=socket;
+		}
+	}
+}
+void formatear_nodos(){
+	int i;
+	for (i=0;i<list_size(nodos);i++)
+		list_remove(nodos,i);
 }
 
 //int BuscarArchivo (char nombreArchivo [FILENAME]){
