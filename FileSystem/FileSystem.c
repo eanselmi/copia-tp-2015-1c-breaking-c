@@ -158,6 +158,7 @@ int main(int argc , char *argv[]){
 	}
 
 	archivos=list_create(); //Crea la lista de archivos
+	directorios=list_create(); //crea la lista de directorios
 	Menu();
 	log_destroy(logger);
 	return 0;
@@ -386,26 +387,32 @@ void *connection_handler_escucha(void){
 
 //Buscar el id del padre
 uint32_t BuscarPadre (char* path){
-    t_dir* dir;
-    t_dir* dirSiguiente;
-    t_list*listaDir;
-    int i, j,k=0, idPadre;
+	t_dir* dir;
+	int directorioPadre=0; //seteo a raíz
+	int tamanio=list_size(directorios);
+	int contadorDirectorio=0;
+	int i;
     char** directorio = string_split((char*) path, "/"); //Devuelve un array del path
     //Obtener id del padre del archivo(ante-ultima posición antes de NULL)
-    for(i=0; directorio[i+2]==NULL;i++){	//Recorrer array del path
-    	for(j=0;listaDir==NULL;j++){					//Recorrer lista de directorios
-    		dir = list_get(listaDir,j);
-    		if(strcmp(dir->nombre,directorio[i])){
-    			for(k=0;listaDir==NULL;k++){			//Recorrer lista de directorios para buscar el nodo siguiente
-    				dirSiguiente = list_get(listaDir,k);
-    				if (dir->id == dirSiguiente->padre){
-    					idPadre = dir->id;
-    				}
-    			}
-    		}
-     	}
-     }
-    return idPadre;
+   	while(directorio[contadorDirectorio+1]!=NULL){
+    	for(i=0;i<tamanio;i++){ //recorro lista de directorios
+    		dir=list_get(directorios,i); //agarro primer directorio de la lista de directorios
+    		//comparo si el nombre es igual al string del array del path y el padre es igual al padre anterior
+        	if(((strcmp(dir->nombre,directorio[contadorDirectorio]))==0)&&(dir->padre==directorioPadre)){
+        		directorioPadre=dir->id;
+        		contadorDirectorio++;
+        		break;
+        	}
+        	else{
+        		if(i==tamanio-1){
+        		printf("No se encontró el directorio");
+        		directorioPadre=-1;
+        		exit(-1);
+        		}
+        	}
+  		}
+   	}
+    return directorioPadre;
 }
 
 
