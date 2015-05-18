@@ -2,17 +2,18 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <unistd.h>
-#include <commons/log.h>
-#include <commons/config.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <commons/collections/list.h>
-#include "FS_MDFS.h"
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <string.h>
 #include <pthread.h>
+#include "FS_MDFS.h"
+#include <commons/log.h>
+#include <commons/config.h>
+#include <commons/collections/list.h>
+#include <commons/string.h>
 
 #define BUF_SIZE 50
 #define BLOCK_SIZE 20971520
@@ -304,18 +305,32 @@ void *connection_handler_escucha(void){
 
 //Buscar el id del padre
 uint32_t BuscarPadre (char* path){
-//    t_dir directorio;
-//    t_list listaDir;
-
-
-return 0;
+    t_dir* dir;
+    t_dir* dirSiguiente;
+    t_list*listaDir;
+    int i, j,k=0, idPadre;
+    char** directorio = string_split((char*) path, "/"); //Devuelve un array del path
+    //Obtener id del padre del archivo(ante-ultima posición antes de NULL)
+    for(i=0; directorio[i+2]==NULL;i++){	//Recorrer array del path
+    	for(j=0;listaDir==NULL;j++){					//Recorrer lista de directorios
+    		dir = list_get(listaDir,j);
+    		if(strcmp(dir->nombre,directorio[i])){
+    			for(k=0;listaDir==NULL;k++){			//Recorrer lista de directorios para buscar el nodo siguiente
+    				dirSiguiente = list_get(listaDir,k);
+    				if (dir->id == dirSiguiente->padre){
+    					idPadre = dir->id;
+    				}
+    			}
+    		}
+     	}
+     }
+    return idPadre;
 }
 
 
 //Buscar la posición del nodo de un archivo de la lista t_archivo por el nombre del archivo y el id del padre
-uint32_t BuscarArchivoPorNombre (const char *path, uint32_t padre){
+uint32_t BuscarArchivoPorNombre (const char *path, uint32_t idPadre){
     t_archivo* arch;
-    t_list* archivos;
     int i;
     char* nombreArchivo;
     int posArchivo = 0;
@@ -324,12 +339,12 @@ uint32_t BuscarArchivoPorNombre (const char *path, uint32_t padre){
     //Obtener solo el nombre del archivo(ultima posición antes de NULL)
     for(i=0; directorio[i+1]==NULL;i++){
     	if(directorio[i+1]==NULL){
-    		nombreArchivo=directorio[i+1];
+    		nombreArchivo=directorio[i];
     	}
     }
     for(i=0; i<tam;i++){
         arch = list_get(archivos,posArchivo);
-        if (strcmp(arch->nombre,nombreArchivo)&(arch->padre == padre)){
+        if (strcmp(arch->nombre,nombreArchivo)&(arch->padre == idPadre)){
             return posArchivo;
             break;
         }
@@ -373,18 +388,16 @@ void FormatearFilesystem (){
 void EliminarArchivo(){
     printf("Eligió  Eliminar archivo\n");
 //    char* path;
-//    t_list listaArchivos;
-//    t_list listaBloques;
-//    t_bloque bloque;
+//    t_bloque* bloque;
+//    t_archivo arch;
 //    printf ("Ingrese el path del archivo \n");
 //    scanf ("%s", path);
-//     uint32_t idPadre = BuscarPadre(path);
+//    uint32_t idPadre = BuscarPadre(path);
 //    uint32_t posArchivo = BuscarArchivoPorNombre (path,idPadre);
-//    t_archivo archivo = list_get(listaArchivos,posArchivo);
-//    listaBloques= archivo.bloques;
+//    arch = list_get(archivos,posArchivo);
 //    //Eliminar bloques del archivo
-//    while(listaBloques!=NULL){
-//        list_destroy_and_destroy_elements(listaBloques, void(bloque)(void*));
+//    while(arch.bloques!=NULL){
+//        list_destroy_and_destroy_elements(arch.bloques, void(*lbloque)(void*));
 //    }
 //    //Elimnar nodo del archivo t_arhivo
 //    list_remove_and_destroy_element(listaArchivos, posArchivo, void(archivo)(void*));
@@ -392,6 +405,19 @@ void EliminarArchivo(){
 
 void RenombrarArchivo (){
 	printf("Eligió Renombrar archivos\n");
+//    char* path;
+//    char nuevoNombre[FILENAME];
+//    t_bloque* bloque;
+//    t_archivo arch;
+//    printf ("Ingrese el path del archivo \n");
+//    scanf ("%s", path);
+//    uint32_t idPadre = BuscarPadre(path);
+//    uint32_t posArchivo = BuscarArchivoPorNombre (path,idPadre);
+//    arch = list_get(archivos,posArchivo);
+//    printf ("Ingrese el nuevo nombre \n");
+//    scanf ("%s", nuevoNombre);
+//    arch.nombre = nuevoNombre;
+
 }
 
 void MoverArchivo(){
