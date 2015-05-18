@@ -1,10 +1,7 @@
-#include <commons/collections/list.h>
-#define FILENAME 50
-
 //se creara una lista de archivos, que contendra elementos del tipo "t_archivo"
 
 typedef struct estructura_filesystem {
-	char nombre[FILENAME];
+	char* nombre;
 	uint32_t padre;
 	uint32_t tamanio;
 	uint32_t estado;
@@ -12,7 +9,7 @@ typedef struct estructura_filesystem {
 } t_archivo;
 
 typedef struct estructura_copia {
-	char nodo[80];
+	char* nodo;
 	int bloqueNodo;
 } t_copias;
 
@@ -32,7 +29,7 @@ typedef struct estructura_manejo_nodos {
 
 typedef struct estructura_directorio{
 	int id;
-	char* nombre[FILENAME];
+	char* nombre;
 	int padre;
 }t_dir;
 

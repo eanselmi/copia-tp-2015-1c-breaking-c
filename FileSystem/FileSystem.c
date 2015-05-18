@@ -9,10 +9,10 @@
 #include <unistd.h>
 #include <string.h>
 #include <pthread.h>
+#include <commons/collections/list.h>
 #include "FS_MDFS.h"
 #include <commons/log.h>
 #include <commons/config.h>
-#include <commons/collections/list.h>
 #include <commons/string.h>
 
 #define BUF_SIZE 50
@@ -51,6 +51,7 @@ fd_set read_fds; // conjunto temporal de descriptores de fichero para select()
 t_log* logger;
 t_list *nodos; //lista de nodos conectados al fs
 t_list* archivos; //lista de archivos del FS
+t_list* directorios; //lista de directorios del FS
 t_config * configurador;
 int fdmax; // número máximo de descriptores de fichero
 int listener; // descriptor de socket a la escucha
@@ -335,20 +336,21 @@ uint32_t BuscarPadre (char* path){
 //Buscar la posición del nodo de un archivo de la lista t_archivo por el nombre del archivo y el id del padre
 uint32_t BuscarArchivoPorNombre (const char *path, uint32_t idPadre){
     t_archivo* arch;
+    arch=malloc(sizeof(t_archivo));
     int i;
     char* nombreArchivo;
     int posArchivo = 0;
     int tam = list_size(archivos);
     char** directorio = string_split((char*) path, "/"); //Devuelve un array del path
     //Obtener solo el nombre del archivo(ultima posición antes de NULL)
-    for(i=0; directorio[i+1]==NULL;i++){
+    for(i=0; directorio[i]!=NULL;i++){
     	if(directorio[i+1]==NULL){
     		nombreArchivo=directorio[i];
     	}
     }
-    for(i=0; i<tam;i++){
+    for(posArchivo=0; posArchivo<tam;posArchivo++){
         arch = list_get(archivos,posArchivo);
-        if (strcmp(arch->nombre,nombreArchivo)&(arch->padre == idPadre)){
+        if ((strcmp(arch->nombre,nombreArchivo)==0)&&(arch->padre == idPadre)){
             return posArchivo;
             break;
         }
