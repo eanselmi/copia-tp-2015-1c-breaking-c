@@ -42,6 +42,8 @@ void BorrarBloques();				//TODAVIA NO DESARROLLADA
 void CopiarBloques();				//TODAVIA NO DESARROLLADA
 void AgregarNodo();					//TODAVIA NO DESARROLLADA
 void EliminarNodo();  				//TODAVIA NO DESARROLLADA
+uint32_t BuscarArchivoPorNombre ();    //DESARROLLADA
+uint32_t BuscarPadre ();            //TODAVIA NO DESARROLLADA
 
 fd_set master; // conjunto maestro de descriptores de fichero
 fd_set read_fds; // conjunto temporal de descriptores de fichero para select()
@@ -300,6 +302,33 @@ void *connection_handler_escucha(void){
 	}
 }
 
+//Buscar el id del padre
+uint32_t BuscarPadre (char* path){
+//    t_dir directorio;
+//    t_list listaDir;
+
+
+return 0;
+}
+
+
+//Buscar la posición del nodo de un archivo de la lista t_archivo por el nombre del archivo y el id del padre
+uint32_t BuscarArchivoPorNombre (const char *path, uint32_t padre){
+    t_archivo* archivo;
+    t_list* listaArchivos;
+    char** nombreArchivo = string_split((char*) path, "/");
+    int posArchivo = 0;
+    int tam = list_size(listaArchivos);
+    int i;
+    for(i=0; i<tam;i++){
+        archivo = list_get(listaArchivos,posArchivo);
+        if (strcmp(archivo->nombre,nombreArchivo)&(archivo->padre == padre)){
+            return posArchivo;
+            break;
+        }
+    }
+}
+
 char *asignar_nombre_a_nodo(void){
 	char *nombre_temporal;
 	char *numero_nodo = malloc (1);
@@ -329,31 +358,29 @@ void formatear_nodos(){
 		list_remove(nodos,i);
 }
 
-//int BuscarArchivo (char nombreArchivo [FILENAME]){
-//	t_archivo* ListaArchivos;
-//	int pos = 0;
-//	while (ListaArchivos->nombre != nombreArchivo){
-//		ListaArchivos->siguiente;
-//		pos++;
-//		if (ListaArchivos->siguiente == NULL){
-//			printf("No se encontró el archivo \n");
-//			break;
-//		}
-//	}
-//	return pos;
-//}
 
-void EliminarArchivo(){
-	printf("Eligió  Eliminar archivo\n");
-//	char nombreArchivo [FILENAME];
-//	printf ("Ingrese el nombre del archivo \n");
-//	scanf ("%s", nombreArchivo);
-//	int buscar = BuscarArchivo (nombreArchivo);
-//	void list_remove_and_destroy_element(t_list *, buscar, void(*element_destroyer)(void*));
-//	return 0;
-}
 void FormatearFilesystem (){
 	printf("Eligió  Formatear el MDFS\n");
+}
+
+void EliminarArchivo(){
+    printf("Eligió  Eliminar archivo\n");
+//    char* path;
+//    t_list listaArchivos;
+//    t_list listaBloques;
+//    t_bloque bloque;
+//    printf ("Ingrese el path del archivo \n");
+//    scanf ("%s", path);
+//     uint32_t idPadre = BuscarPadre(path);
+//    uint32_t posArchivo = BuscarArchivoPorNombre (path,idPadre);
+//    t_archivo archivo = list_get(listaArchivos,posArchivo);
+//    listaBloques= archivo.bloques;
+//    //Eliminar bloques del archivo
+//    while(listaBloques!=NULL){
+//        list_destroy_and_destroy_elements(listaBloques, void(bloque)(void*));
+//    }
+//    //Elimnar nodo del archivo t_arhivo
+//    list_remove_and_destroy_element(listaArchivos, posArchivo, void(archivo)(void*));
 }
 
 void RenombrarArchivo (){

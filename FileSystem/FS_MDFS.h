@@ -29,4 +29,10 @@ typedef struct estructura_manejo_nodos {
 	int bloques_totales;
 } t_nodo;
 
+typedef struct estructura_directorio{
+	int id;
+	char* nombre[FILENAME];
+	int padre;
+}t_dir;
+
 
