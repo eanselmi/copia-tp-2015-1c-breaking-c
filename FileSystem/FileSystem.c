@@ -314,15 +314,22 @@ return 0;
 
 //Buscar la posición del nodo de un archivo de la lista t_archivo por el nombre del archivo y el id del padre
 uint32_t BuscarArchivoPorNombre (const char *path, uint32_t padre){
-    t_archivo* archivo;
-    t_list* listaArchivos;
-    char** nombreArchivo = string_split((char*) path, "/");
-    int posArchivo = 0;
-    int tam = list_size(listaArchivos);
+    t_archivo* arch;
+    t_list* archivos;
     int i;
+    char* nombreArchivo;
+    int posArchivo = 0;
+    int tam = list_size(archivos);
+    char** directorio = string_split((char*) path, "/"); //Devuelve un array del path
+    //Obtener solo el nombre del archivo(ultima posición antes de NULL)
+    for(i=0; directorio[i+1]==NULL;i++){
+    	if(directorio[i+1]==NULL){
+    		nombreArchivo=directorio[i+1];
+    	}
+    }
     for(i=0; i<tam;i++){
-        archivo = list_get(listaArchivos,posArchivo);
-        if (strcmp(archivo->nombre,nombreArchivo)&(archivo->padre == padre)){
+        arch = list_get(archivos,posArchivo);
+        if (strcmp(arch->nombre,nombreArchivo)&(arch->padre == padre)){
             return posArchivo;
             break;
         }
