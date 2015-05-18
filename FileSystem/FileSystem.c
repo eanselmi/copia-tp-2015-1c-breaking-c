@@ -23,6 +23,7 @@
 int Menu();
 void DibujarMenu();
 void *connection_handler_escucha(); // Esta funcion escucha continuamente si recibo nuevos mensajes
+void *connection_handler_marta(); // Esta funcion maneja la conexion con marta
 static t_nodo *agregar_nodo_a_lista(int socket,char *nodo_id,int est,char *ip, int port, int bloques_lib, int bloques_tot);
 char *asignar_nombre_a_nodo();
 void modificar_estado_nodo (int socket,char *ip,int port,int estado);
@@ -55,7 +56,6 @@ t_list* directorios; //lista de directorios del FS
 t_config * configurador;
 int fdmax; // número máximo de descriptores de fichero
 int listener; // descriptor de socket a la escucha
-int marta_sock; //Socket exclusivo para marta
 struct sockaddr_in filesystem; // dirección del servidor
 struct sockaddr_in remote_client; // dirección del cliente
 char identificacion[BUF_SIZE]; // buffer para datos del cliente
@@ -68,6 +68,7 @@ int *bloquesTotales; //tendra la cantidad de bloques totales del file de datos
 int main(int argc , char *argv[]){
 
 	pthread_t escucha; //Hilo que va a manejar los mensajes recibidos
+	pthread_t marta; //Hilo que va a manejar la comunicacion exclusiva con el proceso marta
 	int newfd;
 	int addrlen;
 	int yes=1; // para setsockopt() SO_REUSEADDR, más abajo
@@ -144,11 +145,18 @@ int main(int argc , char *argv[]){
 	sleep(5);
 	//Cuando sale de este ciclo el proceso FileSystem ya se encuentra en condiciones de iniciar sus tareas
 
-	//Este hilo va a manejar las conexiones de forma paralela a la ejecucion del proceso
+	//Este hilo va a manejar las conexiones con los nodos de forma paralela a la ejecucion del proceso
 	if( pthread_create( &escucha , NULL ,  connection_handler_escucha , NULL) < 0){
 	       perror("could not create thread");
 	       return 1;
 	}
+
+	//Este hilo va a manejar la conexion con el proceso marta
+	if( pthread_create( &marta , NULL ,  connection_handler_marta , NULL) < 0){
+	    perror("could not create thread");
+	    return 1;
+	}
+
 	archivos=list_create(); //Crea la lista de archivos
 	Menu();
 	log_destroy(logger);
@@ -221,6 +229,63 @@ static t_nodo *agregar_nodo_a_lista(int socket,char *nodo_id,int est,char *ip, i
 	nodo_temporal->bloques_libres = bloques_lib;
 	nodo_temporal->bloques_totales = bloques_tot;
 	return nodo_temporal;
+}
+
+void *connection_handler_marta(void){
+	int listener_marta; // descriptor de socket a la escucha solo del proceso marta
+	int marta_sock; //Socket exclusivo para marta
+	struct sockaddr_in marta; // dirección de marta
+	int addrlen,yes=1;
+	int read_size;
+	char mensaje_de_marta [100];
+
+	if ((listener_marta = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
+		perror("socket");
+		log_info(logger,"FALLO la creacion del socket");
+		exit(-1);
+	}
+	// obviar el mensaje "address already in use" (la dirección ya se está usando)
+	if (setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, &yes,sizeof(int)) == -1) {
+		perror("setsockopt");
+		log_info(logger,"FALLO la ejecucion del setsockopt");
+		exit(-1);
+	}
+	// enlazar
+	marta.sin_family = AF_INET;
+	marta.sin_addr.s_addr = INADDR_ANY;
+	marta.sin_port = htons(config_get_int_value(configurador,"PUERTO_LISTEN"));
+	memset(&(marta.sin_zero), '\0', 8);
+	if (bind(listener_marta, (struct sockaddr *)&marta, sizeof(marta)) == -1) {
+		perror("bind");
+		log_info(logger,"FALLO el Bind");
+		exit(-1);
+	}
+	// escuchar
+	if (listen(listener_marta, 10) == -1) {
+		perror("listen");
+		log_info(logger,"FALLO el Listen");
+		exit(1);
+	}
+	addrlen = sizeof(struct sockaddr_in);
+	if ((marta_sock = accept(listener_marta, (struct sockaddr*)&marta, (socklen_t*)&addrlen)) == -1) {
+		perror ("accept");
+		log_info(logger,"FALLO el ACCEPT");
+		exit (-1);
+	}
+	while((read_size = recv(marta_sock,mensaje_de_marta,100,0)) > 0 ){ //esto esta a definir conficionado por marta
+	// lo que sea que vaya a hacer marta
+
+	}
+	if(read_size == 0)
+	{
+	    puts("El Server se desconecto");
+	    fflush(stdout);
+	}
+	else if(read_size == -1){
+	     perror("recv failed");
+	}
+	close(marta_sock);
+	return 0;
 }
 
 void *connection_handler_escucha(void){
