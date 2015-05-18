@@ -10,7 +10,7 @@
 #include <string.h>
 #include <commons/string.h>
 
-#define BLOCK_SIZE 20971520 //block size 10 bytes para hacer las pruebas, luego será 20971520
+#define BLOCK_SIZE 20971520 //block size 20MB
 #define BUF_SIZE 50
 
 //Declaración de funciones
@@ -25,17 +25,20 @@ char* fileDeDatos;
 unsigned int sizeFileDatos;
 
 int main(int argc , char *argv[]){
-	configurador= config_create("resources/nodoConfig.conf"); //se asigna el archivo de configuración especificado en la ruta
-	logger = log_create("./nodoLog.log", "Nodo", true, LOG_LEVEL_INFO);
 
 	//-------------------------- Cuerpo ppal del programa ---------------------------------------
+	configurador= config_create("resources/nodoConfig.conf"); //se asigna el archivo de configuración especificado en la ruta
+	logger = log_create("./nodoLog.log", "Nodo", true, LOG_LEVEL_INFO);
+	fileDeDatos=mapearFileDeDatos();//La siguiente función va a mapear el archivo de datos que esta especificado en el archivo conf a memoria, y asignarle al puntero fileDeDatos la direccion donde arranca el file. Utilizando mmap()
 
 	//------------ Variables locales a la funcion main --------------------
 	int sockfd;
 	unsigned char identificacion[BUF_SIZE]; //para el mensaje que envie al conectarse para identificarse, puede cambiar
+	unsigned int bloquesTotales; //tendra la cantidad de bloques totales del file de datos
 	struct sockaddr_in filesystem;
 	memset(&filesystem, 0, sizeof(filesystem));
-	//---------------------------------------------------------------------
+
+	bloquesTotales=sizeFileDatos/20971520;
 
 	//Estructura para conexion con FS
 	filesystem.sin_family = AF_INET;
@@ -57,16 +60,23 @@ int main(int argc , char *argv[]){
 	// aca revisaria si el nodo es nuevo o si es un nodo que se esta reconectando y dependiendo el caso, envia un mensaje y otro
 
 	if (string_equals_ignore_case(config_get_string_value(configurador,"NODO_NUEVO"),"SI")){ //verifica si el nodo es nuevo
+			//envio mensaje de identificación
 			strcpy(identificacion,"nuevo");
 			if((send(sockfd,identificacion,sizeof(identificacion),0))==-1) {
 					perror("send");
 					log_error(logger,"FALLO el envio del saludo al FS");
 					exit(-1);
 			}
+			//envio cantidad de bloques totales
+			if((send(sockfd,bloquesTotales,sizeof(int),0))==-1){
+				perror("send");
+				log_error(logger,"FALLO el envío de la cantidad de bloques totales al FS");
+				exit(-1);
+			}
 			//aca se debería modificar el valor del archivo de configuracion a NO ... ¿como? mail a Dios
 		}
 		else {
-			//si el if da da falso por nodo existente que se esta reconectando
+			//si el if da falso por nodo existente que se esta reconectando
 			strcpy(identificacion,"reconectado");
 			if((send(sockfd,identificacion,sizeof(identificacion),0))==-1) {
 					perror("send");
@@ -75,18 +85,11 @@ int main(int argc , char *argv[]){
 			}
 		}
 
-	/*
-	 *La siguiente función va a mapear el archivo de datos que esta especificado en el archivo conf
-	 * a memoria, y asignarle al puntero fileDeDatos la direccion donde arranca el file. Utilizando mmap()
-	 */
-
-	fileDeDatos=mapearFileDeDatos();
-
 	/*Generacion de datos para probar el funcionamiento de la funcion setBloque*/
 		char* datosAEscribir;
 		datosAEscribir=malloc(BLOCK_SIZE);
 		memset(datosAEscribir,'A',BLOCK_SIZE);
-		int bloqueAEscribir=3;
+		int bloqueAEscribir=2;
 	//
 
 	// Grabará los datos enviados en el bloque solicitado
@@ -97,7 +100,7 @@ int main(int argc , char *argv[]){
 
 		char* datosLeidos;
 		datosLeidos=malloc(BLOCK_SIZE);
-		int bloqueALeer=3;
+		int bloqueALeer=2;
 	//
 
 	datosLeidos=getBloque(bloqueALeer); // Devolverá el contenido del bloque solicitado
