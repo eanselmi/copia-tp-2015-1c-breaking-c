@@ -263,15 +263,22 @@ void *connection_handler_escucha(void){
 								cantidad_nodos_historico=cantidad_nodos;
 								FD_SET(newfd, &master);
 								fdmax = newfd;
-								list_add (nodos, agregar_nodo_a_lista(newfd,asignar_nombre_a_nodo(),0,inet_ntoa(remote_client.sin_addr),remote_client.sin_port,50,50));
-								printf ("Se conecto el nodo %s\n",inet_ntoa(remote_client.sin_addr));
+								if ((read_size = recv(newfd, bloquesTotales , 2 , 0))==-1) {
+									perror ("recv");
+									log_info(logger,"FALLO el RECV");
+									exit (-1);
+								}
+								if (read_size > 0){
+									list_add (nodos, agregar_nodo_a_lista(newfd,asignar_nombre_a_nodo(),0,inet_ntoa(remote_client.sin_addr),remote_client.sin_port,atoi(bloquesTotales),atoi(bloquesTotales)));
+									printf ("Se conecto el nodo %s\n",inet_ntoa(remote_client.sin_addr));
+								}
 							}
 							if (read_size > 0 && strncmp(identificacion,"reconectado",11)==0){
 								cantidad_nodos++;
 								FD_SET(newfd, &master);
 								fdmax = newfd;
 								modificar_estado_nodo (i,inet_ntoa(remote_client.sin_addr),remote_client.sin_port,1); //cambio su estado de la lista a 1 que es activo
-								printf ("Se conecto el nodo %s\n",inet_ntoa(remote_client.sin_addr));
+								printf ("Se reconecto el nodo %s\n",inet_ntoa(remote_client.sin_addr));
 							}
 						}
 					}
@@ -287,10 +294,12 @@ void *connection_handler_escucha(void){
 					if ((nbytes = recv(i, mensaje, sizeof(mensaje), 0)) <= 0) { //si entra aca es porque se desconecto o hubo un error
 						if (nbytes == 0) {
 							// Un nodo cerro su conexion, actualizo la lista de nodos
-							//............................
-							//............................
-							modificar_estado_nodo (i,NULL,-1,0);
-
+							addrlen = sizeof(struct sockaddr_in);
+							if ((getpeername(i,(struct sockaddr*)&remote_client,(socklen_t*)&addrlen))==-1){
+								perror ("getpeername");
+								exit(-1);
+							}
+							modificar_estado_nodo (i,inet_ntoa(remote_client.sin_addr),remote_client.sin_port,0);
 						} else {
 							perror("recv");
 							log_info(logger,"FALLO el Recv");
@@ -372,11 +381,17 @@ void modificar_estado_nodo (int socket,char *ip,int port,int estado){
 	t_nodo *tmp;
 	for (i=0;i<list_size(nodos);i++){
 		tmp = list_get(nodos,i);
-		if ((ip==NULL && port==-1) && tmp->socket==socket)
-			tmp->estado=estado;
-		else if ((strcmp(tmp->ip,ip)==1) && tmp->puerto==port){
-			tmp->estado=estado;
-			tmp->socket=socket;
+		if (socket==-1){
+			if ((strcmp(tmp->ip,ip)==1) && tmp->puerto==port){
+				tmp->estado=estado;
+				break;
+			}
+		}else{
+			if ((strcmp(tmp->ip,ip)==1) && tmp->puerto==port){
+				tmp->estado=estado;
+				tmp->socket=socket;
+				break;
+			}
 		}
 	}
 }
