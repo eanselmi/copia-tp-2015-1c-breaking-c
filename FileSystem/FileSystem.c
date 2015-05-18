@@ -253,7 +253,7 @@ void *connection_handler_marta(void){
 	// enlazar
 	marta.sin_family = AF_INET;
 	marta.sin_addr.s_addr = INADDR_ANY;
-	marta.sin_port = htons(config_get_int_value(configurador,"PUERTO_LISTEN"));
+	marta.sin_port = htons(config_get_int_value(configurador,"PUERTO_LISTEN_MARTA")); //Esto hay que consultar si es valido
 	memset(&(marta.sin_zero), '\0', 8);
 	if (bind(listener_marta, (struct sockaddr *)&marta, sizeof(marta)) == -1) {
 		perror("bind");
