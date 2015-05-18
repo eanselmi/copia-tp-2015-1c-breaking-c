@@ -34,12 +34,14 @@ int main(int argc , char *argv[]){
 	//------------ Variables locales a la funcion main --------------------
 	int sockfd;
 	char identificacion[BUF_SIZE]; //para el mensaje que envie al conectarse para identificarse, puede cambiar
-	char bloquesTotales[2]; //tendra la cantidad de bloques totales del file de datos
+	//char bloquesTotales[2]; //tendra la cantidad de bloques totales del file de datos
+	int *bloquesTotales;
 	struct sockaddr_in filesystem;
 	memset(&filesystem, 0, sizeof(filesystem));
 
-	sprintf(bloquesTotales,"%d",sizeFileDatos/20971520);
-	//bloquesTotales=sizeFileDatos/20971520;
+	//sprintf(bloquesTotales,"%d",sizeFileDatos/20971520);
+	bloquesTotales=malloc(sizeof(int));
+	*bloquesTotales=sizeFileDatos/20971520;
 
 	//Estructura para conexion con FS
 	filesystem.sin_family = AF_INET;

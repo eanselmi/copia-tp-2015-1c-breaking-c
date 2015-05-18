@@ -63,7 +63,7 @@ char mensaje[MENSAJE_SIZE];
 int cantidad_nodos=0;
 int cantidad_nodos_historico=0;
 int read_size;
-char bloquesTotales[2]; //tendra la cantidad de bloques totales del file de datos
+int *bloquesTotales; //tendra la cantidad de bloques totales del file de datos
 
 int main(int argc , char *argv[]){
 
@@ -126,13 +126,14 @@ int main(int argc , char *argv[]){
 			cantidad_nodos_historico=cantidad_nodos;
 			FD_SET(newfd, &master);
 			fdmax = newfd;
-			if ((read_size = recv(newfd, bloquesTotales , 2 , 0))==-1) {
+			bloquesTotales=malloc(sizeof(int));
+			if ((read_size = recv(newfd, bloquesTotales ,sizeof(int) , 0))==-1) {
 				perror ("recv");
 				log_info(logger,"FALLO el RECV");
 				exit (-1);
 			}
 			if (read_size > 0){
-				list_add (nodos, agregar_nodo_a_lista(newfd,asignar_nombre_a_nodo(),0,inet_ntoa(remote_client.sin_addr),remote_client.sin_port,atoi(bloquesTotales),atoi(bloquesTotales)));
+				list_add (nodos, agregar_nodo_a_lista(newfd,asignar_nombre_a_nodo(),0,inet_ntoa(remote_client.sin_addr),remote_client.sin_port,*bloquesTotales,*bloquesTotales));
 				printf ("Se conecto el nodo %s\n",inet_ntoa(remote_client.sin_addr));
 			}
 		}
@@ -263,13 +264,14 @@ void *connection_handler_escucha(void){
 								cantidad_nodos_historico=cantidad_nodos;
 								FD_SET(newfd, &master);
 								fdmax = newfd;
-								if ((read_size = recv(newfd, bloquesTotales , 2 , 0))==-1) {
+								bloquesTotales=malloc(sizeof(int));
+								if ((read_size = recv(newfd, bloquesTotales , sizeof(int) , 0))==-1) {
 									perror ("recv");
 									log_info(logger,"FALLO el RECV");
 									exit (-1);
 								}
 								if (read_size > 0){
-									list_add (nodos, agregar_nodo_a_lista(newfd,asignar_nombre_a_nodo(),0,inet_ntoa(remote_client.sin_addr),remote_client.sin_port,atoi(bloquesTotales),atoi(bloquesTotales)));
+									list_add (nodos, agregar_nodo_a_lista(newfd,asignar_nombre_a_nodo(),0,inet_ntoa(remote_client.sin_addr),remote_client.sin_port,*bloquesTotales,*bloquesTotales));
 									printf ("Se conecto el nodo %s\n",inet_ntoa(remote_client.sin_addr));
 								}
 							}
