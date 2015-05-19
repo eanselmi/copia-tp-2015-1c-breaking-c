@@ -28,10 +28,10 @@ char *asignar_nombre_a_nodo();
 void modificar_estado_nodo (int socket,char *ip,int port,int estado);
 void formatear_nodos(void);
 void FormatearFilesystem ();		//TODAVIA NO DESARROLLADA
-void EliminarArchivo();				//TODAVIA NO DESARROLLADA
-void RenombrarArchivo ();			//TODAVIA NO DESARROLLADA
+void EliminarArchivo();				//DESARROLLADA
+void RenombrarArchivo ();			//DESARROLLADA
 void MoverArchivo();				//TODAVIA NO DESARROLLADA
-void CrearDirectorio();				//TODAVIA NO DESARROLLADA
+void CrearDirectorio();				//DESARROLLADA, falta revisar errores de compilacion, falta persistencia, validar cant max de directorios y ver que pasa si tengo directorio andy/andy/andy
 void EliminarDirectorio();			//TODAVIA NO DESARROLLADA
 void RenombrarDirectorio();			//TODAVIA NO DESARROLLADA
 void MoverDirectorio();				//TODAVIA NO DESARROLLADA
@@ -479,7 +479,49 @@ void MoverArchivo(){
 
 void CrearDirectorio(){
 	printf("Eligió Crear directorios\n");
+	/*char* path;
+	char** directorioNuevo;
+	t_dir elementoDeMiLista;
+	t_dir directorioACrear;
+	int ExisteEnLaLista(t_list listaDirectorios, t_dir directorioABuscar){
+		int encontrado = 0; //trae 1 si lo encuentra, 0 si no lo encuentra
+		int tamanioLista = list_size(listaDirectorios);
+		int i = 0;
+		while(encontrado == 0 && i < tamanioLista){
+			elementoDeMiLista = list_get(listaDirectorios, i);
+			if (string_equals_ignore_case(elementoDeMiLista->nombre, directorioABuscar->nombre)){ 
+				encontrado=1;
+			}
+			i++;
+		}
+		return encontrado;
+	}
+	printf ("Ingrese el path del directorio\n");
+	scanf ("%s", path);
+    directorioNuevo = string_split((char*) path, "/"); //Devuelve un array del path del directorio a crear
+    for(int nivelProf=1; directorioNuevo[nivelProf]!=NULL;nivelProf++){ //empiezo desde 1 porque nivel prof 0 es raiz y no existe en la lista
+    	//list_find(directorios,(void*) ExisteEnLaLista());  //ver más adelante de usar la función de lcommons
+    	if (!ExisteEnLaLista(directorios, directorioNuevo[nivelProf])){
+    		if (nivelProf==1){
+    			directorioACrear->nombre = directorioNuevo[nivelProf];
+    			directorioACrear->padre =0;
+    			list_add(directorios, directorioACrear);
+    			//persistir en la db: pendiente
+    			//una vez persistido, traerme el id de ese elemento para guardarlo en directorio nuevo
+    		}
+    		if (nivelProf>1){
+    			int idPadre=BuscarPadre(directorioNuevo[nivelProf]);
+    			directorioACrear->nombre = directorioNuevo[nivelProf];
+    			directorioACrear->padre = idPadre;
+    			list_add(directorios, directorioACrear);
+    			//persistir en la db: pendiente
+    			    			//una vez persistido, traerme el id de ese elemento para guardarlo en directorio nuevo
+    		}
+
+    	}
+    }*/
 }
+
 
 void EliminarDirectorio(){
 	printf("Eligió Eliminar directorios\n");
