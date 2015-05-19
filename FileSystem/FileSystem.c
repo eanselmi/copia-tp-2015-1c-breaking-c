@@ -23,7 +23,6 @@
 int Menu();
 void DibujarMenu();
 void *connection_handler_escucha(); // Esta funcion escucha continuamente si recibo nuevos mensajes
-void *connection_handler_marta(); // Esta funcion maneja la conexion con marta
 static t_nodo *agregar_nodo_a_lista(int socket,char *nodo_id,int est,char *ip, int port, int bloques_lib, int bloques_tot);
 char *asignar_nombre_a_nodo();
 void modificar_estado_nodo (int socket,char *ip,int port,int estado);
@@ -64,6 +63,8 @@ int cantidad_nodos=0;
 int cantidad_nodos_historico=0;
 int read_size;
 int *bloquesTotales; //tendra la cantidad de bloques totales del file de datos
+int marta_presente=0; //Valiable para controlar que solo 1 proceso marta se conecte
+int marta_sock;
 
 int main(int argc , char *argv[]){
 
@@ -128,6 +129,7 @@ int main(int argc , char *argv[]){
 			FD_SET(newfd, &master);
 			fdmax = newfd;
 			bloquesTotales=malloc(sizeof(int));
+			//Segundo recv, aca espero recibir la capacidad del nodo
 			if ((read_size = recv(newfd, bloquesTotales ,sizeof(int) , 0))==-1) {
 				perror ("recv");
 				log_info(logger,"FALLO el RECV");
@@ -137,7 +139,7 @@ int main(int argc , char *argv[]){
 				list_add (nodos, agregar_nodo_a_lista(newfd,asignar_nombre_a_nodo(),0,inet_ntoa(remote_client.sin_addr),remote_client.sin_port,*bloquesTotales,*bloquesTotales));
 				printf ("Se conecto el nodo %s\n",inet_ntoa(remote_client.sin_addr));
 			}
-		}
+		}else close(newfd);
 	}
 	printf ("Nodos conectados %d\n",list_size(nodos));
 	printf ("Informacion del nodo 2\n");
@@ -149,12 +151,6 @@ int main(int argc , char *argv[]){
 	if( pthread_create( &escucha , NULL ,  connection_handler_escucha , NULL) < 0){
 	       perror("could not create thread");
 	       return 1;
-	}
-
-	//Este hilo va a manejar la conexion con el proceso marta
-	if( pthread_create( &marta , NULL ,  connection_handler_marta , NULL) < 0){
-	    perror("could not create thread");
-	    return 1;
 	}
 
 	archivos=list_create(); //Crea la lista de archivos
@@ -232,63 +228,6 @@ static t_nodo *agregar_nodo_a_lista(int socket,char *nodo_id,int est,char *ip, i
 	return nodo_temporal;
 }
 
-void *connection_handler_marta(void){
-	int listener_marta; // descriptor de socket a la escucha solo del proceso marta
-	int marta_sock; //Socket exclusivo para marta
-	struct sockaddr_in marta; // dirección de marta
-	int addrlen,yes=1;
-	int read_size;
-	char mensaje_de_marta [100];
-
-	if ((listener_marta = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
-		perror("socket");
-		log_info(logger,"FALLO la creacion del socket");
-		exit(-1);
-	}
-	// obviar el mensaje "address already in use" (la dirección ya se está usando)
-	if (setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, &yes,sizeof(int)) == -1) {
-		perror("setsockopt");
-		log_info(logger,"FALLO la ejecucion del setsockopt");
-		exit(-1);
-	}
-	// enlazar
-	marta.sin_family = AF_INET;
-	marta.sin_addr.s_addr = INADDR_ANY;
-	marta.sin_port = htons(config_get_int_value(configurador,"PUERTO_LISTEN_MARTA")); //Esto hay que consultar si es valido
-	memset(&(marta.sin_zero), '\0', 8);
-	if (bind(listener_marta, (struct sockaddr *)&marta, sizeof(marta)) == -1) {
-		perror("bind");
-		log_info(logger,"FALLO el Bind");
-		exit(-1);
-	}
-	// escuchar
-	if (listen(listener_marta, 10) == -1) {
-		perror("listen");
-		log_info(logger,"FALLO el Listen");
-		exit(1);
-	}
-	addrlen = sizeof(struct sockaddr_in);
-	if ((marta_sock = accept(listener_marta, (struct sockaddr*)&marta, (socklen_t*)&addrlen)) == -1) {
-		perror ("accept");
-		log_info(logger,"FALLO el ACCEPT");
-		exit (-1);
-	}
-	while((read_size = recv(marta_sock,mensaje_de_marta,100,0)) > 0 ){ //esto esta a definir conficionado por marta
-	// lo que sea que vaya a hacer marta
-
-	}
-	if(read_size == 0)
-	{
-	    puts("El Server se desconecto");
-	    fflush(stdout);
-	}
-	else if(read_size == -1){
-	     perror("recv failed");
-	}
-	close(marta_sock);
-	return 0;
-}
-
 void *connection_handler_escucha(void){
 	int i,nbytes,newfd,addrlen;
 	while(1) {
@@ -311,10 +250,6 @@ void *connection_handler_escucha(void){
 					}
 					else //llego una nueva conexion, se acepto y ahora tengo que tratarla
 					{
-						FD_SET(newfd, &master); // añadir al conjunto maestro
-						if (newfd > fdmax) { // actualizar el máximo
-							fdmax = newfd;
-						}
 						if ((nbytes = recv(newfd, mensaje, sizeof(mensaje), 0)) <= 0) { //si entra aca es porque hubo un error, no considero desconexion porque es nuevo
 							{
 								perror("recv");
@@ -325,11 +260,29 @@ void *connection_handler_escucha(void){
 							// el nuevo conectado me manda algo, se identifica como nodo nuevo o nodo reconectado
 							// luego de que se identifique lo agregare a la lista de nodos si es nodo nuevo
 							// si es nodo reconectado hay que cambiarle el estado
+							if (read_size > 0 && strncmp(identificacion,"marta",5)==0){
+								// Se conecto el proceso Marta, le asigno un descriptor especial y lo agrego al select
+								if (marta_presente==0){
+									marta_presente=1;
+									marta_sock=newfd;
+									FD_SET(newfd, &master); // añadir al conjunto maestro
+									if (newfd > fdmax) { // actualizar el máximo
+										fdmax = newfd;
+									}
+									printf ("Se conecto el proceso Marta desde la ip %s\n",inet_ntoa(remote_client.sin_addr));
+								}else{
+									printf ("Ya existe un proceso marta conectado, no puede haber mas de 1\n");
+									close (newfd);
+								}
+
+							}
 							if (read_size > 0 && strncmp(identificacion,"nuevo",5)==0){
 								cantidad_nodos++;
 								cantidad_nodos_historico=cantidad_nodos;
-								FD_SET(newfd, &master);
-								fdmax = newfd;
+								FD_SET(newfd, &master); // añadir al conjunto maestro
+								if (newfd > fdmax) { // actualizar el máximo
+									fdmax = newfd;
+								}
 								bloquesTotales=malloc(sizeof(int));
 								if ((read_size = recv(newfd, bloquesTotales , sizeof(int) , 0))==-1) {
 									perror ("recv");
@@ -343,15 +296,15 @@ void *connection_handler_escucha(void){
 							}
 							if (read_size > 0 && strncmp(identificacion,"reconectado",11)==0){
 								cantidad_nodos++;
-								FD_SET(newfd, &master);
-								fdmax = newfd;
+								FD_SET(newfd, &master); // añadir al conjunto maestro
+								if (newfd > fdmax) { // actualizar el máximo
+									fdmax = newfd;
+								}
 								modificar_estado_nodo (i,inet_ntoa(remote_client.sin_addr),remote_client.sin_port,1); //cambio su estado de la lista a 1 que es activo
 								printf ("Se reconecto el nodo %s\n",inet_ntoa(remote_client.sin_addr));
 							}
 						}
 					}
-					printf("select: conexion desde %s en socket %d\n", inet_ntoa(remote_client.sin_addr),newfd);
-
 
 				//.................................................
 				//hasta aca, es el tratamiento de conexiones nuevas
@@ -361,20 +314,26 @@ void *connection_handler_escucha(void){
 					// gestionar datos de un cliente
 					if ((nbytes = recv(i, mensaje, sizeof(mensaje), 0)) <= 0) { //si entra aca es porque se desconecto o hubo un error
 						if (nbytes == 0) {
-							// Un nodo cerro su conexion, actualizo la lista de nodos
-							addrlen = sizeof(struct sockaddr_in);
-							if ((getpeername(i,(struct sockaddr*)&remote_client,(socklen_t*)&addrlen))==-1){
-								perror ("getpeername");
-								exit(-1);
+							// Un nodo o marta cerro su conexion, actualizo la lista de nodos, reviso quien fue
+							if (i==marta_sock){
+								marta_presente=0;
+								close(i); // ¡Hasta luego!
+								FD_CLR(i, &master); // eliminar del conjunto maestro
+							} else {
+								addrlen = sizeof(struct sockaddr_in);
+								if ((getpeername(i,(struct sockaddr*)&remote_client,(socklen_t*)&addrlen))==-1){
+									perror ("getpeername");
+									exit(-1);
+								}
+								modificar_estado_nodo (i,inet_ntoa(remote_client.sin_addr),remote_client.sin_port,0);
+								close(i); // ¡Hasta luego!
+								FD_CLR(i, &master); // eliminar del conjunto maestro
 							}
-							modificar_estado_nodo (i,inet_ntoa(remote_client.sin_addr),remote_client.sin_port,0);
 						} else {
 							perror("recv");
 							log_info(logger,"FALLO el Recv");
 							exit(-1);
 						}
-						close(i); // ¡Hasta luego!
-						FD_CLR(i, &master); // eliminar del conjunto maestro
 					} else {
 						// tenemos datos de algún cliente
 						// ...... Tratamiento del mensaje nuevo
@@ -456,12 +415,12 @@ void modificar_estado_nodo (int socket,char *ip,int port,int estado){
 	for (i=0;i<list_size(nodos);i++){
 		tmp = list_get(nodos,i);
 		if (socket==-1){
-			if ((strcmp(tmp->ip,ip)==1) && tmp->puerto==port){
+			if ((strcmp(tmp->ip,ip)==0) && tmp->puerto==port){
 				tmp->estado=estado;
 				break;
 			}
 		}else{
-			if ((strcmp(tmp->ip,ip)==1) && tmp->puerto==port){
+			if ((strcmp(tmp->ip,ip)==0) && tmp->puerto==port){
 				tmp->estado=estado;
 				tmp->socket=socket;
 				break;
