@@ -69,7 +69,6 @@ int marta_sock;
 int main(int argc , char *argv[]){
 
 	pthread_t escucha; //Hilo que va a manejar los mensajes recibidos
-	pthread_t marta; //Hilo que va a manejar la comunicacion exclusiva con el proceso marta
 	int newfd;
 	int addrlen;
 	int yes=1; // para setsockopt() SO_REUSEADDR, más abajo
