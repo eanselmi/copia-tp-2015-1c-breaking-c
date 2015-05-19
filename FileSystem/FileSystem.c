@@ -45,6 +45,7 @@ void AgregarNodo();					//TODAVIA NO DESARROLLADA
 void EliminarNodo();  				//TODAVIA NO DESARROLLADA
 uint32_t BuscarArchivoPorNombre (); //DESARROLLADA
 uint32_t BuscarPadre ();            //DESARROLLADA
+static void eliminar_bloques(t_bloque *bloque);
 
 
 fd_set master; // conjunto maestro de descriptores de fichero
@@ -459,12 +460,19 @@ void EliminarArchivo(){
     arch = list_get(archivos,posArchivo);
     //Eliminar bloques del archivo
     while(arch->bloques!=NULL){
-    //    list_destroy_and_destroy_elements(arch->bloques,  list_destroy(arch->bloques));
+        //list_destroy_and_destroy_elements(arch->bloques, list_destroy(arch->bloques));
+    	list_destroy_and_destroy_elements(arch->bloques, (void*)eliminar_bloques);
     	break;
 
     }
     //Elimnar nodo del archivo t_arhivo
    // list_remove_and_destroy_element(listaArchivos, posArchivo, void(archivo)(void*));
+}
+
+static void eliminar_bloques(t_bloque *bloque){
+	free(bloque->copias[0].nodo);
+	free(bloque->copias[1].nodo);
+	free(bloque->copias[2].nodo);
 }
 
 void RenombrarArchivo (){
