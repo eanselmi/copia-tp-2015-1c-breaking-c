@@ -460,13 +460,12 @@ void EliminarArchivo(){
     arch = list_get(archivos,posArchivo);
     //Eliminar bloques del archivo
     while(arch->bloques!=NULL){
-        //list_destroy_and_destroy_elements(arch->bloques, list_destroy(arch->bloques));
     	list_destroy_and_destroy_elements(arch->bloques, (void*)eliminar_bloques);
     	break;
 
     }
     //Elimnar nodo del archivo t_arhivo
-   // list_remove_and_destroy_element(listaArchivos, posArchivo, void(archivo)(void*));
+    list_remove_and_destroy_element(archivos, posArchivo, (void*)list_destroy);
 }
 
 static void eliminar_bloques(t_bloque *bloque){
