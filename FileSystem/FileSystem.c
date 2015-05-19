@@ -43,8 +43,9 @@ void BorrarBloques();				//TODAVIA NO DESARROLLADA
 void CopiarBloques();				//TODAVIA NO DESARROLLADA
 void AgregarNodo();					//TODAVIA NO DESARROLLADA
 void EliminarNodo();  				//TODAVIA NO DESARROLLADA
-uint32_t BuscarArchivoPorNombre ();    //DESARROLLADA
-uint32_t BuscarPadre ();            //TODAVIA NO DESARROLLADA
+uint32_t BuscarArchivoPorNombre (); //DESARROLLADA
+uint32_t BuscarPadre ();            //DESARROLLADA
+
 
 fd_set master; // conjunto maestro de descriptores de fichero
 fd_set read_fds; // conjunto temporal de descriptores de fichero para select()
@@ -52,6 +53,7 @@ t_log* logger;
 t_list *nodos; //lista de nodos conectados al fs
 t_list* archivos; //lista de archivos del FS
 t_list* directorios; //lista de directorios del FS
+t_bloque* bloque; //Un Bloque del Archivo
 t_config * configurador;
 int fdmax; // número máximo de descriptores de fichero
 int listener; // descriptor de socket a la escucha
@@ -378,7 +380,7 @@ uint32_t BuscarPadre (char* path){
 uint32_t BuscarArchivoPorNombre (const char *path, uint32_t idPadre){
     t_archivo* arch;
     arch=malloc(sizeof(t_archivo));
-    int i;
+    int i,posicionArchivo;
     char* nombreArchivo;
     int posArchivo = 0;
     int tam = list_size(archivos);
@@ -392,11 +394,19 @@ uint32_t BuscarArchivoPorNombre (const char *path, uint32_t idPadre){
     for(posArchivo=0; posArchivo<tam;posArchivo++){
         arch = list_get(archivos,posArchivo);
         if ((strcmp(arch->nombre,nombreArchivo)==0)&&(arch->padre == idPadre)){
-            return posArchivo;
+            posicionArchivo = posArchivo;
             break;
+        }else{
+        	if(i==tam-1){
+        	printf("No se encontró el archivo");
+        	posicionArchivo=-1;
+        	exit(-1);
+        	}
         }
     }
+    return posicionArchivo;
 }
+
 
 char *asignar_nombre_a_nodo(void){
 	char *nombre_temporal;
@@ -440,36 +450,36 @@ void FormatearFilesystem (){
 
 void EliminarArchivo(){
     printf("Eligió  Eliminar archivo\n");
-//    char* path;
-//    t_bloque* bloque;
-//    t_archivo arch;
-//    printf ("Ingrese el path del archivo \n");
-//    scanf ("%s", path);
-//    uint32_t idPadre = BuscarPadre(path);
-//    uint32_t posArchivo = BuscarArchivoPorNombre (path,idPadre);
-//    arch = list_get(archivos,posArchivo);
-//    //Eliminar bloques del archivo
-//    while(arch.bloques!=NULL){
-//        list_destroy_and_destroy_elements(arch.bloques, void(*lbloque)(void*));
-//    }
-//    //Elimnar nodo del archivo t_arhivo
-//    list_remove_and_destroy_element(listaArchivos, posArchivo, void(archivo)(void*));
+    char* path = malloc(1);
+    t_archivo* arch;
+    printf ("Ingrese el path del archivo \n");
+    scanf ("%s", path);
+    uint32_t idPadre = BuscarPadre(path);
+    uint32_t posArchivo = BuscarArchivoPorNombre (path,idPadre);
+    arch = list_get(archivos,posArchivo);
+    //Eliminar bloques del archivo
+    while(arch->bloques!=NULL){
+    //    list_destroy_and_destroy_elements(arch->bloques,  list_destroy(arch->bloques));
+    	break;
+
+    }
+    //Elimnar nodo del archivo t_arhivo
+   // list_remove_and_destroy_element(listaArchivos, posArchivo, void(archivo)(void*));
 }
 
 void RenombrarArchivo (){
 	printf("Eligió Renombrar archivos\n");
-//    char* path;
-//    char nuevoNombre[FILENAME];
-//    t_bloque* bloque;
-//    t_archivo arch;
-//    printf ("Ingrese el path del archivo \n");
-//    scanf ("%s", path);
-//    uint32_t idPadre = BuscarPadre(path);
-//    uint32_t posArchivo = BuscarArchivoPorNombre (path,idPadre);
-//    arch = list_get(archivos,posArchivo);
-//    printf ("Ingrese el nuevo nombre \n");
-//    scanf ("%s", nuevoNombre);
-//    arch.nombre = nuevoNombre;
+    char* path = malloc(1);
+    char* nuevoNombre = malloc(1);
+    t_archivo* arch;
+    printf ("Ingrese el path del archivo \n");
+    scanf ("%s", path);
+    uint32_t idPadre = BuscarPadre(path);
+    uint32_t posArchivo = BuscarArchivoPorNombre (path,idPadre);
+    arch = list_get(archivos,posArchivo);
+    printf ("Ingrese el nuevo nombre \n");
+    scanf ("%s", nuevoNombre);
+    strcpy(arch->nombre, nuevoNombre);
 
 }
 
