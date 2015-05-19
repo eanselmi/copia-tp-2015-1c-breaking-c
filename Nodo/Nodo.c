@@ -17,6 +17,7 @@
 char* mapearFileDeDatos();
 void setBloque(int bloque,char* datos);
 char* getBloque(int bloque);
+char* getFileContent(char* nombre);
 
 //Declaración de variables Globales
 t_config* configurador;
@@ -30,7 +31,7 @@ int main(int argc , char *argv[]){
 	configurador= config_create("resources/nodoConfig.conf"); //se asigna el archivo de configuración especificado en la ruta
 	logger = log_create("./nodoLog.log", "Nodo", true, LOG_LEVEL_INFO);
 	fileDeDatos=mapearFileDeDatos();//La siguiente función va a mapear el archivo de datos que esta especificado en el archivo conf a memoria, y asignarle al puntero fileDeDatos la direccion donde arranca el file. Utilizando mmap()
-
+/*
 	//------------ Variables locales a la funcion main --------------------
 	int sockfd;
 	char identificacion[BUF_SIZE]; //para el mensaje que envie al conectarse para identificarse, puede cambiar
@@ -87,26 +88,7 @@ int main(int argc , char *argv[]){
 					exit(-1);
 			}
 		}
-
-	/*Generacion de datos para probar el funcionamiento de la funcion setBloque*/
-		char* datosAEscribir;
-		datosAEscribir=malloc(BLOCK_SIZE);
-		memset(datosAEscribir,'A',BLOCK_SIZE);
-		int bloqueAEscribir=2;
-	//
-
-	// Grabará los datos enviados en el bloque solicitado
-	setBloque(bloqueAEscribir,datosAEscribir);
-
-
-	/*Generación de datos para probar la funcion getBloque*/
-
-		char* datosLeidos;
-		datosLeidos=malloc(BLOCK_SIZE);
-		int bloqueALeer=2;
-	//
-
-	datosLeidos=getBloque(bloqueALeer); // Devolverá el contenido del bloque solicitado
+*/
 
 	log_destroy(logger);
 	config_destroy(configurador);
@@ -180,4 +162,35 @@ char* getBloque(int numBloque){
 	ubicacionEnElFile=fileDeDatos+(BLOCK_SIZE*(numBloque-1));
 	memcpy(datosLeidos,ubicacionEnElFile,BLOCK_SIZE); //Copia el valor de BLOCK_SIZE bytes desde la direccion de memoria apuntada por fileDeDatos a la direccion de memoria apuntada por datosLeidos
 	return datosLeidos;
+}
+
+char* getFileContent(char* nombreFile){
+	char* path;
+	char* fileMapeado;
+	int fileDescriptor;
+	struct stat estadoDelFile; //declaro una estructura que guarda el estado de un archivo
+	path=strdup("");
+	strcpy(path,config_get_string_value(configurador,"DIR_TEMP"));
+	strcat(path,"/");
+	strcat(path,nombreFile);
+	fileDescriptor = open(path,O_RDWR);
+		/*Chequeo de apertura del file exitosa*/
+			if (fileDescriptor==-1){
+				perror("open");
+				log_error(logger,"Fallo la apertura del file de datos");
+				exit(-1);
+			}
+	if(fstat(fileDescriptor,&estadoDelFile)==-1){//guardo el estado del archivo de datos en la estructura
+			perror("fstat");
+			log_error(logger,"Falló el fstat");
+		}
+	fileMapeado=mmap(0,estadoDelFile.st_size,(PROT_WRITE|PROT_READ|PROT_EXEC),MAP_SHARED,fileDescriptor,0);
+	/*Chequeo de mmap exitoso*/
+		if (fileMapeado==MAP_FAILED){
+			perror("mmap");
+			log_error(logger,"Falló el mmap, no se pudo asignar la direccion de memoria para el archivo solicitado");
+			exit(-1);
+		}
+	close(fileDescriptor); //Cierro el archivo
+	return fileMapeado;
 }
