@@ -21,7 +21,8 @@ char* getFileContent(char* nombre);
 
 //Declaración de variables Globales
 t_config* configurador;
-t_log* logger;
+t_log* logger; //log en pantalla y archivo de log
+t_log* logger_archivo; //log solo en archivo de log
 char* fileDeDatos;
 unsigned int sizeFileDatos;
 
@@ -30,6 +31,7 @@ int main(int argc , char *argv[]){
 	//-------------------------- Cuerpo ppal del programa ---------------------------------------
 	configurador= config_create("resources/nodoConfig.conf"); //se asigna el archivo de configuración especificado en la ruta
 	logger = log_create("./nodoLog.log", "Nodo", true, LOG_LEVEL_INFO);
+	logger_archivo = log_create("./nodoLog.log", "Nodo", false, LOG_LEVEL_INFO);
 	fileDeDatos=mapearFileDeDatos();//La siguiente función va a mapear el archivo de datos que esta especificado en el archivo conf a memoria, y asignarle al puntero fileDeDatos la direccion donde arranca el file. Utilizando mmap()
 /*
 	//------------ Variables locales a la funcion main --------------------
@@ -77,7 +79,6 @@ int main(int argc , char *argv[]){
 				log_error(logger,"FALLO el envío de la cantidad de bloques totales al FS");
 				exit(-1);
 			}
-			//aca se debería modificar el valor del archivo de configuracion a NO ... ¿como? mail a Dios
 		}
 		else {
 			//si el if da falso por nodo existente que se esta reconectando
@@ -89,8 +90,30 @@ int main(int argc , char *argv[]){
 			}
 		}
 */
+	/*Generacion de datos para probar el funcionamiento de la funcion setBloque*/
+			char* datosAEscribir;
+			datosAEscribir=malloc(BLOCK_SIZE);
+			memset(datosAEscribir,'H',BLOCK_SIZE);
+			int bloqueAEscribir=3;
+		//
+
+		// Grabará los datos enviados en el bloque solicitado
+		setBloque(bloqueAEscribir,datosAEscribir);
+
+
+		/*Generación de datos para probar la funcion getBloque*/
+
+			char* datosLeidos;
+			datosLeidos=malloc(BLOCK_SIZE);
+			int bloqueALeer=1;
+		//
+
+		datosLeidos=getBloque(bloqueALeer); // Devolverá el contenido del bloque solicitado
+	char* fileContent;
+	fileContent=getFileContent("archivo.txt");
 
 	log_destroy(logger);
+	log_destroy(logger_archivo);
 	config_destroy(configurador);
 	return 0;
 }
@@ -145,6 +168,7 @@ void setBloque(int numBloque,char* datosAEscribir){
 	ubicacionEnElFile=malloc(BLOCK_SIZE);
 	ubicacionEnElFile=fileDeDatos+(BLOCK_SIZE*(numBloque-1));
 	memcpy(ubicacionEnElFile,datosAEscribir,BLOCK_SIZE); //Copia el valor de BLOCK_SIZE bytes desde la direccion de memoria apuntada por datos a la direccion de memoria apuntada por fileDeDatos
+	log_info(logger_archivo,"Se escribió el bloque %d",numBloque);
 	return;
 }
 
@@ -161,6 +185,7 @@ char* getBloque(int numBloque){
 	ubicacionEnElFile=malloc(BLOCK_SIZE);
 	ubicacionEnElFile=fileDeDatos+(BLOCK_SIZE*(numBloque-1));
 	memcpy(datosLeidos,ubicacionEnElFile,BLOCK_SIZE); //Copia el valor de BLOCK_SIZE bytes desde la direccion de memoria apuntada por fileDeDatos a la direccion de memoria apuntada por datosLeidos
+	log_info(logger_archivo,"Se leyó el bloque %d",numBloque);
 	return datosLeidos;
 }
 
@@ -192,5 +217,6 @@ char* getFileContent(char* nombreFile){
 			exit(-1);
 		}
 	close(fileDescriptor); //Cierro el archivo
+	log_info(logger_archivo,"Fue leído el archivo /tmp/%s",nombreFile);
 	return fileMapeado;
 }

@@ -77,18 +77,20 @@ int main(int argc , char *argv[]){
 	int addrlen;
 	int yes=1; // para setsockopt() SO_REUSEADDR, más abajo
 	configurador= config_create("resources/fsConfig.conf"); //se asigna el archivo de configuración especificado en la ruta
+	logger=log_create("fsLog.log","FileSystem",false,LOG_LEVEL_INFO);
 	FD_ZERO(&master); // borra los conjuntos maestro y temporal
 	FD_ZERO(&read_fds);
 
+
 	if ((listener = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
 		perror("socket");
-		log_info(logger,"FALLO la creacion del socket");
+		log_error(logger,"FALLO la creacion del socket");
 		exit(-1);
 	}
 	// obviar el mensaje "address already in use" (la dirección ya se está usando)
 	if (setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, &yes,sizeof(int)) == -1) {
 		perror("setsockopt");
-		log_info(logger,"FALLO la ejecucion del setsockopt");
+		log_error(logger,"FALLO la ejecucion del setsockopt");
 		exit(-1);
 	}
 	// enlazar
@@ -98,13 +100,13 @@ int main(int argc , char *argv[]){
 	memset(&(filesystem.sin_zero), '\0', 8);
 	if (bind(listener, (struct sockaddr *)&filesystem, sizeof(filesystem)) == -1) {
 		perror("bind");
-		log_info(logger,"FALLO el Bind");
+		log_error(logger,"FALLO el Bind");
 		exit(-1);
 	}
 	// escuchar
 	if (listen(listener, 10) == -1) {
 		perror("listen");
-		log_info(logger,"FALLO el Listen");
+		log_error(logger,"FALLO el Listen");
 		exit(1);
 	}
 	// añadir listener al conjunto maestro
@@ -115,15 +117,16 @@ int main(int argc , char *argv[]){
 	addrlen = sizeof(struct sockaddr_in);
 	nodos=list_create(); //Crea la lista de que va a manejar la lista de nodos
 	printf ("Esperando las conexiones de los nodos iniciales\n");
+	log_info(logger,"Esperando las conexiones de los nodos iniciales");
 	while (cantidad_nodos != config_get_int_value(configurador,"CANTIDAD_NODOS")){
 		if ((newfd = accept(listener, (struct sockaddr*)&remote_client, (socklen_t*)&addrlen)) == -1) {
 			perror ("accept");
-			log_info(logger,"FALLO el ACCEPT");
+			log_error(logger,"FALLO el ACCEPT");
 		   	exit (-1);
 		}
 		if ((read_size = recv(newfd, identificacion , 50 , 0))==-1) {
 			perror ("recv");
-			log_info(logger,"FALLO el RECV");
+			log_error(logger,"FALLO el RECV");
 			exit (-1);
 		}
 		if (read_size > 0 && strncmp(identificacion,"nuevo",5)==0){
@@ -135,12 +138,13 @@ int main(int argc , char *argv[]){
 			//Segundo recv, aca espero recibir la capacidad del nodo
 			if ((read_size = recv(newfd, bloquesTotales ,sizeof(int) , 0))==-1) {
 				perror ("recv");
-				log_info(logger,"FALLO el RECV");
+				log_error(logger,"FALLO el RECV");
 				exit (-1);
 			}
 			if (read_size > 0){
 				list_add (nodos, agregar_nodo_a_lista(newfd,asignar_nombre_a_nodo(),0,inet_ntoa(remote_client.sin_addr),remote_client.sin_port,*bloquesTotales,*bloquesTotales));
 				printf ("Se conecto el nodo %s\n",inet_ntoa(remote_client.sin_addr));
+				log_info(logger,"Se conecto el nodo %s",inet_ntoa(remote_client.sin_addr));
 			}
 		}else close(newfd);
 	}
@@ -153,6 +157,7 @@ int main(int argc , char *argv[]){
 	//Este hilo va a manejar las conexiones con los nodos de forma paralela a la ejecucion del proceso
 	if( pthread_create( &escucha , NULL ,  connection_handler_escucha , NULL) < 0){
 	       perror("could not create thread");
+	       log_error(logger,"Falló la creación del hilo que maneja las conexiones");
 	       return 1;
 	}
 
@@ -237,7 +242,7 @@ void *connection_handler_escucha(void){
 		read_fds = master;
 		if (select(fdmax+1, &read_fds, NULL, NULL, NULL) == -1) {
 			perror("select");
-			log_info(logger,"FALLO el Select");
+			log_error(logger,"FALLO el Select");
 			exit(-1);
 		}
 		// explorar conexiones existentes en busca de datos que leer
@@ -248,12 +253,12 @@ void *connection_handler_escucha(void){
 					addrlen = sizeof(struct sockaddr_in);
 					if ((newfd = accept(listener, (struct sockaddr*)&remote_client,(socklen_t*)&addrlen)) == -1) {
 						perror("accept");
-						log_info(logger,"FALLO el ACCEPT");
+						log_error(logger,"FALLO el ACCEPT");
 						exit(-1);
 					} else {//llego una nueva conexion, se acepto y ahora tengo que tratarla
 						if ((nbytes = recv(newfd, mensaje, sizeof(mensaje), 0)) <= 0) { //si entra aca es porque hubo un error, no considero desconexion porque es nuevo
 								perror("recv");
-								log_info(logger,"FALLO el Recv");
+								log_error(logger,"FALLO el Recv");
 								exit(-1);
 						} else {
 							// el nuevo conectado me manda algo, se identifica como nodo nuevo o nodo reconectado
@@ -269,8 +274,10 @@ void *connection_handler_escucha(void){
 										fdmax = newfd;
 									}
 									printf ("Se conecto el proceso Marta desde la ip %s\n",inet_ntoa(remote_client.sin_addr));
+									log_info(logger,"Se conecto el proceso Marta desde la ip %s",inet_ntoa(remote_client.sin_addr));
 								}else{
 									printf ("Ya existe un proceso marta conectado, no puede haber mas de 1\n");
+									log_warning(logger,"Ya existe un proceso marta conectado, no puede haber mas de 1");
 									close (newfd);
 								}
 
@@ -285,12 +292,13 @@ void *connection_handler_escucha(void){
 								bloquesTotales=malloc(sizeof(int));
 								if ((read_size = recv(newfd, bloquesTotales , sizeof(int) , 0))==-1) {
 									perror ("recv");
-									log_info(logger,"FALLO el RECV");
+									log_error(logger,"FALLO el RECV");
 									exit (-1);
 								}
 								if (read_size > 0){
 									list_add (nodos, agregar_nodo_a_lista(newfd,asignar_nombre_a_nodo(),0,inet_ntoa(remote_client.sin_addr),remote_client.sin_port,*bloquesTotales,*bloquesTotales));
 									printf ("Se conecto el nodo %s\n",inet_ntoa(remote_client.sin_addr));
+									log_info(logger,"Se conecto el nodo %s",inet_ntoa(remote_client.sin_addr));
 								}
 							}
 							if (read_size > 0 && strncmp(identificacion,"reconectado",11)==0){
@@ -301,6 +309,7 @@ void *connection_handler_escucha(void){
 								}
 								modificar_estado_nodo (i,inet_ntoa(remote_client.sin_addr),remote_client.sin_port,1); //cambio su estado de la lista a 1 que es activo
 								printf ("Se reconecto el nodo %s\n",inet_ntoa(remote_client.sin_addr));
+								log_info(logger,"Se reconecto el nodo %s",inet_ntoa(remote_client.sin_addr));
 							}
 						}
 					}
@@ -322,6 +331,7 @@ void *connection_handler_escucha(void){
 								addrlen = sizeof(struct sockaddr_in);
 								if ((getpeername(i,(struct sockaddr*)&remote_client,(socklen_t*)&addrlen))==-1){
 									perror ("getpeername");
+									log_error(logger,"Fallo el getpeername");
 									exit(-1);
 								}
 								modificar_estado_nodo (i,inet_ntoa(remote_client.sin_addr),remote_client.sin_port,0);
@@ -330,7 +340,7 @@ void *connection_handler_escucha(void){
 							}
 						} else {
 							perror("recv");
-							log_info(logger,"FALLO el Recv");
+							log_error(logger,"FALLO el Recv");
 							exit(-1);
 						}
 					} else {
