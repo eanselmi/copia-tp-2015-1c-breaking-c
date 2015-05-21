@@ -250,15 +250,11 @@ void *connection_handler_escucha(void){
 						perror("accept");
 						log_info(logger,"FALLO el ACCEPT");
 						exit(-1);
-					}
-					else //llego una nueva conexion, se acepto y ahora tengo que tratarla
-					{
+					} else {//llego una nueva conexion, se acepto y ahora tengo que tratarla
 						if ((nbytes = recv(newfd, mensaje, sizeof(mensaje), 0)) <= 0) { //si entra aca es porque hubo un error, no considero desconexion porque es nuevo
-							{
 								perror("recv");
 								log_info(logger,"FALLO el Recv");
 								exit(-1);
-							}
 						} else {
 							// el nuevo conectado me manda algo, se identifica como nodo nuevo o nodo reconectado
 							// luego de que se identifique lo agregare a la lista de nodos si es nodo nuevo
