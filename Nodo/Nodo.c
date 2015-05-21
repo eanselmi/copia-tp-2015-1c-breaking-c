@@ -9,6 +9,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <commons/string.h>
+#include <pthread.h>
 
 #define BLOCK_SIZE 20971520 //block size 20MB
 #define BUF_SIZE 50
@@ -18,6 +19,7 @@ char* mapearFileDeDatos();
 void setBloque(int bloque,char* datos);
 char* getBloque(int bloque);
 char* getFileContent(char* nombre);
+void* manejador_de_escuchas(); //Hilo que va a manejar las conexiones
 
 //Declaración de variables Globales
 t_config* configurador;
@@ -25,15 +27,18 @@ t_log* logger; //log en pantalla y archivo de log
 t_log* logger_archivo; //log solo en archivo de log
 char* fileDeDatos;
 unsigned int sizeFileDatos;
+fd_set* master; // conjunto maestro de descriptores de fichero
+fd_set* read_fds; // conjunto temporal de descriptores de fichero para select()
 
 int main(int argc , char *argv[]){
 
 	//-------------------------- Cuerpo ppal del programa ---------------------------------------
+	pthread_t escucha; // Hilo que va a escuchar nuevas conexiones
 	configurador= config_create("resources/nodoConfig.conf"); //se asigna el archivo de configuración especificado en la ruta
 	logger = log_create("./nodoLog.log", "Nodo", true, LOG_LEVEL_INFO);
 	logger_archivo = log_create("./nodoLog.log", "Nodo", false, LOG_LEVEL_INFO);
 	fileDeDatos=mapearFileDeDatos();//La siguiente función va a mapear el archivo de datos que esta especificado en el archivo conf a memoria, y asignarle al puntero fileDeDatos la direccion donde arranca el file. Utilizando mmap()
-/*
+
 	//------------ Variables locales a la funcion main --------------------
 	int sockfd;
 	char identificacion[BUF_SIZE]; //para el mensaje que envie al conectarse para identificarse, puede cambiar
@@ -89,33 +94,22 @@ int main(int argc , char *argv[]){
 					exit(-1);
 			}
 		}
-*/
-	/*Generacion de datos para probar el funcionamiento de la funcion setBloque*/
-			char* datosAEscribir;
-			datosAEscribir=malloc(BLOCK_SIZE);
-			memset(datosAEscribir,'H',BLOCK_SIZE);
-			int bloqueAEscribir=3;
-		//
 
-		// Grabará los datos enviados en el bloque solicitado
-		setBloque(bloqueAEscribir,datosAEscribir);
-
-
-		/*Generación de datos para probar la funcion getBloque*/
-
-			char* datosLeidos;
-			datosLeidos=malloc(BLOCK_SIZE);
-			int bloqueALeer=1;
-		//
-
-		datosLeidos=getBloque(bloqueALeer); // Devolverá el contenido del bloque solicitado
-	char* fileContent;
-	fileContent=getFileContent("archivo.txt");
+	//Creación del hilo que va a manejar nuevas conexiones / cambios en las conexiones
+	if( pthread_create(&escucha, NULL, manejador_de_escuchas, NULL) != 0 ) {
+		perror("pthread_create");
+		log_error(logger,"Fallo la creación del hilo manejador de escuchas");
+		return 1;
+	}
 
 	log_destroy(logger);
 	log_destroy(logger_archivo);
 	config_destroy(configurador);
 	return 0;
+}
+
+void *manejador_de_escuchas(){
+
 }
 
 char* mapearFileDeDatos(){
