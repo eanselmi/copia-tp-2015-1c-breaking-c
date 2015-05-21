@@ -28,9 +28,9 @@ typedef struct estructura_manejo_nodos {
 } t_nodo;
 
 typedef struct estructura_directorio{
-	int id;
+	uint32_t id;
 	char* nombre;
-	int padre;
+	uint32_t padre;
 }t_dir;
 
 
