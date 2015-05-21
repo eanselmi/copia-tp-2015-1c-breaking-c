@@ -31,7 +31,7 @@ void FormatearFilesystem ();		//TODAVIA NO DESARROLLADA
 void EliminarArchivo();				//DESARROLLADA
 void RenombrarArchivo ();			//DESARROLLADA
 void MoverArchivo();				//TODAVIA NO DESARROLLADA
-void CrearDirectorio();				//DESARROLLADA, falta revisar errores de compilacion, falta persistencia, validar cant max de directorios y ver que pasa si tengo directorio andy/andy/andy
+void CrearDirectorio();				//DESARROLLADA, falta persistencia, falta validar cant max de directorios
 void EliminarDirectorio();			//TODAVIA NO DESARROLLADA
 void RenombrarDirectorio();			//TODAVIA NO DESARROLLADA
 void MoverDirectorio();				//TODAVIA NO DESARROLLADA
@@ -46,6 +46,7 @@ void EliminarNodo();  				//TODAVIA NO DESARROLLADA
 uint32_t BuscarArchivoPorNombre (); //DESARROLLADA
 uint32_t BuscarPadre ();            //DESARROLLADA
 static void eliminar_bloques(t_bloque *bloque);
+long ExisteEnLaLista(t_list* listaDirectorios, char* nombreDirectorioABuscar, uint32_t idPadre);
 
 
 fd_set master; // conjunto maestro de descriptores de fichero
@@ -494,49 +495,60 @@ void MoverArchivo(){
 	 printf("Eligió Mover archivos\n");
 }
 
-void CrearDirectorio(){
-	printf("Eligió Crear directorios\n");
-	/*char* path;
-	char** directorioNuevo;
-	t_dir elementoDeMiLista;
-	t_dir directorioACrear;
-	int ExisteEnLaLista(t_list listaDirectorios, t_dir directorioABuscar){
-		int encontrado = 0; //trae 1 si lo encuentra, 0 si no lo encuentra
-		int tamanioLista = list_size(listaDirectorios);
-		int i = 0;
-		while(encontrado == 0 && i < tamanioLista){
-			elementoDeMiLista = list_get(listaDirectorios, i);
-			if (string_equals_ignore_case(elementoDeMiLista->nombre, directorioABuscar->nombre)){ 
-				encontrado=1;
+long ExisteEnLaLista(t_list* listaDirectorios, char* nombreDirectorioABuscar, uint32_t idPadre){
+	t_dir* elementoDeMiLista;
+	elementoDeMiLista = malloc(sizeof(t_dir));
+	long encontrado = -1; //trae -1 si no lo encuentra, sino trae el id del elemento
+	int tamanioLista = list_size(listaDirectorios);
+	int i = 0;
+	while(encontrado == -1 && i < tamanioLista){
+		elementoDeMiLista = list_get(listaDirectorios, i);
+		if (string_equals_ignore_case(elementoDeMiLista->nombre, nombreDirectorioABuscar)){
+			if (elementoDeMiLista->padre == idPadre){
+				encontrado= elementoDeMiLista->id;
 			}
-			i++;
 		}
-		return encontrado;
+		i++;
 	}
+	return encontrado;
+}
+
+void CrearDirectorio(){
+	//printf("Eligió Crear directorios\n");
+	uint32_t idPadre;
+	char* path;
+	char** directorioNuevo;
+	t_dir* directorioACrear;
+	directorioACrear = malloc(sizeof(t_dir));
+	long idAValidar; //uso este tipo para cubrir rango de uint32_t y el -1,  deberia mejorar el nombre de la variable
 	printf ("Ingrese el path del directorio\n");
 	scanf ("%s", path);
     directorioNuevo = string_split((char*) path, "/"); //Devuelve un array del path del directorio a crear
-    for(int nivelProf=1; directorioNuevo[nivelProf]!=NULL;nivelProf++){ //empiezo desde 1 porque nivel prof 0 es raiz y no existe en la lista
+    int indiceVectorDirNuevo=1;
+    while( directorioNuevo[indiceVectorDirNuevo]!=NULL){ //empiezo desde 1 porque nivel prof 0 es raiz y no existe en la lista
     	//list_find(directorios,(void*) ExisteEnLaLista());  //ver más adelante de usar la función de lcommons
-    	if (!ExisteEnLaLista(directorios, directorioNuevo[nivelProf])){
-    		if (nivelProf==1){
-    			directorioACrear->nombre = directorioNuevo[nivelProf];
-    			directorioACrear->padre =0;
-    			list_add(directorios, directorioACrear);
-    			//persistir en la db: pendiente
-    			//una vez persistido, traerme el id de ese elemento para guardarlo en directorio nuevo
-    		}
-    		if (nivelProf>1){
-    			int idPadre=BuscarPadre(directorioNuevo[nivelProf]);
-    			directorioACrear->nombre = directorioNuevo[nivelProf];
-    			directorioACrear->padre = idPadre;
-    			list_add(directorios, directorioACrear);
-    			//persistir en la db: pendiente
-    			    			//una vez persistido, traerme el id de ese elemento para guardarlo en directorio nuevo
-    		}
-
+    	if (indiceVectorDirNuevo == 1){
+    		idPadre = 0;
     	}
-    }*/
+    	idAValidar = ExisteEnLaLista(directorios, directorioNuevo[indiceVectorDirNuevo], idPadre);
+    	//quiere decir que existe
+    	if (idAValidar != -1){
+    		idPadre = (uint32_t) idAValidar;
+    		indiceVectorDirNuevo++;
+    	}
+    	else {
+    		while( directorioNuevo[indiceVectorDirNuevo]!=NULL){
+    	          directorioACrear->nombre = directorioNuevo[indiceVectorDirNuevo];
+    	          directorioACrear->padre = idPadre;
+    	          //persistir en la db: pendiente
+    	          //una vez persistido, traerme el id de ese elemento para guardarlo en directorio nuevo
+    	          //directorioACrear->id = lo que me trae la persistencia;
+    	          //idPadre = directorioACrear->id;
+    	          list_add(directorios, directorioACrear);
+    	          indiceVectorDirNuevo++;
+    		}
+    	}
+    }
 }
 
 
