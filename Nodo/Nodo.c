@@ -21,6 +21,10 @@ void setBloque(int bloque,char* datos);
 char* getBloque(int bloque);
 char* getFileContent(char* nombre);
 void* manejador_de_escuchas(); //Hilo que va a manejar las conexiones
+int estaEnListaNodos(int socket);
+int estaEnListaMappers(int socket);
+int estaEnListaReducers(int socket);
+
 
 //Declaración de variables Globales
 t_config* configurador;
@@ -61,6 +65,9 @@ int main(int argc , char *argv[]){
 	struct sockaddr_in filesystem; //direccion del fs a donde se conectará
 	struct sockaddr_in nodoAddr; //direccion del nodo que será servidor
 	memset(&filesystem, 0, sizeof(filesystem));
+	listaNodosConectados=list_create();
+	listaMappersConectados=list_create();
+	listaReducersConectados=list_create();
 
 	//sprintf(bloquesTotales,"%d",sizeFileDatos/20971520);
 	bloquesTotales=malloc(sizeof(int));
@@ -154,6 +161,7 @@ int main(int argc , char *argv[]){
 		return 1;
 	}
 
+	pthread_join(escucha,NULL);
 	log_destroy(logger);
 	log_destroy(logger_archivo);
 	config_destroy(configurador);
@@ -162,13 +170,6 @@ int main(int argc , char *argv[]){
 
 void *manejador_de_escuchas(){
 	int socketModificado,nbytes,newfd,addrlen;
-	listaNodosConectados=list_create();
-	listaMappersConectados=list_create();
-	listaReducersConectados=list_create();
-	socketNodo=malloc(sizeof(int));
-	socketMapper=malloc(sizeof(int));
-	socketReducer=malloc(sizeof(int));
-
 	while(1) {
 			read_fds = master;
 			if (select(fdmax+1, &read_fds, NULL, NULL, NULL) == -1) {
@@ -179,8 +180,10 @@ void *manejador_de_escuchas(){
 			// explorar conexiones existentes en busca de datos que leer
 			for(socketModificado = 0; socketModificado <= fdmax; socketModificado++) {
 				if (FD_ISSET(socketModificado, &read_fds)) {	// ¡¡tenemos datos!!
+
+					/* -- Nuevas conexiones(o nodo, o hilo map, o hilo reducer) --*/
+
 					if(socketModificado==listener){
-						//Se trata de una nueva conexion (o nodo, o hilo map, o hilo reducer)
 						addrlen=sizeof(struct sockaddr_in);
 						if ((newfd = accept(listener, (struct sockaddr*)&remote_client,(socklen_t*)&addrlen)) == -1) {
 								perror("accept");
@@ -196,6 +199,7 @@ void *manejador_de_escuchas(){
 								// el nuevo conectado me manda algo, se identifica como mapper, reducer o nodo
 								if(nbytes>0 && strncmp(mensaje,"soy nodo",9)==0){
 									//se conectó un nodo
+									socketNodo=malloc(sizeof(int));
 									*socketNodo=newfd;
 									list_add(listaNodosConectados,socketNodo); //agrego el nuevo socket a la lista de Nodos conectados
 									FD_SET(newfd,&master); //añadir al conjunto maestro
@@ -206,6 +210,7 @@ void *manejador_de_escuchas(){
 								}
 								if(nbytes>0 && strncmp(mensaje,"soy mapper",11)==0){
 									//se conectó un hilo mapper
+									socketMapper=malloc(sizeof(int));
 									*socketMapper=newfd;
 									list_add(listaMappersConectados,socketMapper); //agrego el nuevo socket a la lista de Mappers conectados
 									FD_SET(newfd,&master); //añadir al conjunto maestro
@@ -215,25 +220,137 @@ void *manejador_de_escuchas(){
 									log_info(logger,"Se conectó un hilo mapper desde %s",inet_ntoa(remote_client.sin_addr));
 								}
 								if(nbytes>0 && strncmp(mensaje,"soy reducer",12)==0){
-								//se conectó un hilo reducer
-								*socketReducer=newfd;
-								list_add(listaReducersConectados,socketReducer); //agrego el nuevo socket a la lista de Reducers conectados
-								FD_SET(newfd,&master); //añadir al conjunto maestro
-								if(newfd>fdmax){ //actualizar el máximo
-									fdmax=newfd;
+									//se conectó un hilo reducer
+									socketReducer=malloc(sizeof(int));
+									*socketReducer=newfd;
+									list_add(listaReducersConectados,socketReducer); //agrego el nuevo socket a la lista de Reducers conectados
+									FD_SET(newfd,&master); //añadir al conjunto maestro
+									if(newfd>fdmax){ //actualizar el máximo
+										fdmax=newfd;
+									}
+									log_info(logger,"Se conectó un hilo reducer desde %s",inet_ntoa(remote_client.sin_addr));
 								}
-								log_info(logger,"Se conectó un hilo reducer desde %s",inet_ntoa(remote_client.sin_addr));
 							}
+						}
+
+					/*-- Conexión con el fileSystem --*/
+
+					if(socketModificado==conectorFS){
+						if ((nbytes=recv(conectorFS,mensaje,sizeof(mensaje),0))==-1){ //da error
+							perror("recv");
+							log_error(logger,"Falló el receive");
+							exit(-1);
+						}
+						if(nbytes==0){ //se desconectó
+							close(conectorFS);
+							FD_CLR(conectorFS,&master);
+						}
+						else{
+
+							/* -- el filesystem envío un mensaje a tratar -- */
+
 						}
 					}
 
-						/* Hasta acá es el manejo de nuevas conexiones */
+					//-- Conexión con otro nodo --//
 
+					if(estaEnListaNodos(socketModificado)==0){
+						if ((nbytes=recv(socketModificado,mensaje,sizeof(mensaje),0))==-1){ //da error
+							perror("recv");
+							log_error(logger,"Falló el receive");
+							exit(-1);
+						}
+						if(nbytes==0){ //se desconectó
+							close(socketModificado);
+							FD_CLR(socketModificado,&master);
+						}
+						else{
 
+							/* -- el nodo envío un mensaje a tratar -- */
+
+						}
+					}
+
+					//-- Conexión con hilo mapper --//
+
+					if(estaEnListaMappers(socketModificado)==0){
+						if ((nbytes=recv(socketModificado,mensaje,sizeof(mensaje),0))==-1){ //da error
+							perror("recv");
+							log_error(logger,"Falló el receive");
+							exit(-1);
+						}
+						if(nbytes==0){ //se desconectó
+							close(socketModificado);
+							FD_CLR(socketModificado,&master);
+						}
+						else{
+
+							/* -- el mapper envío un mensaje a tratar -- */
+
+						}
+					}
+
+					//-- Conexión con hilo reducer --//
+
+					if(estaEnListaReducers(socketModificado)==0){
+						if ((nbytes=recv(socketModificado,mensaje,sizeof(mensaje),0))==-1){ //da error
+							perror("recv");
+							log_error(logger,"Falló el receive");
+							exit(-1);
+						}
+						if(nbytes==0){ //se desconectó
+							close(socketModificado);
+							FD_CLR(socketModificado,&master);
+						}
+						else{
+
+							/* -- el reducer envío un mensaje a tratar -- */
+
+						}
+					}
 				}
 			}
 	}
 }
+}
+
+int estaEnListaNodos(int socket){
+	int i,tamanio;
+	int* nodoDeLaLista;
+	tamanio=list_size(listaNodosConectados);
+	for(i=0;i<tamanio;i++){
+		nodoDeLaLista=list_get(listaNodosConectados,i);
+		if(*nodoDeLaLista==socket){
+			return 0;
+		}
+	}
+	return -1;
+}
+
+int estaEnListaMappers(int socket){
+	int i,tamanio;
+	int* mapperDeLaLista;
+	tamanio=list_size(listaMappersConectados);
+	for(i=0;i<tamanio;i++){
+		mapperDeLaLista=list_get(listaMappersConectados,i);
+		if(*mapperDeLaLista==socket){
+			return 0;
+		}
+	}
+	return -1;
+}
+
+int estaEnListaReducers(int socket){
+	int i,tamanio;
+	int* reducerDeLaLista;
+	tamanio=list_size(listaReducersConectados);
+	for(i=0;i<tamanio;i++){
+		reducerDeLaLista=list_get(listaReducersConectados,i);
+		if(*reducerDeLaLista==socket){
+			return 0;
+		}
+	}
+	return -1;
 }
 
 char* mapearFileDeDatos(){
