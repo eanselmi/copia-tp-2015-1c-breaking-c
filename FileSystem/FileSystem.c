@@ -143,8 +143,8 @@ int main(int argc , char *argv[]){
 			}
 			if (read_size > 0){
 				list_add (nodos, agregar_nodo_a_lista(newfd,asignar_nombre_a_nodo,0,inet_ntoa(remote_client.sin_addr),remote_client.sin_port,*bloquesTotales,*bloquesTotales));
-				printf ("Se conecto el nodo %s\n",inet_ntoa(remote_client.sin_addr));
-				log_info(logger,"Se conecto el nodo %s",inet_ntoa(remote_client.sin_addr));
+				printf ("Se conectó un nuevo nodo: %s con %d bloques totales\n",inet_ntoa(remote_client.sin_addr),*bloquesTotales);
+				log_info(logger,"Se conectó un nuevo nodo: %s con %d bloques totales",inet_ntoa(remote_client.sin_addr),*bloquesTotales);
 			}
 		}else close(newfd);
 	}
@@ -273,11 +273,11 @@ void *connection_handler_escucha(void){
 									if (newfd > fdmax) { // actualizar el máximo
 										fdmax = newfd;
 									}
-									printf ("Se conecto el proceso Marta desde la ip %s\n",inet_ntoa(remote_client.sin_addr));
-									log_info(logger,"Se conecto el proceso Marta desde la ip %s",inet_ntoa(remote_client.sin_addr));
+									printf ("Se conectó el proceso Marta desde la ip %s\n",inet_ntoa(remote_client.sin_addr));
+									log_info(logger,"Se conectó el proceso Marta desde la ip %s",inet_ntoa(remote_client.sin_addr));
 								}else{
-									printf ("Ya existe un proceso marta conectado, no puede haber mas de 1\n");
-									log_warning(logger,"Ya existe un proceso marta conectado, no puede haber mas de 1");
+									printf ("Ya existe un proceso marta conectado, no puede haber más de 1\n");
+									log_warning(logger,"Ya existe un proceso marta conectado, no puede haber más de 1");
 									close (newfd);
 								}
 
@@ -297,8 +297,8 @@ void *connection_handler_escucha(void){
 								}
 								if (read_size > 0){
 									list_add (nodos, agregar_nodo_a_lista(newfd,asignar_nombre_a_nodo(),0,inet_ntoa(remote_client.sin_addr),remote_client.sin_port,*bloquesTotales,*bloquesTotales));
-									printf ("Se conecto el nodo %s\n",inet_ntoa(remote_client.sin_addr));
-									log_info(logger,"Se conecto el nodo %s",inet_ntoa(remote_client.sin_addr));
+									printf ("Se conectó un nuevo nodo: %s con %d bloques totales\n",inet_ntoa(remote_client.sin_addr),*bloquesTotales);
+									log_info(logger,"Se conectó un nuevo nodo: %s con %d bloques totales",inet_ntoa(remote_client.sin_addr),*bloquesTotales);
 								}
 							}
 							if (read_size > 0 && strncmp(identificacion,"reconectado",11)==0){
@@ -308,8 +308,8 @@ void *connection_handler_escucha(void){
 									fdmax = newfd;
 								}
 								modificar_estado_nodo (i,inet_ntoa(remote_client.sin_addr),remote_client.sin_port,1); //cambio su estado de la lista a 1 que es activo
-								printf ("Se reconecto el nodo %s\n",inet_ntoa(remote_client.sin_addr));
-								log_info(logger,"Se reconecto el nodo %s",inet_ntoa(remote_client.sin_addr));
+								printf ("Se reconectó el nodo %s\n",inet_ntoa(remote_client.sin_addr));
+								log_info(logger,"Se reconectó el nodo %s",inet_ntoa(remote_client.sin_addr));
 							}
 						}
 					}

@@ -10,6 +10,7 @@
 #include <string.h>
 #include <commons/string.h>
 #include <pthread.h>
+#include <commons/collections/list.h>
 
 #define BLOCK_SIZE 20971520 //block size 20MB
 #define BUF_SIZE 50
@@ -30,6 +31,16 @@ unsigned int sizeFileDatos;
 fd_set master; // conjunto maestro de descriptores de fichero
 fd_set read_fds; // conjunto temporal de descriptores de fichero para select()
 int fdmax;//Numero maximo de descriptores de fichero
+int conectorFS; //socket para conectarse al FS
+int listener; //socket encargado de escuchar nuevas conexiones
+struct sockaddr_in remote_client; //Direccion del cliente que se conectará
+char* mensaje[BUF_SIZE]; //Mensaje que recivirá de los clientes
+t_list* listaNodosConectados; //Lista con los nodos conectados
+t_list* listaMappersConectados; //Lista con los mappers conectados
+t_list* listaReducersConectados; //lista con los reducers conectados
+int* socketNodo; //para identificar los que son nodos conectados
+int* socketMapper; //para identificar los que son mappers conectados
+int* socketReducer; //para identificar los que son reducers conectados
 
 int main(int argc , char *argv[]){
 
@@ -43,14 +54,12 @@ int main(int argc , char *argv[]){
 	fileDeDatos=mapearFileDeDatos();//La siguiente función va a mapear el archivo de datos que esta especificado en el archivo conf a memoria, y asignarle al puntero fileDeDatos la direccion donde arranca el file. Utilizando mmap()
 	FD_ZERO(&master); // borra los conjuntos maestro y temporal
 	FD_ZERO(&read_fds);
-	int listener; //socket encargado de escuchar nuevas conexiones
 	int yes=1; // para setsockopt() SO_REUSEADDR, más abajo
-	int conectorFS; //socket para conectarse al FS
 	char identificacion[BUF_SIZE]; //para el mensaje que envie al conectarse para identificarse, puede cambiar
 	//char bloquesTotales[2]; //tendra la cantidad de bloques totales del file de datos
 	int *bloquesTotales;
-	struct sockaddr_in filesystem;
-	struct sockaddr_in nodoAddr;
+	struct sockaddr_in filesystem; //direccion del fs a donde se conectará
+	struct sockaddr_in nodoAddr; //direccion del nodo que será servidor
 	memset(&filesystem, 0, sizeof(filesystem));
 
 	//sprintf(bloquesTotales,"%d",sizeFileDatos/20971520);
@@ -152,7 +161,79 @@ int main(int argc , char *argv[]){
 }
 
 void *manejador_de_escuchas(){
-	return 0;
+	int socketModificado,nbytes,newfd,addrlen;
+	listaNodosConectados=list_create();
+	listaMappersConectados=list_create();
+	listaReducersConectados=list_create();
+	socketNodo=malloc(sizeof(int));
+	socketMapper=malloc(sizeof(int));
+	socketReducer=malloc(sizeof(int));
+
+	while(1) {
+			read_fds = master;
+			if (select(fdmax+1, &read_fds, NULL, NULL, NULL) == -1) {
+				perror("select");
+				log_error(logger,"FALLO el Select");
+				exit(-1);
+			}
+			// explorar conexiones existentes en busca de datos que leer
+			for(socketModificado = 0; socketModificado <= fdmax; socketModificado++) {
+				if (FD_ISSET(socketModificado, &read_fds)) {	// ¡¡tenemos datos!!
+					if(socketModificado==listener){
+						//Se trata de una nueva conexion (o nodo, o hilo map, o hilo reducer)
+						addrlen=sizeof(struct sockaddr_in);
+						if ((newfd = accept(listener, (struct sockaddr*)&remote_client,(socklen_t*)&addrlen)) == -1) {
+								perror("accept");
+								log_error(logger,"FALLO el ACCEPT");
+								exit(-1);
+						} else {//llego una nueva conexion, se acepto y ahora tengo que tratarla
+							if((nbytes=recv(newfd,mensaje,sizeof(mensaje),0))<=0){ //error
+								perror("recive");
+								log_error(logger,"Falló el receive");
+								exit(-1);
+							}
+							else{
+								// el nuevo conectado me manda algo, se identifica como mapper, reducer o nodo
+								if(nbytes>0 && strncmp(mensaje,"soy nodo",9)==0){
+									//se conectó un nodo
+									*socketNodo=newfd;
+									list_add(listaNodosConectados,socketNodo); //agrego el nuevo socket a la lista de Nodos conectados
+									FD_SET(newfd,&master); //añadir al conjunto maestro
+									if(newfd>fdmax){ //actualizar el máximo
+										fdmax=newfd;
+									}
+									log_info(logger,"Se conectó el nodo %s",inet_ntoa(remote_client.sin_addr));
+								}
+								if(nbytes>0 && strncmp(mensaje,"soy mapper",11)==0){
+									//se conectó un hilo mapper
+									*socketMapper=newfd;
+									list_add(listaMappersConectados,socketMapper); //agrego el nuevo socket a la lista de Mappers conectados
+									FD_SET(newfd,&master); //añadir al conjunto maestro
+									if(newfd>fdmax){ //actualizar el máximo
+										fdmax=newfd;
+									}
+									log_info(logger,"Se conectó un hilo mapper desde %s",inet_ntoa(remote_client.sin_addr));
+								}
+								if(nbytes>0 && strncmp(mensaje,"soy reducer",12)==0){
+								//se conectó un hilo reducer
+								*socketReducer=newfd;
+								list_add(listaReducersConectados,socketReducer); //agrego el nuevo socket a la lista de Reducers conectados
+								FD_SET(newfd,&master); //añadir al conjunto maestro
+								if(newfd>fdmax){ //actualizar el máximo
+									fdmax=newfd;
+								}
+								log_info(logger,"Se conectó un hilo reducer desde %s",inet_ntoa(remote_client.sin_addr));
+							}
+						}
+					}
+
+						/* Hasta acá es el manejo de nuevas conexiones */
+
+
+				}
+			}
+	}
+}
 }
 
 char* mapearFileDeDatos(){
