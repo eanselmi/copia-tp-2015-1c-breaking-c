@@ -142,7 +142,7 @@ int main(int argc , char *argv[]){
 				exit (-1);
 			}
 			if (read_size > 0){
-				list_add (nodos, agregar_nodo_a_lista(newfd,asignar_nombre_a_nodo(),0,inet_ntoa(remote_client.sin_addr),remote_client.sin_port,*bloquesTotales,*bloquesTotales));
+				list_add (nodos, agregar_nodo_a_lista(newfd,asignar_nombre_a_nodo,0,inet_ntoa(remote_client.sin_addr),remote_client.sin_port,*bloquesTotales,*bloquesTotales));
 				printf ("Se conecto el nodo %s\n",inet_ntoa(remote_client.sin_addr));
 				log_info(logger,"Se conecto el nodo %s",inet_ntoa(remote_client.sin_addr));
 			}
