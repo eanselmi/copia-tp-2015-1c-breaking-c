@@ -27,24 +27,30 @@ t_log* logger; //log en pantalla y archivo de log
 t_log* logger_archivo; //log solo en archivo de log
 char* fileDeDatos;
 unsigned int sizeFileDatos;
-fd_set* master; // conjunto maestro de descriptores de fichero
-fd_set* read_fds; // conjunto temporal de descriptores de fichero para select()
+fd_set master; // conjunto maestro de descriptores de fichero
+fd_set read_fds; // conjunto temporal de descriptores de fichero para select()
+int fdmax;//Numero maximo de descriptores de fichero
 
 int main(int argc , char *argv[]){
 
 	//-------------------------- Cuerpo ppal del programa ---------------------------------------
+	//------------ Variables locales a la funcion main --------------------
+
 	pthread_t escucha; // Hilo que va a escuchar nuevas conexiones
 	configurador= config_create("resources/nodoConfig.conf"); //se asigna el archivo de configuración especificado en la ruta
 	logger = log_create("./nodoLog.log", "Nodo", true, LOG_LEVEL_INFO);
 	logger_archivo = log_create("./nodoLog.log", "Nodo", false, LOG_LEVEL_INFO);
 	fileDeDatos=mapearFileDeDatos();//La siguiente función va a mapear el archivo de datos que esta especificado en el archivo conf a memoria, y asignarle al puntero fileDeDatos la direccion donde arranca el file. Utilizando mmap()
-
-	//------------ Variables locales a la funcion main --------------------
-	int sockfd;
+	FD_ZERO(&master); // borra los conjuntos maestro y temporal
+	FD_ZERO(&read_fds);
+	int listener; //socket encargado de escuchar nuevas conexiones
+	int yes=1; // para setsockopt() SO_REUSEADDR, más abajo
+	int conectorFS; //socket para conectarse al FS
 	char identificacion[BUF_SIZE]; //para el mensaje que envie al conectarse para identificarse, puede cambiar
 	//char bloquesTotales[2]; //tendra la cantidad de bloques totales del file de datos
 	int *bloquesTotales;
 	struct sockaddr_in filesystem;
+	struct sockaddr_in nodoAddr;
 	memset(&filesystem, 0, sizeof(filesystem));
 
 	//sprintf(bloquesTotales,"%d",sizeFileDatos/20971520);
@@ -57,29 +63,31 @@ int main(int argc , char *argv[]){
 	filesystem.sin_port = htons(config_get_int_value(configurador,"PUERTO_FS"));
 	//-------------------------------
 
-	if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
+	if ((conectorFS = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
 		perror ("socket");
 		log_error(logger,"FALLO la creacion del socket");
 		exit (-1);
 	}
-	if (connect(sockfd, (struct sockaddr *)&filesystem,sizeof(struct sockaddr)) == -1) {
+	if (connect(conectorFS, (struct sockaddr *)&filesystem,sizeof(struct sockaddr)) == -1) {
 		perror ("connect");
 		log_error(logger,"FALLO la conexion con el FS");
 		exit (-1);
 	}
 	log_info(logger,"Se conectó al FS IP: %s, en el puerto: %d",config_get_string_value(configurador,"IP_FS"),config_get_int_value(configurador,"PUERTO_FS"));
+	FD_SET(conectorFS,&master); //Agrego al conector con el FS al conjunto maestro
+	fdmax=conectorFS; //Por ahora el FD más grande es éste
 	// aca revisaria si el nodo es nuevo o si es un nodo que se esta reconectando y dependiendo el caso, envia un mensaje y otro
 
 	if (string_equals_ignore_case(config_get_string_value(configurador,"NODO_NUEVO"),"SI")){ //verifica si el nodo es nuevo
 			//envio mensaje de identificación
 			strcpy(identificacion,"nuevo");
-			if((send(sockfd,identificacion,sizeof(identificacion),0))==-1) {
+			if((send(conectorFS,identificacion,sizeof(identificacion),0))==-1) {
 					perror("send");
 					log_error(logger,"FALLO el envio del saludo al FS");
 					exit(-1);
 			}
 			//envio cantidad de bloques totales
-			if((send(sockfd,bloquesTotales,sizeof(int),0))==-1){
+			if((send(conectorFS,bloquesTotales,sizeof(int),0))==-1){
 				perror("send");
 				log_error(logger,"FALLO el envío de la cantidad de bloques totales al FS");
 				exit(-1);
@@ -88,12 +96,47 @@ int main(int argc , char *argv[]){
 		else {
 			//si el if da falso por nodo existente que se esta reconectando
 			strcpy(identificacion,"reconectado");
-			if((send(sockfd,identificacion,sizeof(identificacion),0))==-1) {
+			if((send(conectorFS,identificacion,sizeof(identificacion),0))==-1) {
 					perror("send");
 					log_error(logger,"FALLO el envio del saludo al FS");
 					exit(-1);
 			}
 		}
+
+	/*
+	El nodo ya se conectó al FS, ahora queda a la espera de conexiones de hilos mapper/hilos reduce/otros nodos
+	*/
+
+	if ((listener = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
+			perror("socket");
+			log_error(logger,"FALLO la creacion del socket");
+			exit(-1);
+		}
+	// obviar el mensaje "address already in use" (la dirección ya se está usando)
+	if (setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, &yes,sizeof(int)) == -1) {
+		perror("setsockopt");
+		log_error(logger,"FALLO la ejecucion del setsockopt");
+		exit(-1);
+	}
+	// enlazar
+	nodoAddr.sin_family = AF_INET;
+	nodoAddr.sin_addr.s_addr = inet_addr(config_get_string_value(configurador,"IP_NODO"));
+	nodoAddr.sin_port = htons(config_get_int_value(configurador,"PUERTO_NODO"));
+	memset(&(nodoAddr.sin_zero), '\0', 8);
+	if (bind(listener, (struct sockaddr *)&nodoAddr, sizeof(nodoAddr)) == -1) {
+		perror("bind");
+		log_error(logger,"FALLO el Bind");
+		exit(-1);
+	}
+	// escuchar
+	if (listen(listener, 10) == -1) {
+		perror("listen");
+		log_error(logger,"FALLO el Listen");
+		exit(1);
+	}
+	FD_SET(listener,&master); //Agrego al listener al conjunto maestro
+	fdmax=listener; //el fd máximo hasta el momento es el listener
+	printf("Está escuchando conexiones");
 
 	//Creación del hilo que va a manejar nuevas conexiones / cambios en las conexiones
 	if( pthread_create(&escucha, NULL, manejador_de_escuchas, NULL) != 0 ) {
@@ -109,7 +152,7 @@ int main(int argc , char *argv[]){
 }
 
 void *manejador_de_escuchas(){
-
+	return 0;
 }
 
 char* mapearFileDeDatos(){
