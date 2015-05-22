@@ -38,7 +38,7 @@ int fdmax;//Numero maximo de descriptores de fichero
 int conectorFS; //socket para conectarse al FS
 int listener; //socket encargado de escuchar nuevas conexiones
 struct sockaddr_in remote_client; //Direccion del cliente que se conectará
-char* mensaje[BUF_SIZE]; //Mensaje que recivirá de los clientes
+char mensaje[BUF_SIZE]; //Mensaje que recivirá de los clientes
 t_list* listaNodosConectados; //Lista con los nodos conectados
 t_list* listaMappersConectados; //Lista con los mappers conectados
 t_list* listaReducersConectados; //lista con los reducers conectados
