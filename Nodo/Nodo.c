@@ -171,67 +171,67 @@ int main(int argc , char *argv[]){
 void *manejador_de_escuchas(){
 	int socketModificado,nbytes,newfd,addrlen;
 	while(1) {
-			read_fds = master;
-			if (select(fdmax+1, &read_fds, NULL, NULL, NULL) == -1) {
-				perror("select");
-				log_error(logger,"FALLO el Select");
-				exit(-1);
-			}
-			// explorar conexiones existentes en busca de datos que leer
-			for(socketModificado = 0; socketModificado <= fdmax; socketModificado++) {
-				if (FD_ISSET(socketModificado, &read_fds)) {	// ¡¡tenemos datos!!
+		read_fds = master;
+		if (select(fdmax+1, &read_fds, NULL, NULL, NULL) == -1) {
+			perror("select");
+			log_error(logger,"FALLO el Select");
+			exit(-1);
+		}
+		// explorar conexiones existentes en busca de datos que leer
+		for(socketModificado = 0; socketModificado <= fdmax; socketModificado++) {
+			if (FD_ISSET(socketModificado, &read_fds)) {	// ¡¡tenemos datos!!
 
-					/* -- Nuevas conexiones(o nodo, o hilo map, o hilo reducer) --*/
+				/* -- Nuevas conexiones(o nodo, o hilo map, o hilo reducer) --*/
 
-					if(socketModificado==listener){
-						addrlen=sizeof(struct sockaddr_in);
-						if ((newfd = accept(listener, (struct sockaddr*)&remote_client,(socklen_t*)&addrlen)) == -1) {
-								perror("accept");
-								log_error(logger,"FALLO el ACCEPT");
-								exit(-1);
-						} else {//llego una nueva conexion, se acepto y ahora tengo que tratarla
-							if((nbytes=recv(newfd,mensaje,sizeof(mensaje),0))<=0){ //error
-								perror("recive");
-								log_error(logger,"Falló el receive");
-								exit(-1);
+				if(socketModificado==listener){
+					addrlen=sizeof(struct sockaddr_in);
+					if ((newfd = accept(listener, (struct sockaddr*)&remote_client,(socklen_t*)&addrlen)) == -1) {
+						perror("accept");
+						log_error(logger,"FALLO el ACCEPT");
+						exit(-1);
+					} else {//llego una nueva conexion, se acepto y ahora tengo que tratarla
+						if((nbytes=recv(newfd,mensaje,sizeof(mensaje),0))<=0){ //error
+							perror("recive");
+							log_error(logger,"Falló el receive");
+							exit(-1);
+						}
+						else{
+							// el nuevo conectado me manda algo, se identifica como mapper, reducer o nodo
+							if(nbytes>0 && strncmp(mensaje,"soy nodo",9)==0){
+								//se conectó un nodo
+								socketNodo=malloc(sizeof(int));
+								*socketNodo=newfd;
+								list_add(listaNodosConectados,socketNodo); //agrego el nuevo socket a la lista de Nodos conectados
+								FD_SET(newfd,&master); //añadir al conjunto maestro
+								if(newfd>fdmax){ //actualizar el máximo
+									fdmax=newfd;
+								}
+								log_info(logger,"Se conectó el nodo %s",inet_ntoa(remote_client.sin_addr));
 							}
-							else{
-								// el nuevo conectado me manda algo, se identifica como mapper, reducer o nodo
-								if(nbytes>0 && strncmp(mensaje,"soy nodo",9)==0){
-									//se conectó un nodo
-									socketNodo=malloc(sizeof(int));
-									*socketNodo=newfd;
-									list_add(listaNodosConectados,socketNodo); //agrego el nuevo socket a la lista de Nodos conectados
-									FD_SET(newfd,&master); //añadir al conjunto maestro
-									if(newfd>fdmax){ //actualizar el máximo
-										fdmax=newfd;
-									}
-									log_info(logger,"Se conectó el nodo %s",inet_ntoa(remote_client.sin_addr));
+							if(nbytes>0 && strncmp(mensaje,"soy mapper",11)==0){
+								//se conectó un hilo mapper
+								socketMapper=malloc(sizeof(int));
+								*socketMapper=newfd;
+								list_add(listaMappersConectados,socketMapper); //agrego el nuevo socket a la lista de Mappers conectados
+								FD_SET(newfd,&master); //añadir al conjunto maestro
+								if(newfd>fdmax){ //actualizar el máximo
+									fdmax=newfd;
 								}
-								if(nbytes>0 && strncmp(mensaje,"soy mapper",11)==0){
-									//se conectó un hilo mapper
-									socketMapper=malloc(sizeof(int));
-									*socketMapper=newfd;
-									list_add(listaMappersConectados,socketMapper); //agrego el nuevo socket a la lista de Mappers conectados
-									FD_SET(newfd,&master); //añadir al conjunto maestro
-									if(newfd>fdmax){ //actualizar el máximo
-										fdmax=newfd;
-									}
-									log_info(logger,"Se conectó un hilo mapper desde %s",inet_ntoa(remote_client.sin_addr));
+								log_info(logger,"Se conectó un hilo mapper desde %s",inet_ntoa(remote_client.sin_addr));
+							}
+							if(nbytes>0 && strncmp(mensaje,"soy reducer",12)==0){
+								//se conectó un hilo reducer
+								socketReducer=malloc(sizeof(int));
+								*socketReducer=newfd;
+								list_add(listaReducersConectados,socketReducer); //agrego el nuevo socket a la lista de Reducers conectados
+								FD_SET(newfd,&master); //añadir al conjunto maestro
+								if(newfd>fdmax){ //actualizar el máximo
+									fdmax=newfd;
 								}
-								if(nbytes>0 && strncmp(mensaje,"soy reducer",12)==0){
-									//se conectó un hilo reducer
-									socketReducer=malloc(sizeof(int));
-									*socketReducer=newfd;
-									list_add(listaReducersConectados,socketReducer); //agrego el nuevo socket a la lista de Reducers conectados
-									FD_SET(newfd,&master); //añadir al conjunto maestro
-									if(newfd>fdmax){ //actualizar el máximo
-										fdmax=newfd;
-									}
-									log_info(logger,"Se conectó un hilo reducer desde %s",inet_ntoa(remote_client.sin_addr));
-								}
+								log_info(logger,"Se conectó un hilo reducer desde %s",inet_ntoa(remote_client.sin_addr));
 							}
 						}
+					}
 
 					/*-- Conexión con el fileSystem --*/
 
@@ -247,7 +247,7 @@ void *manejador_de_escuchas(){
 						}
 						else{
 
-							/* -- el filesystem envío un mensaje a tratar -- */
+						/* -- el filesystem envío un mensaje a tratar -- */
 
 						}
 					}
@@ -310,9 +310,10 @@ void *manejador_de_escuchas(){
 					}
 				}
 			}
+		}
 	}
 }
-}
+
 
 int estaEnListaNodos(int socket){
 	int i,tamanio;
