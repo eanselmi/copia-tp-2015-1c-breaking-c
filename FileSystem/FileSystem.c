@@ -18,6 +18,7 @@
 #define BUF_SIZE 50
 #define BLOCK_SIZE 20971520
 #define MENSAJE_SIZE 4096
+#define MAX_DIRECTORIOS 1024
 
 //Prototipos de Funciones
 int Menu();
@@ -31,7 +32,7 @@ void FormatearFilesystem ();		//TODAVIA NO DESARROLLADA
 void EliminarArchivo();				//DESARROLLADA
 void RenombrarArchivo ();			//DESARROLLADA
 void MoverArchivo();				//TODAVIA NO DESARROLLADA
-void CrearDirectorio();				//DESARROLLADA, falta persistencia, falta validar cant max de directorios
+void CrearDirectorio();				//DESARROLLADA, falta persistencia y error a devolver cuando supera cant max de directorios
 void EliminarDirectorio();			//TODAVIA NO DESARROLLADA
 void RenombrarDirectorio();			//TODAVIA NO DESARROLLADA
 void MoverDirectorio();				//TODAVIA NO DESARROLLADA
@@ -47,6 +48,7 @@ uint32_t BuscarArchivoPorNombre (); //DESARROLLADA
 uint32_t BuscarPadre ();            //DESARROLLADA
 static void eliminar_bloques(t_bloque *bloque);
 long ExisteEnLaLista(t_list* listaDirectorios, char* nombreDirectorioABuscar, uint32_t idPadre);
+int BuscarMenorIndiceLibre (char indiceDirectorios[]);
 
 
 fd_set master; // conjunto maestro de descriptores de fichero
@@ -69,6 +71,9 @@ int read_size;
 int *bloquesTotales; //tendra la cantidad de bloques totales del file de datos
 int marta_presente=0; //Valiable para controlar que solo 1 proceso marta se conecte
 int marta_sock;
+char indiceDirectorios[MAX_DIRECTORIOS]; //cantidad maxima de directorios
+int directoriosDisponibles; //reservo raiz
+int j; //variable para recorrer el vector de indices
 
 int main(int argc , char *argv[]){
 
@@ -165,6 +170,13 @@ int main(int argc , char *argv[]){
 	directorios=list_create(); //crea la lista de directorios
 	Menu();
 	log_destroy(logger);
+
+	//inicializo los indices para los directorios, 0 si está libre, 1 ocupado.
+	for (j =1; j < sizeof(indiceDirectorios); j++){
+		indiceDirectorios[j] = 0;
+	}
+	indiceDirectorios[0]=1; //raiz queda reservado como ocupado
+	directoriosDisponibles= MAX_DIRECTORIOS-1;
 	return 0;
 }
 
@@ -416,6 +428,19 @@ uint32_t BuscarArchivoPorNombre (const char *path, uint32_t idPadre){
 }
 
 
+
+int BuscarMenorIndiceLibre (char indiceDirectorios[]){
+	int i;
+	while (i < sizeof(indiceDirectorios) && indiceDirectorios[i] == 1)
+		i++;
+	if (i < sizeof(indiceDirectorios))
+			return i; //devuelvo el menor indice libre
+	else
+		return -1;
+}
+
+
+
 char *asignar_nombre_a_nodo(void){
 	char *nombre_temporal;
 	char *numero_nodo = malloc (1);
@@ -525,6 +550,7 @@ void CrearDirectorio(){
 	char* path;
 	char** directorioNuevo;
 	t_dir* directorioACrear;
+	int cantDirACrear=0;
 	directorioACrear = malloc(sizeof(t_dir));
 	long idAValidar; //uso este tipo para cubrir rango de uint32_t y el -1,  deberia mejorar el nombre de la variable
 	printf ("Ingrese el path del directorio\n");
@@ -543,15 +569,26 @@ void CrearDirectorio(){
     		indiceVectorDirNuevo++;
     	}
     	else {
-    		while( directorioNuevo[indiceVectorDirNuevo]!=NULL){
-    	          directorioACrear->nombre = directorioNuevo[indiceVectorDirNuevo];
-    	          directorioACrear->padre = idPadre;
-    	          //persistir en la db: pendiente
-    	          //una vez persistido, traerme el id de ese elemento para guardarlo en directorio nuevo
-    	          //directorioACrear->id = lo que me trae la persistencia;
-    	          //idPadre = directorioACrear->id;
-    	          list_add(directorios, directorioACrear);
-    	          indiceVectorDirNuevo++;
+    		int indiceDirectoriosNuevos;
+    		for(indiceDirectoriosNuevos=indiceVectorDirNuevo; directorioNuevo[indiceDirectoriosNuevos] != NULL; indiceDirectoriosNuevos++){
+    			cantDirACrear++;
+    		}
+    		if(cantDirACrear <= directoriosDisponibles ){
+        		while( directorioNuevo[indiceVectorDirNuevo]!=NULL){
+        	          directorioACrear->nombre = directorioNuevo[indiceVectorDirNuevo];
+        	          directorioACrear->padre = idPadre;
+        	          //persistir en la db: pendiente
+        	          int id = BuscarMenorIndiceLibre(indiceDirectorios);
+        	          directorioACrear->id = id;
+        	          indiceDirectorios[id]=1;
+        	          directoriosDisponibles--;
+        	          idPadre = directorioACrear->id;
+        	          list_add(directorios, directorioACrear);
+        	          indiceVectorDirNuevo++;
+        		}
+    		}
+    		else{
+    			//PREGUNTAR COMO SE DEVUELVE EL ERROR
     		}
     	}
     }
