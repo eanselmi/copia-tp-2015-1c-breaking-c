@@ -57,8 +57,10 @@ t_log* logger;
 t_list *nodos; //lista de nodos conectados al fs
 t_list* archivos; //lista de archivos del FS
 t_list* directorios; //lista de directorios del FS
+t_archivo* unArchivo; //un archivo de la lista de archivos del FS
 t_bloque* bloque; //Un Bloque del Archivo
 t_config * configurador;
+
 int fdmax; // número máximo de descriptores de fichero
 int listener; // descriptor de socket a la escucha
 struct sockaddr_in filesystem; // dirección del servidor
@@ -398,8 +400,7 @@ uint32_t BuscarPadre (char* path){
 
 //Buscar la posición del nodo de un archivo de la lista t_archivo por el nombre del archivo y el id del padre
 uint32_t BuscarArchivoPorNombre (const char *path, uint32_t idPadre){
-    t_archivo* arch;
-    arch=malloc(sizeof(t_archivo));
+    unArchivo=malloc(sizeof(t_archivo));
     int i,posicionArchivo;
     char* nombreArchivo;
     int posArchivo = 0;
@@ -412,8 +413,8 @@ uint32_t BuscarArchivoPorNombre (const char *path, uint32_t idPadre){
     	}
     }
     for(posArchivo=0; posArchivo<tam;posArchivo++){
-        arch = list_get(archivos,posArchivo);
-        if ((strcmp(arch->nombre,nombreArchivo)==0)&&(arch->padre == idPadre)){
+        unArchivo = list_get(archivos,posArchivo);
+        if ((strcmp(unArchivo->nombre,nombreArchivo)==0)&&(unArchivo->padre == idPadre)){
             posicionArchivo = posArchivo;
             break;
         }else{
@@ -484,15 +485,14 @@ void FormatearFilesystem (){
 void EliminarArchivo(){
     printf("Eligió  Eliminar archivo\n");
     char* path = malloc(1);
-    t_archivo* arch;
     printf ("Ingrese el path del archivo \n");
     scanf ("%s", path);
     uint32_t idPadre = BuscarPadre(path);
     uint32_t posArchivo = BuscarArchivoPorNombre (path,idPadre);
-    arch = list_get(archivos,posArchivo);
+    unArchivo = list_get(archivos,posArchivo);
     //Eliminar bloques del archivo
-    while(arch->bloques!=NULL){
-    	list_destroy_and_destroy_elements(arch->bloques, (void*)eliminar_bloques);
+    while(unArchivo->bloques!=NULL){
+    	list_destroy_and_destroy_elements(unArchivo->bloques, (void*)eliminar_bloques);
     	break;
 
     }
@@ -507,23 +507,33 @@ static void eliminar_bloques(t_bloque *bloque){
 }
 
 void RenombrarArchivo (){
-	//printf("Eligió Renombrar archivos\n");
+	printf("Eligió Renombrar archivos\n");
     char* path = malloc(1);
     char* nuevoNombre = malloc(1);
-    t_archivo* arch;
     printf ("Ingrese el path del archivo \n");
     scanf ("%s", path);
     uint32_t idPadre = BuscarPadre(path);
     uint32_t posArchivo = BuscarArchivoPorNombre (path,idPadre);
-    arch = list_get(archivos,posArchivo);
+    unArchivo = list_get(archivos,posArchivo);
     printf ("Ingrese el nuevo nombre \n");
     scanf ("%s", nuevoNombre);
-    strcpy(arch->nombre, nuevoNombre);
+    strcpy(unArchivo->nombre, nuevoNombre);
 
 }
 
 void MoverArchivo(){
+	 char* path = malloc(1);
+	 char* nuevoPath = malloc(1);
 	 printf("Eligió Mover archivos\n");
+	 printf ("Ingrese el path del archivo \n");
+	 scanf ("%s", path);
+	 uint32_t idPadre = BuscarPadre(path);
+	 uint32_t posArchivo = BuscarArchivoPorNombre (path,idPadre);
+	 unArchivo = list_get(archivos,posArchivo);
+	 printf ("Ingrese el nuevo path \n");
+	 scanf ("%s", nuevoPath);
+	 uint32_t idPadreNuevo = BuscarPadre(nuevoPath);
+	 unArchivo->padre = idPadreNuevo;
 }
 
 long ExisteEnLaLista(t_list* listaDirectorios, char* nombreDirectorioABuscar, uint32_t idPadre){
