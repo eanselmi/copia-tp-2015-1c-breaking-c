@@ -61,10 +61,19 @@ int main(int argc, char**argv){
 	FD_SET(socket_fs, &master);
 	fdmax = socket_fs; // por ahora es éste el ultimo socket
 
+	strcpy(identificacion,"marta");
+	if((send(socket_fs,identificacion,sizeof(identificacion),0))==-1) {
+		perror("send");
+		log_error(logger,"FALLO el envio del saludo al FS");
+	exit(-1);
+	}
+
 	if( pthread_create( &escucha_jobs , NULL , connection_handler_jobs , NULL) < 0){
 	    perror("could not create thread");
 	    return -1;
 	}
+
+	pthread_join(escucha_jobs,NULL);
 	return 0;
 }
 
@@ -123,7 +132,7 @@ void *connection_handler_jobs(){
 							exit(-1);
 						} else {
 							// Se conecta un nuevo job, algo haremos aca
-
+							log_info(logger,"Se conectó el Job");
 						}
 					}
 					//.................................................
