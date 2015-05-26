@@ -272,7 +272,7 @@ void *connection_handler_escucha(void){
 						log_error(logger,"FALLO el ACCEPT");
 						exit(-1);
 					} else {//llego una nueva conexion, se acepto y ahora tengo que tratarla
-						if ((nbytes = recv(newfd, identificacion, sizeof(identificacion), 0)) <= 0) { //si entra aca es porque hubo un error, no considero desconexion porque es nuevo
+						if ((read_size = recv(newfd, identificacion, sizeof(identificacion), 0)) <= 0) { //si entra aca es porque hubo un error, no considero desconexion porque es nuevo
 								perror("recv");
 								log_error(logger,"FALLO el Recv");
 								exit(-1);
@@ -342,13 +342,14 @@ void *connection_handler_escucha(void){
 
 				} else { //si entra aca no es un cliente nuevo, es uno que ya tenia y me esta mandando algo
 					// gestionar datos de un cliente
-					if ((nbytes = recv(i, mensaje, sizeof(mensaje), 0)) <= 0) { //si entra aca es porque se desconecto o hubo un error
-						if (nbytes == 0) {
+					if ((read_size = recv(i, mensaje, sizeof(mensaje), 0)) <= 0) { //si entra aca es porque se desconecto o hubo un error
+						if (read_size == 0) {
 							// Un nodo o marta cerro su conexion, actualizo la lista de nodos, reviso quien fue
 							if (i==marta_sock){
 								marta_presente=0;
 								close(i); // ¡Hasta luego!
 								FD_CLR(i, &master); // eliminar del conjunto maestro
+								printf ("Marta se desconecto\n");
 							} else {
 								addrlen = sizeof(struct sockaddr_in);
 								if ((getpeername(i,(struct sockaddr*)&remote_client,(socklen_t*)&addrlen))==-1){
@@ -357,6 +358,7 @@ void *connection_handler_escucha(void){
 									exit(-1);
 								}
 								modificar_estado_nodo (i,inet_ntoa(remote_client.sin_addr),remote_client.sin_port,0);
+								printf ("Se desconecto el nodo %s, %d\n",inet_ntoa(remote_client.sin_addr),remote_client.sin_port);
 								close(i); // ¡Hasta luego!
 								FD_CLR(i, &master); // eliminar del conjunto maestro
 							}
