@@ -18,6 +18,9 @@ int main(void){
 	//Variables locales a main
 	int marta_sock; //socket de conexión a MaRTA
 	struct sockaddr_in marta_addr;
+	char** archivosDelJob;
+	archivosDelJob=strdup("");
+	archivosDelJob=config_get_array_value(configurador,"ARCHIVOS");
 
 	/* Se conecta a MaRTA */
 
@@ -41,7 +44,9 @@ int main(void){
 
 	log_info(logger,"Se conectó a MaRTA. IP: %s, Puerto: %d",config_get_string_value(configurador,"IP_MARTA"),config_get_int_value(configurador,"PUERTO_MARTA")); //se agrega al log en modo de informacion la conexión con MaRTA
 
-
+	/*
+	 * Acá debe enviar la lista de archivos a donde aplicaria el Job a Marta y esperar indicaciones de Marta
+	*/
 
 	log_destroy(logger); //se elimina la instancia de log
 	return 0;
