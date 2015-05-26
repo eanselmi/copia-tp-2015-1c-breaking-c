@@ -67,6 +67,16 @@ int main(int argc, char**argv){
 		log_error(logger,"FALLO el envio del saludo al FS");
 	exit(-1);
 	}
+	int nbytes;
+	if ((nbytes = recv(socket_fs, identificacion, sizeof(identificacion), 0)) < 0) { //si entra aca es porque hubo un error, no considero desconexion porque es nuevo
+		perror("recv");
+		log_error(logger,"FALLO el Recv");
+		exit(-1);
+	} else if (nbytes == 0){
+		printf ("Conexion con FS cerrada, el proceso fs no esta listo o bien ya existe una instancia de marta conectada\n");
+		exit(-1);
+	}
+	if (nbytes > 0 && strncmp(identificacion,"ok",2)==0)	printf ("Conexion con el FS exitosa\n");
 
 	if( pthread_create( &escucha_jobs , NULL , connection_handler_jobs , NULL) < 0){
 	    perror("could not create thread");

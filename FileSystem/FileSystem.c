@@ -152,7 +152,10 @@ int main(int argc , char *argv[]){
 				printf ("Se conectó un nuevo nodo: %s con %d bloques totales\n",inet_ntoa(remote_client.sin_addr),*bloquesTotales);
 				log_info(logger,"Se conectó un nuevo nodo: %s con %d bloques totales",inet_ntoa(remote_client.sin_addr),*bloquesTotales);
 			}
-		}else close(newfd);
+		}else {
+			close(newfd);
+			printf ("Se conecto algo pero no se que fue, lo rechazo\n");
+		}
 	}
 	printf ("Nodos conectados %d\n",list_size(nodos));
 	printf ("Informacion del nodo 2\n");
@@ -269,7 +272,7 @@ void *connection_handler_escucha(void){
 						log_error(logger,"FALLO el ACCEPT");
 						exit(-1);
 					} else {//llego una nueva conexion, se acepto y ahora tengo que tratarla
-						if ((nbytes = recv(newfd, mensaje, sizeof(mensaje), 0)) <= 0) { //si entra aca es porque hubo un error, no considero desconexion porque es nuevo
+						if ((nbytes = recv(newfd, identificacion, sizeof(identificacion), 0)) <= 0) { //si entra aca es porque hubo un error, no considero desconexion porque es nuevo
 								perror("recv");
 								log_error(logger,"FALLO el Recv");
 								exit(-1);
@@ -285,6 +288,12 @@ void *connection_handler_escucha(void){
 									FD_SET(newfd, &master); // añadir al conjunto maestro
 									if (newfd > fdmax) { // actualizar el máximo
 										fdmax = newfd;
+									}
+									strcpy(identificacion,"ok");
+									if((send(marta_sock,identificacion,sizeof(identificacion),0))==-1) {
+										perror("send");
+										log_error(logger,"FALLO el envio del ok a Marta");
+										exit(-1);
 									}
 									printf ("Se conectó el proceso Marta desde la ip %s\n",inet_ntoa(remote_client.sin_addr));
 									log_info(logger,"Se conectó el proceso Marta desde la ip %s",inet_ntoa(remote_client.sin_addr));
