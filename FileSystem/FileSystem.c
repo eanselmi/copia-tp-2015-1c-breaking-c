@@ -32,7 +32,7 @@ void FormatearFilesystem ();		//TODAVIA NO DESARROLLADA
 void EliminarArchivo();				//DESARROLLADA
 void RenombrarArchivo ();			//DESARROLLADA
 void MoverArchivo();				//TODAVIA NO DESARROLLADA
-void CrearDirectorio();				//DESARROLLADA, falta persistencia y error a devolver cuando supera cant max de directorios
+void CrearDirectorio();				//DESARROLLADA, falta persistencia
 void EliminarDirectorio();			//TODAVIA NO DESARROLLADA
 void RenombrarDirectorio();			//TODAVIA NO DESARROLLADA
 void MoverDirectorio();				//TODAVIA NO DESARROLLADA
@@ -534,7 +534,7 @@ long ExisteEnLaLista(t_list* listaDirectorios, char* nombreDirectorioABuscar, ui
 	int i = 0;
 	while(encontrado == -1 && i < tamanioLista){
 		elementoDeMiLista = list_get(listaDirectorios, i);
-		if (string_equals_ignore_case(elementoDeMiLista->nombre, nombreDirectorioABuscar)){
+		if (strcmp(elementoDeMiLista->nombre, nombreDirectorioABuscar)){
 			if (elementoDeMiLista->padre == idPadre){
 				encontrado= elementoDeMiLista->id;
 			}
@@ -588,7 +588,8 @@ void CrearDirectorio(){
         		}
     		}
     		else{
-    			//PREGUNTAR COMO SE DEVUELVE EL ERROR
+    			printf("No se puede crear el directorio ya que sobrepasaría el límite máximo de directorios permitidos: %d\n", MAX_DIRECTORIOS);
+    					//No puede pasarse de 1024 directorios
     		}
     	}
     }
