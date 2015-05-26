@@ -16,11 +16,11 @@ int main(void){
 	configurador= config_create("resources/jobConfig.conf"); //se asigna el archivo de configuración especificado en la ruta
 	logger = log_create("./jobLog.log", "Job", true, LOG_LEVEL_INFO); //se crea la instancia de log, que tambien imprimira en pantalla
 	//Variables locales a main
-	int marta_sock; //socket de conexión a MaRTA
+	int marta_sock,i; //socket de conexión a MaRTA
 	struct sockaddr_in marta_addr;
 	char** archivosDelJob;
-	archivosDelJob=strdup("");
-	archivosDelJob=config_get_array_value(configurador,"ARCHIVOS");
+	archivosDelJob=config_get_array_value(configurador,"ARCHIVOS"); //devuelve un array con todos los archivos, y ultimo un NULL
+	char mensajeArchivos[sizeof(archivosDelJob)+1]; //el mensaje que se le mandará a marta
 
 	/* Se conecta a MaRTA */
 
