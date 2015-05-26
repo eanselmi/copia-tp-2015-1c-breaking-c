@@ -28,22 +28,22 @@ static t_nodo *agregar_nodo_a_lista(int socket,char *nodo_id,int est,char *ip, i
 char *asignar_nombre_a_nodo();
 void modificar_estado_nodo (int socket,char *ip,int port,int estado);
 void formatear_nodos(void);
-void FormatearFilesystem ();		//TODAVIA NO DESARROLLADA
+void FormatearFilesystem ();		//Pame TODAVIA NO DESARROLLADA
 void EliminarArchivo();				//DESARROLLADA
 void RenombrarArchivo ();			//DESARROLLADA
-void MoverArchivo();				//TODAVIA NO DESARROLLADA
+void MoverArchivo();				//DESARROLLADA
 void CrearDirectorio();				//DESARROLLADA, falta persistencia
-void EliminarDirectorio();			//TODAVIA NO DESARROLLADA
+void EliminarDirectorio();			//Andy TODAVIA NO DESARROLLADA
 void RenombrarDirectorio();			//comienzo, no esta terminada
-void MoverDirectorio();				//TODAVIA NO DESARROLLADA
-void CopiarArchivoAMDFS();			//TODAVIA NO DESARROLLADA
-void CopiarArchivoDelMDFS();		//TODAVIA NO DESARROLLADA
-void MD5DeArchivo();				//TODAVIA NO DESARROLLADA
-void VerBloques();					//TODAVIA NO DESARROLLADA
-void BorrarBloques();				//TODAVIA NO DESARROLLADA
-void CopiarBloques();				//TODAVIA NO DESARROLLADA
-void AgregarNodo();					//TODAVIA NO DESARROLLADA
-void EliminarNodo();  				//TODAVIA NO DESARROLLADA
+void MoverDirectorio();				//Andy TODAVIA NO DESARROLLADA
+void CopiarArchivoAMDFS();			//Pame TODAVIA NO DESARROLLADA
+void CopiarArchivoDelMDFS();		//Pame TODAVIA NO DESARROLLADA
+void MD5DeArchivo();				//Pame TODAVIA NO DESARROLLADA
+void VerBloques();					//Andy TODAVIA NO DESARROLLADA
+void BorrarBloques();				//Andy TODAVIA NO DESARROLLADA
+void CopiarBloques();				//Andy TODAVIA NO DESARROLLADA
+void AgregarNodo();					//Andy TODAVIA NO DESARROLLADA
+void EliminarNodo();  				//Andy TODAVIA NO DESARROLLADA
 uint32_t BuscarArchivoPorNombre (); //DESARROLLADA
 uint32_t BuscarPadre ();            //DESARROLLADA
 static void eliminar_bloques(t_bloque *bloque);
