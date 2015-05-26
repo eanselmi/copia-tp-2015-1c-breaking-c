@@ -34,7 +34,7 @@ void RenombrarArchivo ();			//DESARROLLADA
 void MoverArchivo();				//TODAVIA NO DESARROLLADA
 void CrearDirectorio();				//DESARROLLADA, falta persistencia
 void EliminarDirectorio();			//TODAVIA NO DESARROLLADA
-void RenombrarDirectorio();			//TODAVIA NO DESARROLLADA
+void RenombrarDirectorio();			//comienzo, no esta terminada
 void MoverDirectorio();				//TODAVIA NO DESARROLLADA
 void CopiarArchivoAMDFS();			//TODAVIA NO DESARROLLADA
 void CopiarArchivoDelMDFS();		//TODAVIA NO DESARROLLADA
@@ -507,7 +507,7 @@ static void eliminar_bloques(t_bloque *bloque){
 }
 
 void RenombrarArchivo (){
-	printf("Eligió Renombrar archivos\n");
+	//printf("Eligió Renombrar archivos\n");
     char* path = malloc(1);
     char* nuevoNombre = malloc(1);
     t_archivo* arch;
@@ -602,6 +602,38 @@ void EliminarDirectorio(){
 
 void RenombrarDirectorio(){
 	printf("Eligió Renombrar directorios\n");
+/*
+	char* pathOriginal;
+	char** vectorPathOriginal;
+	char* pathNuevo;
+	char** vectorPathNuevo;
+	int i=0;
+	char comparador;
+    printf ("Ingrese el path del original \n");
+	scanf ("%s", pathOriginal);
+	printf ("Ingrese el nuevo nombre \n");
+	scanf ("%s", pathNuevo);
+	vectorPathOriginal = string_split((char*) pathOriginal, "/");
+	vectorPathNuevo = string_split((char*) vectorPathNuevo, "/");
+	if(sizeof(vectorPathOriginal) == sizeof(vectorPathNuevo)){
+		comparador=0;
+		while (vectorPathOriginal[i+1] != NULL && comparador==0){ //el anterior a null es el que me interesa que sea distinto
+			comparador = strcmp(vectorPathOriginal[i], vectorPathNuevo[i]);
+			i++;
+		}
+		if(comparador==0){
+			//Magia acá
+		}
+		else {
+			printf("Aca mensaje de error\n");
+		}
+	}
+	else{
+		printf("Aca mensaje de error\n");
+	}
+
+*/
+
 }
 
 void MoverDirectorio(){
