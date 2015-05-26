@@ -3,7 +3,8 @@
 #include <commons/config.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-
+#include <commons/collections/list.h>
+#include "Job.h"
 
 //Declaración de funciones
 
@@ -16,7 +17,9 @@ int main(void){
 	configurador= config_create("resources/jobConfig.conf"); //se asigna el archivo de configuración especificado en la ruta
 	logger = log_create("./jobLog.log", "Job", true, LOG_LEVEL_INFO); //se crea la instancia de log, que tambien imprimira en pantalla
 	//Variables locales a main
-	int marta_sock,i; //socket de conexión a MaRTA
+	pthread_t mapperThread;
+	pthread_t reduceThread;
+	int marta_sock; //socket de conexión a MaRTA
 	struct sockaddr_in marta_addr;
 	char** archivosDelJob;
 	archivosDelJob=config_get_array_value(configurador,"ARCHIVOS"); //devuelve un array con todos los archivos, y ultimo un NULL
@@ -46,8 +49,16 @@ int main(void){
 
 	/*
 	 * Acá debe enviar la lista de archivos a donde aplicaria el Job a Marta y esperar indicaciones de Marta
+	 * También se indicara a Marta si el Job acepta combiner
 	*/
 
 	log_destroy(logger); //se elimina la instancia de log
 	return 0;
 }
+
+
+void* hilo_mapper(t_mapper* mapperStruct){
+
+
+}
+
