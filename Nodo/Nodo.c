@@ -154,7 +154,6 @@ int main(int argc , char *argv[]){
 	if(listener>fdmax){
 		fdmax=listener; //el fd máximo hasta el momento es el listener
 	}
-	printf("Está escuchando conexiones");
 
 	//Creación del hilo que va a manejar nuevas conexiones / cambios en las conexiones
 	if( pthread_create(&escucha, NULL, manejador_de_escuchas, NULL) != 0 ) {
@@ -172,6 +171,7 @@ int main(int argc , char *argv[]){
 
 void *manejador_de_escuchas(){
 	int socketModificado,nbytes,newfd,addrlen;
+	printf("Nodo en la espera de conexiones/solicitudes del FS\n");
 	while(1) {
 		read_fds = master;
 		if (select(fdmax+1, &read_fds, NULL, NULL, NULL) == -1) {

@@ -4,11 +4,14 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <commons/collections/list.h>
+#include <pthread.h>
 #include "Job.h"
 
+#define BUF_SIZE 50
 #define BUF_ARCH 4096
 
 //Declaración de funciones
+void* hilo_mapper(t_mapper*);
 
 //Declaración de variables
 t_config* configurador;
@@ -78,6 +81,21 @@ int main(void){
 		exit(-1);
 	}
 
+	t_mapper* datosMapper;
+	datosMapper=malloc(sizeof(t_mapper));
+	strcpy(datosMapper->ip_nodo,"127.0.0.1");
+	datosMapper->puerto_nodo=6500;
+	datosMapper->bloque=3;
+	strcpy(datosMapper->nombreArchivoTemporal,"/tmp/map3tmp.txt");
+
+
+	if(pthread_create(&mapperThread,NULL,hilo_mapper,datosMapper)!=0){
+		perror("pthread_create");
+		log_error(logger,"Fallo la creación del hilo rutina mapper");
+		return 1;
+	}
+
+	pthread_join(mapperThread,NULL);
 	log_destroy(logger); //se elimina la instancia de log
 	config_destroy(configurador);
 	return 0;
@@ -85,7 +103,38 @@ int main(void){
 
 
 void* hilo_mapper(t_mapper* mapperStruct){
+	printf("Se conectara al nodo con ip: %s\n",mapperStruct->ip_nodo);
+	printf("En el puerto %d\n",mapperStruct->puerto_nodo);
+	printf("Ejecutará la rutina mapper en el bloque %d\n",mapperStruct->bloque);
+	printf("Guardará el resultado en el archivo %s\n",mapperStruct->nombreArchivoTemporal);
+	//comienzo de conexion con nodo
+	struct sockaddr_in nodo_addr;
+	int nodo_sock;
+	char identificacion[BUF_SIZE];
 
+	if((nodo_sock=socket(AF_INET,SOCK_STREAM,0))==-1){ //si función socket devuelve -1 es error
+		perror("socket");
+		log_error(logger,"Fallo la creación del socket (conexión mapper-nodo)");
+		exit(1);
+	}
+
+	nodo_addr.sin_family=AF_INET;
+	nodo_addr.sin_port=htons(mapperStruct->puerto_nodo);
+	nodo_addr.sin_addr.s_addr=inet_addr(mapperStruct->ip_nodo);
+	memset(&(nodo_addr.sin_zero),'\0',8);
+
+	if((connect(nodo_sock,(struct sockaddr *)&nodo_addr,sizeof(struct sockaddr)))==-1){
+		perror("connect");
+		log_error(logger,"Fallo la conexión con MaRTA");
+		exit(1);
+	}
+	strcpy(identificacion,"soy mapper");
+	if(send(nodo_sock,identificacion,sizeof(identificacion),0)==-1){
+		perror("send");
+		log_error(logger,"Fallo el envío de identificación mapper-nodo");
+	}
+	/*Conexión mapper-nodo establecida*/
+	log_info(logger,"Hilo mapper conectado al Nodo con IP: %s,en el Puerto: %d",mapperStruct->ip_nodo,mapperStruct->puerto_nodo);
 
 }
 
