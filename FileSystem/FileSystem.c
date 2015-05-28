@@ -24,9 +24,10 @@
 int Menu();
 void DibujarMenu();
 void *connection_handler_escucha(); // Esta funcion escucha continuamente si recibo nuevos mensajes
-static t_nodo *agregar_nodo_a_lista(int socket,char *nodo_id,int est,char *ip, int port, int bloques_lib, int bloques_tot);
+static t_nodo *agregar_nodo_a_lista(int socket,int est,char *ip, int port, int bloques_lib, int bloques_tot);
 char *asignar_nombre_a_nodo();
 void modificar_estado_nodo (int socket,char *ip,int port,int estado);
+void listar_nodos_conectados(t_list *nodos);
 void formatear_nodos(void);
 void FormatearFilesystem ();		//Pame TODAVIA NO DESARROLLADA
 void EliminarArchivo();				//DESARROLLADA
@@ -68,6 +69,7 @@ char identificacion[BUF_SIZE]; // buffer para datos del cliente
 char mensaje[MENSAJE_SIZE];
 int cantidad_nodos=0;
 int cantidad_nodos_historico=0;
+//char *nombre_generico_nodo="nodo";
 int read_size;
 int *bloquesTotales; //tendra la cantidad de bloques totales del file de datos
 int marta_presente=0; //Valiable para controlar que solo 1 proceso marta se conecte
@@ -139,7 +141,7 @@ int main(int argc , char *argv[]){
 			cantidad_nodos++;
 			cantidad_nodos_historico=cantidad_nodos;
 			FD_SET(newfd, &master);
-			fdmax = newfd;
+			if (newfd>fdmax) fdmax = newfd;
 			bloquesTotales=malloc(sizeof(int));
 			//Segundo recv, aca espero recibir la capacidad del nodo
 			if ((read_size = recv(newfd, bloquesTotales ,sizeof(int) , 0))==-1) {
@@ -148,7 +150,7 @@ int main(int argc , char *argv[]){
 				exit (-1);
 			}
 			if (read_size > 0){
-				list_add (nodos, agregar_nodo_a_lista(newfd,asignar_nombre_a_nodo,0,inet_ntoa(remote_client.sin_addr),remote_client.sin_port,*bloquesTotales,*bloquesTotales));
+				list_add (nodos, agregar_nodo_a_lista(newfd,0,inet_ntoa(remote_client.sin_addr),remote_client.sin_port,*bloquesTotales,*bloquesTotales));
 				printf ("Se conectó un nuevo nodo: %s con %d bloques totales\n",inet_ntoa(remote_client.sin_addr),*bloquesTotales);
 				log_info(logger,"Se conectó un nuevo nodo: %s con %d bloques totales",inet_ntoa(remote_client.sin_addr),*bloquesTotales);
 			}
@@ -234,16 +236,32 @@ int Menu(void){
 	      case 14: CopiarBloques(); break;
 	      case 15: AgregarNodo(); break;
 	      case 16: EliminarNodo(); break;
-	      case 17: printf("Eligió Salir\n"); break;
+	      //case 17: printf("Eligió Salir\n"); break;
+	      case 17: listar_nodos_conectados(nodos); break;
 	      default: printf("Opción incorrecta. Por favor ingrese una opción del 1 al 17\n");break;
 		}
 	}
 	return 0;
 }
-static t_nodo *agregar_nodo_a_lista(int socket,char *nodo_id,int est,char *ip, int port, int bloques_lib, int bloques_tot){
+static t_nodo *agregar_nodo_a_lista(int socket,int est,char *ip, int port, int bloques_lib, int bloques_tot){
 	t_nodo *nodo_temporal = malloc (sizeof(t_nodo));
+
+
+	//===========================================================================
+	//Preparo el nombre que identificara al nodo, esto antes lo hacia una funcion
+	//===========================================================================
+	char nombre_temporal[10]="nodo";
+	char *numero_nodo=malloc(sizeof(int));
+	sprintf(numero_nodo,"%d",cantidad_nodos_historico);
+	strcat(nombre_temporal,numero_nodo);
+
+	//===========================================================================
+	//===========================================================================
+	//===========================================================================
+
+	memset(nodo_temporal->nodo_id,'\0',10);
 	nodo_temporal->socket = socket;
-	nodo_temporal->nodo_id = strdup(ip);
+	strcat(nodo_temporal->nodo_id,nombre_temporal);
 	nodo_temporal->estado = est;
 	nodo_temporal->ip = strdup (ip);
 	nodo_temporal->puerto = port;
@@ -252,6 +270,16 @@ static t_nodo *agregar_nodo_a_lista(int socket,char *nodo_id,int est,char *ip, i
 	return nodo_temporal;
 }
 
+void listar_nodos_conectados(t_list *nodos){
+	int i,cantidad_nodos;
+	t_nodo *elemento;
+	cantidad_nodos= list_size(nodos);
+	for (i=0;i<=cantidad_nodos;i++){
+		elemento = list_get(nodos,i);
+		printf ("\n\n");
+		printf ("Nodo_ID: %s\nSocket: %d\nEstado: %d\nIP: %s\nPuerto_Origen: %d\nBloques_Libres: %d\nBloques_Totales: %d", elemento->nodo_id, elemento->socket,elemento->estado,elemento->ip,elemento->puerto,elemento->bloques_libres,elemento->bloques_totales);
+	}
+}
 void *connection_handler_escucha(void){
 	int i,newfd,addrlen;
 	while(1) {
@@ -318,7 +346,7 @@ void *connection_handler_escucha(void){
 									exit (-1);
 								}
 								if (read_size > 0){
-									list_add (nodos, agregar_nodo_a_lista(newfd,asignar_nombre_a_nodo(),0,inet_ntoa(remote_client.sin_addr),remote_client.sin_port,*bloquesTotales,*bloquesTotales));
+									list_add (nodos, agregar_nodo_a_lista(newfd,0,inet_ntoa(remote_client.sin_addr),remote_client.sin_port,*bloquesTotales,*bloquesTotales));
 									printf ("Se conectó un nuevo nodo: %s con %d bloques totales\n",inet_ntoa(remote_client.sin_addr),*bloquesTotales);
 									log_info(logger,"Se conectó un nuevo nodo: %s con %d bloques totales",inet_ntoa(remote_client.sin_addr),*bloquesTotales);
 								}
@@ -448,16 +476,6 @@ int BuscarMenorIndiceLibre (char indiceDirectorios[]){
 			return i; //devuelvo el menor indice libre
 	else
 		return -1;
-}
-
-char *asignar_nombre_a_nodo(void){
-	char *nombre_temporal=malloc(sizeof(char));
-	char *numero_nodo=malloc(sizeof(char));
-	sprintf(numero_nodo,"%d",cantidad_nodos_historico);
-	strcat(nombre_temporal,"nodo");
-	strcat(nombre_temporal,numero_nodo);
-	free (numero_nodo);
-	return nombre_temporal;
 }
 
 void modificar_estado_nodo (int socket,char *ip,int port,int estado){

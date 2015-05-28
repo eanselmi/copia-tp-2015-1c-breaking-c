@@ -19,7 +19,7 @@ typedef struct estructura_bloque {
 
 typedef struct estructura_manejo_nodos {
 	int socket;
-	char *nodo_id;
+	char nodo_id[10];
 	int estado;
 	char *ip;
 	int puerto;
