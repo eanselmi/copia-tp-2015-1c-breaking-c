@@ -1,6 +1,7 @@
 typedef struct estructura_mapper {
 	char* ip_nodo;
 	int puerto_nodo;
+	int bloque;
 	char* nombreArchivoTemporal;
 } t_mapper;
 
