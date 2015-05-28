@@ -13,6 +13,7 @@
 #include <commons/log.h>
 #include <commons/config.h>
 #include <commons/string.h>
+#include "Marta.h"
 
 #define BUF_SIZE 50
 #define MENSAJE_SIZE 4096
@@ -36,6 +37,7 @@ char identificacion[BUF_SIZE]; // buffer para datos del cliente
 char mensaje[MENSAJE_SIZE];
 char mensajeCombiner[3]; //Dice si el Job acepta combiner (SI/NO)
 int read_size;
+t_list* jobs;
 
 int main(int argc, char**argv){
 
@@ -78,6 +80,8 @@ int main(int argc, char**argv){
 		exit(-1);
 	}
 	if (nbytes > 0 && strncmp(identificacion,"ok",2)==0)	printf ("Conexion con el FS exitosa\n");
+
+	jobs=list_create(); //creo la lista de jobs
 
 	if( pthread_create( &escucha_jobs , NULL , connection_handler_jobs , NULL) < 0){
 	    perror("could not create thread");
@@ -142,27 +146,39 @@ void *connection_handler_jobs(){
 							log_info(logger,"FALLO el Recv");
 							exit(-1);
 						} else {
-							// Se conecta un nuevo job, algo haremos aca
+							// Se conecta un nuevo job, lo guardamos en el set master y actualizamos fdmax
+							log_info(logger,"Se conectó el Job con IP:%s",inet_ntoa(remote_job.sin_addr));
 							FD_SET(newfd,&master);
 							if(newfd>fdmax){
 								fdmax=newfd;
 							}
-							log_info(logger,"Se conectó el Job con IP:%s",inet_ntoa(remote_job.sin_addr));
 
 							// Separo el mensaje que recibo con los archivos a trabajar (Job envía todos juntos separados con ,)
 							char** archivos =string_split((char*)mensaje,",");
+
+							//Lo siguiente es para probar que efectivamente se reciba la lista de archivos
 							int i;
 							for(i=0;archivos[i]!=NULL;i++){
 								printf("Se debe trabajar en el archivo:%s\n",archivos[i]);
 							}
+							//fin de la prueba
 
 							if(recv(newfd,mensajeCombiner,sizeof(mensajeCombiner),0)==-1){
 								perror("recv");
 								log_error(logger,"Fallo al recibir el atributo COMBINER");
 								exit(-1);
 							}
-
+							//Para probar que recibio el atributo
 							printf("El Job %s acepta combiner\n",(char*)mensajeCombiner);
+
+							/*
+							 * MaRTA le va a pedir al FS los bloques de los archivos involucrados
+							 * FS le deverá devolver: nodo(ip,puerto)-bloque
+							 * Buscará la combinación que maximice la distribución de las tareas en los nodos e
+							 * irá indicando al Job cada Hilo Mapper que deberá iniciar y qué NodoBloque debe
+							 * procesar hasta que la rutina de Mapping haya sido aplicada en todo el set de datos.
+							 */
+
 
 						}
 					}

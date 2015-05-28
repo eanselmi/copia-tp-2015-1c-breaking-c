@@ -24,6 +24,9 @@ int main(void){
 	int marta_sock; //socket de conexión a MaRTA
 	struct sockaddr_in marta_addr;
 	char** archivosDelJob;
+	char mensajeCombiner[3]; // Mensaje que se enviará a MaRTA con el atributo COMBINER
+	int contMensajeArch; //contador para recorrer el array de archivos a los que se aplica el Job
+	char mensajeArchivos[BUF_ARCH]; //cadena de caracteres que enviara a MaRTA los archivos a donde se aplica el Job. Formato: ",archivo1,archivo2,archivo3,...,archivo_n"
 
 	/* Se conecta a MaRTA */
 
@@ -51,13 +54,10 @@ int main(void){
 	 * De esta forma, del lado de marta voy a recibir el mensaje todo seguido y lo voy a separar con un string_split (commons)
 	*/
 
-	int i;
-	char mensajeArchivos[BUF_ARCH];
-	//strcat(mensajeArchivos,",");
 	archivosDelJob=config_get_array_value(configurador,"ARCHIVOS"); //devuelve un array con todos los archivos, y ultimo un NULL
-	for(i=0;archivosDelJob[i]!=NULL;i++){
+	for(contMensajeArch=0;archivosDelJob[contMensajeArch]!=NULL;contMensajeArch++){
 		strcat(mensajeArchivos,",");
-		strcat(mensajeArchivos,archivosDelJob[i]);
+		strcat(mensajeArchivos,archivosDelJob[contMensajeArch]);
 	}
 
 	if (send(marta_sock,mensajeArchivos,sizeof(mensajeArchivos),0)==-1){
@@ -65,11 +65,11 @@ int main(void){
 		log_error(logger,"Falló el envío a MaRTA de la lista de archivos");
 		exit(-1);
 	}
+
 	/*
 	 * Envío a MaRTA si el Job acepta combiner o no
 	*/
 
-	char mensajeCombiner[3];
 	strcat(mensajeCombiner,config_get_string_value(configurador,"COMBINER"));
 
 	if (send(marta_sock,mensajeCombiner,sizeof(mensajeCombiner),0)==-1){
