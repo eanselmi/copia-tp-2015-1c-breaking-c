@@ -160,7 +160,7 @@ int main(int argc , char *argv[]){
 	printf ("Nodos conectados %d\n",list_size(nodos));
 	printf ("Informacion del nodo 2\n");
 	printf ("Socket %d, ip %s, Estado %d, Nodos Libres %d\n",((t_nodo*)list_get(nodos,1))->socket,((t_nodo*)list_get(nodos,1))->ip,((t_nodo*)list_get(nodos,1))->estado,((t_nodo*)list_get(nodos,1))->bloques_libres);
-	sleep(5);
+	//sleep(5);
 	//Cuando sale de este ciclo el proceso FileSystem ya se encuentra en condiciones de iniciar sus tareas
 
 	//Este hilo va a manejar las conexiones con los nodos de forma paralela a la ejecucion del proceso
@@ -253,7 +253,7 @@ static t_nodo *agregar_nodo_a_lista(int socket,char *nodo_id,int est,char *ip, i
 }
 
 void *connection_handler_escucha(void){
-	int i,nbytes,newfd,addrlen;
+	int i,newfd,addrlen;
 	while(1) {
 		read_fds = master;
 		if (select(fdmax+1, &read_fds, NULL, NULL, NULL) == -1) {
@@ -450,15 +450,13 @@ int BuscarMenorIndiceLibre (char indiceDirectorios[]){
 		return -1;
 }
 
-
-
 char *asignar_nombre_a_nodo(void){
-	char *nombre_temporal;
-	char *numero_nodo = malloc (1);
+	char *nombre_temporal=malloc(sizeof(char));
+	char *numero_nodo=malloc(sizeof(char));
 	sprintf(numero_nodo,"%d",cantidad_nodos_historico);
-	nombre_temporal=malloc(4+strlen(numero_nodo));
 	strcat(nombre_temporal,"nodo");
 	strcat(nombre_temporal,numero_nodo);
+	free (numero_nodo);
 	return nombre_temporal;
 }
 
