@@ -6,6 +6,8 @@
 #include <commons/collections/list.h>
 #include "Job.h"
 
+#define BUF_ARCH 4096
+
 //Declaración de funciones
 
 //Declaración de variables
@@ -22,8 +24,6 @@ int main(void){
 	int marta_sock; //socket de conexión a MaRTA
 	struct sockaddr_in marta_addr;
 	char** archivosDelJob;
-	archivosDelJob=config_get_array_value(configurador,"ARCHIVOS"); //devuelve un array con todos los archivos, y ultimo un NULL
-	char mensajeArchivos[sizeof(archivosDelJob)+1]; //el mensaje que se le mandará a marta
 
 	/* Se conecta a MaRTA */
 
@@ -47,12 +47,39 @@ int main(void){
 
 	log_info(logger,"Se conectó a MaRTA. IP: %s, Puerto: %d",config_get_string_value(configurador,"IP_MARTA"),config_get_int_value(configurador,"PUERTO_MARTA")); //se agrega al log en modo de informacion la conexión con MaRTA
 
-	/*
-	 * Acá debe enviar la lista de archivos a donde aplicaria el Job a Marta y esperar indicaciones de Marta
-	 * También se indicara a Marta si el Job acepta combiner
+	/*Creo un char[] que tenga los nombres de los archivos a trabajar separados con "," (una "," tambien al principio)
+	 * De esta forma, del lado de marta voy a recibir el mensaje todo seguido y lo voy a separar con un string_split (commons)
 	*/
 
+	int i;
+	char mensajeArchivos[BUF_ARCH];
+	//strcat(mensajeArchivos,",");
+	archivosDelJob=config_get_array_value(configurador,"ARCHIVOS"); //devuelve un array con todos los archivos, y ultimo un NULL
+	for(i=0;archivosDelJob[i]!=NULL;i++){
+		strcat(mensajeArchivos,",");
+		strcat(mensajeArchivos,archivosDelJob[i]);
+	}
+
+	if (send(marta_sock,mensajeArchivos,sizeof(mensajeArchivos),0)==-1){
+		perror("send");
+		log_error(logger,"Falló el envío a MaRTA de la lista de archivos");
+		exit(-1);
+	}
+	/*
+	 * Envío a MaRTA si el Job acepta combiner o no
+	*/
+
+	char mensajeCombiner[3];
+	strcat(mensajeCombiner,config_get_string_value(configurador,"COMBINER"));
+
+	if (send(marta_sock,mensajeCombiner,sizeof(mensajeCombiner),0)==-1){
+		perror("send");
+		log_error(logger,"Falló el envío del atributo COMBINER");
+		exit(-1);
+	}
+
 	log_destroy(logger); //se elimina la instancia de log
+	config_destroy(configurador);
 	return 0;
 }
 

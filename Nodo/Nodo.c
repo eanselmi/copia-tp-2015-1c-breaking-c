@@ -151,7 +151,9 @@ int main(int argc , char *argv[]){
 		exit(1);
 	}
 	FD_SET(listener,&master); //Agrego al listener al conjunto maestro
-	fdmax=listener; //el fd máximo hasta el momento es el listener
+	if(listener>fdmax){
+		fdmax=listener; //el fd máximo hasta el momento es el listener
+	}
 	printf("Está escuchando conexiones");
 
 	//Creación del hilo que va a manejar nuevas conexiones / cambios en las conexiones

@@ -34,6 +34,7 @@ struct sockaddr_in filesystem; // dirección del servidor
 struct sockaddr_in remote_job; // dirección del cliente
 char identificacion[BUF_SIZE]; // buffer para datos del cliente
 char mensaje[MENSAJE_SIZE];
+char mensajeCombiner[3]; //Dice si el Job acepta combiner (SI/NO)
 int read_size;
 
 int main(int argc, char**argv){
@@ -142,7 +143,27 @@ void *connection_handler_jobs(){
 							exit(-1);
 						} else {
 							// Se conecta un nuevo job, algo haremos aca
-							log_info(logger,"Se conectó el Job");
+							FD_SET(newfd,&master);
+							if(newfd>fdmax){
+								fdmax=newfd;
+							}
+							log_info(logger,"Se conectó el Job con IP:%s",inet_ntoa(remote_job.sin_addr));
+
+							// Separo el mensaje que recibo con los archivos a trabajar (Job envía todos juntos separados con ,)
+							char** archivos =string_split((char*)mensaje,",");
+							int i;
+							for(i=0;archivos[i]!=NULL;i++){
+								printf("Se debe trabajar en el archivo:%s\n",archivos[i]);
+							}
+
+							if(recv(newfd,mensajeCombiner,sizeof(mensajeCombiner),0)==-1){
+								perror("recv");
+								log_error(logger,"Fallo al recibir el atributo COMBINER");
+								exit(-1);
+							}
+
+							printf("El Job %s acepta combiner\n",(char*)mensajeCombiner);
+
 						}
 					}
 					//.................................................
