@@ -1,9 +1,9 @@
 typedef struct estructura_mapper {
-	char* ip_nodo;
+	char ip_nodo[20];
 	int puerto_nodo;
 	int bloque;
-	char* nombreArchivoTemporal;
-} t_mapper;
+	char nombreArchivoTemporal[100];
+} __attribute__((packed)) t_mapper;
 
 typedef struct estructura_reduce {
 	char* ip_nodoPpal;

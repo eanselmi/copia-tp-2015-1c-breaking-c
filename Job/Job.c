@@ -81,15 +81,22 @@ int main(void){
 		exit(-1);
 	}
 
-	t_mapper* datosMapper;
-	datosMapper=malloc(sizeof(t_mapper));
-	strcpy(datosMapper->ip_nodo,"127.0.0.1");
-	datosMapper->puerto_nodo=6500;
-	datosMapper->bloque=3;
-	strcpy(datosMapper->nombreArchivoTemporal,"/tmp/map3tmp.txt");
+	t_mapper datosMapper;
 
+	if(recv(marta_sock,&datosMapper,sizeof(t_mapper),0)==-1){
+		perror("recv");
+		log_error(logger,"Fallo al recibir los datos para el mapper");
+		exit(-1);
+	}
 
-	if(pthread_create(&mapperThread,NULL,hilo_mapper,datosMapper)!=0){
+	t_mapper* punteroMapper;
+	punteroMapper=malloc(sizeof(t_mapper));
+	strcpy(punteroMapper->ip_nodo,datosMapper.ip_nodo);
+	punteroMapper->bloque=datosMapper.bloque;
+	punteroMapper->puerto_nodo=datosMapper.puerto_nodo;
+	strcpy(punteroMapper->nombreArchivoTemporal,datosMapper.nombreArchivoTemporal);
+
+	if(pthread_create(&mapperThread,NULL,hilo_mapper,punteroMapper)!=0){
 		perror("pthread_create");
 		log_error(logger,"Fallo la creación del hilo rutina mapper");
 		return 1;
@@ -103,8 +110,8 @@ int main(void){
 
 
 void* hilo_mapper(t_mapper* mapperStruct){
-	printf("Se conectara al nodo con ip: %s\n",mapperStruct->ip_nodo);
-	printf("En el puerto %d\n",mapperStruct->puerto_nodo);
+	printf("Se conectara al nodo con ip: %s\n",(char*)mapperStruct->ip_nodo);
+	printf("En el puerto %d\n", mapperStruct->puerto_nodo);
 	printf("Ejecutará la rutina mapper en el bloque %d\n",mapperStruct->bloque);
 	printf("Guardará el resultado en el archivo %s\n",mapperStruct->nombreArchivoTemporal);
 	//comienzo de conexion con nodo

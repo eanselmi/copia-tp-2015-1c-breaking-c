@@ -7,3 +7,11 @@ typedef struct estructura_job{
 	int reducePendientes;
 	char* combiner;
 } t_job;
+
+
+typedef struct estructura_mapper {
+	char ip_nodo[20];
+	int puerto_nodo;
+	int bloque;
+	char nombreArchivoTemporal[100];
+} __attribute__((packed)) t_mapper;

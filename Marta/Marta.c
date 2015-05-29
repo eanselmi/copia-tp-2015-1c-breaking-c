@@ -179,6 +179,17 @@ void *connection_handler_jobs(){
 							 * procesar hasta que la rutina de Mapping haya sido aplicada en todo el set de datos.
 							 */
 
+							t_mapper datosMapper;
+							strcpy(datosMapper.ip_nodo,"127.0.0.1");
+							datosMapper.puerto_nodo=6500;
+							datosMapper.bloque=3;
+							strcpy(datosMapper.nombreArchivoTemporal,"/tmp/map3tmp.txt");
+
+							if(send(newfd,&datosMapper,sizeof(t_mapper),0)==-1){
+								perror("send");
+								log_error(logger,"Fallo el envio de los datos para el mapper");
+								exit(-1);
+							}
 
 						}
 					}
