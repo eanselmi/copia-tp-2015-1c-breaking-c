@@ -506,6 +506,12 @@ void formatear_nodos(){
 
 void FormatearFilesystem (){
 	printf("Eligió  Formatear el MDFS\n");
+	if (archivos != NULL){
+		if (unArchivo->bloques != NULL){
+			list_clean(unArchivo->bloques);
+		}
+		list_clean(archivos);
+	}
 }
 
 void EliminarArchivo(){
@@ -686,6 +692,12 @@ void CopiarArchivoDelMDFS(){
 
 void MD5DeArchivo(){
 	printf("Eligió Solicitar el MD5 de un archivo en MDFS\n");
+//    char* path = malloc(1);
+//    printf ("Ingrese el path del archivo \n");
+//	scanf ("%s", path);
+//	uint32_t idPadre = BuscarPadre(path);
+//	uint32_t posArchivo = BuscarArchivoPorNombre (path,idPadre);
+//	unArchivo = list_get(archivos,posArchivo);
 }
 
 void VerBloques(){
