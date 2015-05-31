@@ -15,6 +15,10 @@
 #include <commons/config.h>
 #include <commons/string.h>
 
+//Includes para mongo
+#include <bson.h>
+#include <mongoc.h>
+
 #define BUF_SIZE 50
 #define BLOCK_SIZE 20971520
 #define MENSAJE_SIZE 4096
@@ -25,7 +29,6 @@ int Menu();
 void DibujarMenu();
 void *connection_handler_escucha(); // Esta funcion escucha continuamente si recibo nuevos mensajes
 static t_nodo *agregar_nodo_a_lista(int socket,int est,char *ip, int port, int bloques_lib, int bloques_tot);
-char *asignar_nombre_a_nodo();
 void modificar_estado_nodo (int socket,char *ip,int port,int estado);
 void listar_nodos_conectados(t_list *nodos);
 void formatear_nodos(void);
@@ -78,6 +81,15 @@ char indiceDirectorios[MAX_DIRECTORIOS]; //cantidad maxima de directorios
 int directoriosDisponibles; //reservo raiz
 int j; //variable para recorrer el vector de indices
 
+//Variables para la persistencia con mongo
+mongoc_client_t *client;
+mongoc_collection_t *collection;
+mongoc_cursor_t *cursor;
+bson_error_t error;
+bson_oid_t oid;
+bson_t *doc;
+
+
 int main(int argc , char *argv[]){
 
 	pthread_t escucha; //Hilo que va a manejar los mensajes recibidos
@@ -88,7 +100,10 @@ int main(int argc , char *argv[]){
 	logger=log_create("fsLog.log","FileSystem",false,LOG_LEVEL_INFO);
 	FD_ZERO(&master); // borra los conjuntos maestro y temporal
 	FD_ZERO(&read_fds);
-
+	mongoc_init ();
+	client = mongoc_client_new ("mongodb://localhost:27017/");
+	collection = mongoc_client_get_collection (client, "NODOS", "lista_nodos");
+	bson_oid_init (&oid, NULL);
 
 	if ((listener = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
 		perror("socket");
@@ -150,6 +165,7 @@ int main(int argc , char *argv[]){
 				exit (-1);
 			}
 			if (read_size > 0){
+				agregar_nodo_a_lista(newfd,0,inet_ntoa(remote_client.sin_addr),remote_client.sin_port,*bloquesTotales,*bloquesTotales);
 				list_add (nodos, agregar_nodo_a_lista(newfd,0,inet_ntoa(remote_client.sin_addr),remote_client.sin_port,*bloquesTotales,*bloquesTotales));
 				printf ("Se conectó un nuevo nodo: %s con %d bloques totales\n",inet_ntoa(remote_client.sin_addr),*bloquesTotales);
 				log_info(logger,"Se conectó un nuevo nodo: %s con %d bloques totales",inet_ntoa(remote_client.sin_addr),*bloquesTotales);
@@ -267,6 +283,35 @@ static t_nodo *agregar_nodo_a_lista(int socket,int est,char *ip, int port, int b
 	nodo_temporal->puerto = port;
 	nodo_temporal->bloques_libres = bloques_lib;
 	nodo_temporal->bloques_totales = bloques_tot;
+
+	/*char tmp_socket[50];
+	char tmp_estado[10];
+	char tmp_puerto[50];
+	char tmp_bl_lib[50];
+	char tmp_bl_tot[50];*/
+		char *tmp_socket=malloc(sizeof(int));
+		char *tmp_estado=malloc(sizeof(int));
+		char *tmp_puerto=malloc(sizeof(int));
+		char *tmp_bl_lib=malloc(sizeof(int));
+		char *tmp_bl_tot=malloc(sizeof(int));
+	/*memset(tmp_socket,'\0',50);
+	memset(tmp_estado,'\0',10);
+	memset(tmp_puerto,'\0',50);
+	memset(tmp_bl_lib,'\0',50);
+	memset(tmp_bl_tot,'\0',50);*/
+	sprintf(tmp_socket,"%d",socket);
+	sprintf(tmp_estado,"%d",est);
+	sprintf(tmp_puerto,"%d",port);
+	sprintf(tmp_bl_lib,"%d",bloques_lib);
+	sprintf(tmp_bl_tot,"%d",bloques_tot);
+	printf ("%s",tmp_socket);
+	//Persistencia del nodo agregado a la base de mongo
+	//doc = BCON_NEW ("Socket",socket,"Nodo_ID",nombre_temporal,"Estado",est,"IP",ip,"Puerto",port,"Bloques_Libres",bloques_lib,"Bloques_Totales",bloques_tot);
+	doc = BCON_NEW ("Socket",tmp_socket,"Nodo_ID",nombre_temporal,"Estado",tmp_estado,"IP",ip,"Puerto",tmp_puerto,"Bloques_Libres",tmp_bl_lib,"Bloques_Totales",tmp_bl_tot);
+	if (!mongoc_collection_insert (collection, MONGOC_INSERT_NONE, doc, NULL, &error)) {
+		printf ("%s\n", error.message);
+	}
+
 	return nodo_temporal;
 }
 
