@@ -1,0 +1,15 @@
+Tuto para instalar mongo en la virtual.
+
+1. En una terminal, ejecuten "sudo su" y pongan la clave utnso, esto los va a convertir en usuario root, ojo con lo que hacen siendo root
+2. apt-get install mongodb-clients
+3. apt-get install mongodb-server
+4. wget https://github.com/mongodb/mongo-c-driver/releases/download/1.1.4/mongo-c-driver-1.1.4.tar.gz
+5. tar -xzf mongo-c-driver-1.1.4.tar.gz 
+6. cd mongo-c-driver-1.1.4/
+7. ./configure
+8. make
+9. make install
+10. editar el archivo /etc/profile y agregar la linea export LD_LIBRARY_PATH=/usr/local/lib arriba de todo luego del comenratio y antes del primer IF
+
+Bueno esto fue mongodb para nintendo64 espero que les haya gustado, Chau.
+
