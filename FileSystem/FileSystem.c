@@ -37,7 +37,7 @@ void EliminarArchivo();				//DESARROLLADA
 void RenombrarArchivo ();			//DESARROLLADA
 void MoverArchivo();				//DESARROLLADA
 void CrearDirectorio();				//DESARROLLADA, falta persistencia
-void EliminarDirectorio();			//Andy En desarrollo
+void EliminarDirectorio();			//DESARROLLA, falta persistencia y ver list_remove_and_destroy_element
 void RenombrarDirectorio();			//DESARROLLADA, falta persistencia
 void MoverDirectorio();				//Andy TODAVIA NO DESARROLLADA
 void CopiarArchivoAMDFS();			//Pame TODAVIA NO DESARROLLADA
@@ -53,7 +53,7 @@ uint32_t BuscarPadre ();            //DESARROLLADA
 static void eliminar_bloques(t_bloque *bloque);
 long ExisteEnLaLista(t_list* listaDirectorios, char* nombreDirectorioABuscar, uint32_t idPadre);
 int BuscarMenorIndiceLibre (char indiceDirectorios[]);
-
+static void directorio_destroy(t_dir* self);
 
 fd_set master; // conjunto maestro de descriptores de fichero
 fd_set read_fds; // conjunto temporal de descriptores de fichero para select()
@@ -670,6 +670,13 @@ void CrearDirectorio(){
 }
 
 
+static void directorio_destroy(t_dir* self) {
+    free(self->nombre);
+    free(self);
+}
+
+
+
 void EliminarDirectorio(){
 	//printf("Eligió Eliminar directorios\n");
 	char* pathAEliminar;
@@ -683,7 +690,9 @@ void EliminarDirectorio(){
 	int i = 0;
 	uint32_t idAEliminar;
 	long idEncontrado = 0;
+	char encontrePos; //0 si no lo encuentra, 1 si lo encuentra
 	char tieneDirOArch; //0 si no tiene, 1 si tiene subdirectorio o archivo
+	int posicionElementoAEliminar;
 	printf ("Ingrese el path a eliminar desde raíz ejemplo /home/utnso \n");
 	scanf ("%s", pathAEliminar);
 	vectorpathAEliminar = string_split((char*) pathAEliminar, "/");
@@ -724,7 +733,18 @@ void EliminarDirectorio(){
 					printf ("El directorio que desea eliminar no puede ser eliminado ya que posee archivos \n");
 				}
 				else{
-					//Aca hacer el borrado
+					i = 0;
+					encontrePos = 0; //no lo encontre
+					while (encontrePos == 0 && i < tamanioListaDir){
+						elementoDeMiListaDir = list_get(directorios, i);
+						if (elementoDeMiListaDir->id ==idAEliminar){
+							encontrePos = 1;
+						}
+						i++;
+					}
+					posicionElementoAEliminar = i -1;
+					//list_remove_and_destroy_element(t_list *, int index, void(*element_destroyer)(void*));
+					list_remove_and_destroy_element(directorios, posicionElementoAEliminar, (void*) directorio_destroy);
 				}
 			}
 		}
