@@ -115,9 +115,12 @@ void* hilo_mapper(t_mapper* mapperStruct){
 	printf("Ejecutará la rutina mapper en el bloque %d\n",mapperStruct->bloque);
 	printf("Guardará el resultado en el archivo %s\n",mapperStruct->nombreArchivoTemporal);
 	//comienzo de conexion con nodo
+	int* bloqueParaMap;
+	char nomArchTemp[100];
 	struct sockaddr_in nodo_addr;
 	int nodo_sock;
 	char identificacion[BUF_SIZE];
+	bloqueParaMap=malloc(sizeof(int));
 
 	if((nodo_sock=socket(AF_INET,SOCK_STREAM,0))==-1){ //si función socket devuelve -1 es error
 		perror("socket");
@@ -142,6 +145,20 @@ void* hilo_mapper(t_mapper* mapperStruct){
 	}
 	/*Conexión mapper-nodo establecida*/
 	log_info(logger,"Hilo mapper conectado al Nodo con IP: %s,en el Puerto: %d",mapperStruct->ip_nodo,mapperStruct->puerto_nodo);
+
+	strcpy(nomArchTemp,mapperStruct->nombreArchivoTemporal);
+
+	if(send(nodo_sock,&(mapperStruct->bloque),sizeof(int),0)==-1){
+		perror("send");
+		log_error(logger,"Fallo el envio del bloque a mapear hacia el Nodo");
+		exit(-1);
+	}
+
+	if(send(nodo_sock,&(mapperStruct->nombreArchivoTemporal),100,0)==-1){
+		perror("send");
+		log_error(logger,"Fallo el envio del nombre del archivo temporal a guardar el Map");
+		exit(-1);
+	}
 
 }
 

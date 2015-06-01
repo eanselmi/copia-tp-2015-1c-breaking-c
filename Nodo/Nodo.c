@@ -234,81 +234,88 @@ void *manejador_de_escuchas(){
 							}
 						}
 					}
+				}
 
-					/*-- Conexión con el fileSystem --*/
+				/*-- Conexión con el fileSystem --*/
 
-					if(socketModificado==conectorFS){
-						if ((nbytes=recv(conectorFS,mensaje,sizeof(mensaje),0))==-1){ //da error
-							perror("recv");
-							log_error(logger,"Falló el receive");
-							exit(-1);
-						}
-						if(nbytes==0){ //se desconectó
-							close(conectorFS);
-							FD_CLR(conectorFS,&master);
-						}
-						else{
-
+				if(socketModificado==conectorFS){
+					if ((nbytes=recv(conectorFS,mensaje,sizeof(mensaje),0))==-1){ //da error
+						perror("recv");
+						log_error(logger,"Falló el receive");
+						exit(-1);
+					}
+					if(nbytes==0){ //se desconectó
+						close(conectorFS);
+						FD_CLR(conectorFS,&master);
+					}
+					else{
 						/* -- el filesystem envío un mensaje a tratar -- */
-
 						}
+				}
+
+				//-- Conexión con otro nodo --//
+
+				if(estaEnListaNodos(socketModificado)==0){
+					if ((nbytes=recv(socketModificado,mensaje,sizeof(mensaje),0))==-1){ //da error
+						perror("recv");
+						log_error(logger,"Falló el receive");
+						exit(-1);
 					}
+					if(nbytes==0){ //se desconectó
+						close(socketModificado);
+						FD_CLR(socketModificado,&master);
+					}
+					else{
 
-					//-- Conexión con otro nodo --//
+						/* -- el nodo envío un mensaje a tratar -- */
 
-					if(estaEnListaNodos(socketModificado)==0){
-						if ((nbytes=recv(socketModificado,mensaje,sizeof(mensaje),0))==-1){ //da error
+					}
+				}
+
+				//-- Conexión con hilo mapper --//
+
+				if(estaEnListaMappers(socketModificado)==0){
+					char nomArchTemp[100];
+					if ((nbytes=recv(socketModificado,mensaje,sizeof(mensaje),0))==-1){ //da error
+						perror("recv");
+						log_error(logger,"Falló el receive");
+						exit(-1);
+					}
+					if(nbytes==0){ //se desconectó
+						close(socketModificado);
+						FD_CLR(socketModificado,&master);
+					}
+					else{
+						/* -- el mapper envío un mensaje a tratar -- */
+						/*En el mensaje recibio el bloque a donde aplicar mapper*/
+						printf("Se aplicará la rutina mapper en el bloque %d\n",*mensaje);
+
+						/*Recibe el nombre del archivo temporal a donde guardar el mapper*/
+						if(recv(socketModificado,nomArchTemp,100,0)==-1){
 							perror("recv");
-							log_error(logger,"Falló el receive");
+							log_error(logger,"Fallo al recibir el nombre del archivo temporal donde guardar el Map");
 							exit(-1);
 						}
-						if(nbytes==0){ //se desconectó
-							close(socketModificado);
-							FD_CLR(socketModificado,&master);
-						}
-						else{
-
-							/* -- el nodo envío un mensaje a tratar -- */
-
-						}
+						printf("Se guardará el resultado del mapper en el archivo temporal %s\n",nomArchTemp);
 					}
+				}
 
-					//-- Conexión con hilo mapper --//
+				//-- Conexión con hilo reducer --//
 
-					if(estaEnListaMappers(socketModificado)==0){
-						if ((nbytes=recv(socketModificado,mensaje,sizeof(mensaje),0))==-1){ //da error
-							perror("recv");
-							log_error(logger,"Falló el receive");
-							exit(-1);
-						}
-						if(nbytes==0){ //se desconectó
-							close(socketModificado);
-							FD_CLR(socketModificado,&master);
-						}
-						else{
-
-							/* -- el mapper envío un mensaje a tratar -- */
-
-						}
+				if(estaEnListaReducers(socketModificado)==0){
+					if ((nbytes=recv(socketModificado,mensaje,sizeof(mensaje),0))==-1){ //da error
+						perror("recv");
+						log_error(logger,"Falló el receive");
+						exit(-1);
 					}
+					if(nbytes==0){ //se desconectó
+						close(socketModificado);
+						FD_CLR(socketModificado,&master);
+					}
+					else{
 
-					//-- Conexión con hilo reducer --//
+						/* -- el reducer envío un mensaje a tratar -- */
 
-					if(estaEnListaReducers(socketModificado)==0){
-						if ((nbytes=recv(socketModificado,mensaje,sizeof(mensaje),0))==-1){ //da error
-							perror("recv");
-							log_error(logger,"Falló el receive");
-							exit(-1);
-						}
-						if(nbytes==0){ //se desconectó
-							close(socketModificado);
-							FD_CLR(socketModificado,&master);
-						}
-						else{
-
-							/* -- el reducer envío un mensaje a tratar -- */
-
-						}
 					}
 				}
 			}
