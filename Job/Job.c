@@ -168,14 +168,10 @@ void* hilo_mapper(t_mapper* mapperStruct){
 
 }
 
-char* getFileContent(char* nombreFile){
-	char* path;
+char* getFileContent(char* path){
 	char* fileMapeado;
 	int fileDescriptor;
 	struct stat estadoDelFile; //declaro una estructura que guarda el estado de un archivo
-	path=strdup("");
-	strcpy(path,"/home/utnso/");
-	strcat(path,nombreFile);
 	fileDescriptor = open(path,O_RDWR);
 		/*Chequeo de apertura del file exitosa*/
 			if (fileDescriptor==-1){

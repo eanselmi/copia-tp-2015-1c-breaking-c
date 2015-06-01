@@ -288,6 +288,9 @@ void *manejador_de_escuchas(){
 					}
 					else{
 						/* -- el mapper envío un mensaje a tratar -- */
+						char* rutinaMapper;
+						rutinaMapper=strdup("");
+
 						/*En el mensaje recibio el bloque a donde aplicar mapper*/
 						printf("Se aplicará la rutina mapper en el bloque %d\n",*mensaje);
 
@@ -300,14 +303,17 @@ void *manejador_de_escuchas(){
 						printf("Se guardará el resultado del mapper en el archivo temporal %s\n",nomArchTemp);
 
 						//Recibirá la rutina mapper
-						char* rutinaMapper;
-						rutinaMapper=strdup("");
+
+
 						if(recv(socketModificado,rutinaMapper,MAPPER_SIZE,0)==-1){
 							perror("recv");
 							log_error(logger,"Fallo al recibir la rutina mapper");
 							exit(1);
 						}
 						printf("El script mapper es el siguiente:\n%s",rutinaMapper);
+
+						//crearmapper();
+
 					}
 				}
 
@@ -475,4 +481,17 @@ char* getFileContent(char* nombreFile){
 	close(fileDescriptor); //Cierro el archivo
 	log_info(logger_archivo,"Fue leído el archivo /tmp/%s",nombreFile);
 	return fileMapeado;
+}
+
+
+void crearmapper(){
+	FILE* scriptMap;
+	//scriptMap=malloc(MAPPER_SIZE);
+	if(scriptMap=fopen("./Maps/mapJob.sh","w+")==NULL){
+		perror("fopen");
+		log_error(logger,"Fallo al crear el script del mapper");
+		exit(1);
+	}
+	fputs("LALSDASA\n",scriptMap);
+	close(scriptMap);
 }
