@@ -6,17 +6,22 @@
 #include <commons/collections/list.h>
 #include <pthread.h>
 #include "Job.h"
+#include <fcntl.h>
+#include <sys/mman.h>
+
 
 #define BUF_SIZE 50
 #define BUF_ARCH 4096
 
 //Declaración de funciones
 void* hilo_mapper(t_mapper*);
+char* getFileContent(char*);
 
 //Declaración de variables
 t_config* configurador;
 t_log* logger;
-
+char* rutinaMap; //Tiene el contenido de la rutina de map
+char* rutinaReduce; //tiene el contenido de la rutina de reduce
 
 int main(void){
 	configurador= config_create("resources/jobConfig.conf"); //se asigna el archivo de configuración especificado en la ruta
@@ -50,6 +55,10 @@ int main(void){
 		exit(1);
 	}
 	/*Conexión con MaRTA establecida*/
+
+	//Guardo rutinas map y reduce en las variables rutinaMap y rutinaReduce, luego se enviaran a los nodos
+	rutinaMap=getFileContent(config_get_string_value(configurador,"MAPPER"));
+	//rutinaReduce=getFileContent(config_get_string_value(configurador,"MAPPER"));
 
 	log_info(logger,"Se conectó a MaRTA. IP: %s, Puerto: %d",config_get_string_value(configurador,"IP_MARTA"),config_get_int_value(configurador,"PUERTO_MARTA")); //se agrega al log en modo de informacion la conexión con MaRTA
 
@@ -114,13 +123,12 @@ void* hilo_mapper(t_mapper* mapperStruct){
 	printf("En el puerto %d\n", mapperStruct->puerto_nodo);
 	printf("Ejecutará la rutina mapper en el bloque %d\n",mapperStruct->bloque);
 	printf("Guardará el resultado en el archivo %s\n",mapperStruct->nombreArchivoTemporal);
+
 	//comienzo de conexion con nodo
-	int* bloqueParaMap;
-	char nomArchTemp[100];
 	struct sockaddr_in nodo_addr;
 	int nodo_sock;
 	char identificacion[BUF_SIZE];
-	bloqueParaMap=malloc(sizeof(int));
+
 
 	if((nodo_sock=socket(AF_INET,SOCK_STREAM,0))==-1){ //si función socket devuelve -1 es error
 		perror("socket");
@@ -146,8 +154,6 @@ void* hilo_mapper(t_mapper* mapperStruct){
 	/*Conexión mapper-nodo establecida*/
 	log_info(logger,"Hilo mapper conectado al Nodo con IP: %s,en el Puerto: %d",mapperStruct->ip_nodo,mapperStruct->puerto_nodo);
 
-	strcpy(nomArchTemp,mapperStruct->nombreArchivoTemporal);
-
 	if(send(nodo_sock,&(mapperStruct->bloque),sizeof(int),0)==-1){
 		perror("send");
 		log_error(logger,"Fallo el envio del bloque a mapear hacia el Nodo");
@@ -160,5 +166,38 @@ void* hilo_mapper(t_mapper* mapperStruct){
 		exit(-1);
 	}
 
+
+
 }
 
+char* getFileContent(char* nombreFile){
+	char* path;
+	char* fileMapeado;
+	int fileDescriptor;
+	struct stat estadoDelFile; //declaro una estructura que guarda el estado de un archivo
+	path=strdup("");
+	strcpy(path,"/home/utnso/");
+	strcat(path,nombreFile);
+	fileDescriptor = open(path,O_RDWR);
+		/*Chequeo de apertura del file exitosa*/
+			if (fileDescriptor==-1){
+				perror("open");
+				log_error(logger,"Fallo la apertura del file de datos");
+				exit(-1);
+			}
+	if(fstat(fileDescriptor,&estadoDelFile)==-1){//guardo el estado del archivo de datos en la estructura
+			perror("fstat");
+			log_error(logger,"Falló el fstat");
+			exit(-1);
+		}
+	fileMapeado=mmap(0,estadoDelFile.st_size,(PROT_WRITE|PROT_READ|PROT_EXEC),MAP_SHARED,fileDescriptor,0);
+	/*Chequeo de mmap exitoso*/
+		if (fileMapeado==MAP_FAILED){
+			perror("mmap");
+			log_error(logger,"Falló el mmap, no se pudo asignar la direccion de memoria para el archivo solicitado");
+			exit(-1);
+		}
+	close(fileDescriptor); //Cierro el archivo
+//	log_info(logger,"Fue leído el archivo /home/utnso/%s",nombreFile);
+	return fileMapeado;
+}
