@@ -37,7 +37,7 @@ void EliminarArchivo();				//DESARROLLADA
 void RenombrarArchivo ();			//DESARROLLADA
 void MoverArchivo();				//DESARROLLADA
 void CrearDirectorio();				//DESARROLLADA, falta persistencia
-void EliminarDirectorio();			//Andy TODAVIA NO DESARROLLADA
+void EliminarDirectorio();			//DESARROLLADA, falta persistencia
 void RenombrarDirectorio();			//comienzo, no esta terminada
 void MoverDirectorio();				//Andy TODAVIA NO DESARROLLADA
 void CopiarArchivoAMDFS();			//Pame TODAVIA NO DESARROLLADA
@@ -627,7 +627,7 @@ void CrearDirectorio(){
 	int cantDirACrear=0;
 	directorioACrear = malloc(sizeof(t_dir));
 	long idAValidar; //uso este tipo para cubrir rango de uint32_t y el -1,  deberia mejorar el nombre de la variable
-	printf ("Ingrese el path del directorio\n");
+	printf ("Ingrese el path del directorio desde raíz ejemplo /home/utnso \n");
 	scanf ("%s", path);
     directorioNuevo = string_split((char*) path, "/"); //Devuelve un array del path del directorio a crear
     int indiceVectorDirNuevo=1;
@@ -676,38 +676,44 @@ void EliminarDirectorio(){
 
 void RenombrarDirectorio(){
 	printf("Eligió Renombrar directorios\n");
-/*
 	char* pathOriginal;
 	char** vectorPathOriginal;
 	char* pathNuevo;
-	char** vectorPathNuevo;
-	int i=0;
-	char comparador;
-    printf ("Ingrese el path del original \n");
+	t_dir* elementoDeMiLista;
+	elementoDeMiLista = malloc(sizeof(t_dir));
+	int tamanioLista = list_size(directorios);
+	int i = 0;
+	uint32_t idARenombrar;
+	long idEncontrado = 0;
+	char encontrado; //0 si no lo encontro, 1 si lo encontro
+    printf ("Ingrese el path del original desde raíz ejemplo /home/utnso \n");
 	scanf ("%s", pathOriginal);
-	printf ("Ingrese el nuevo nombre \n");
+	printf ("Ingrese el nuevo nombre de directorio \n");
 	scanf ("%s", pathNuevo);
 	vectorPathOriginal = string_split((char*) pathOriginal, "/");
-	vectorPathNuevo = string_split((char*) vectorPathNuevo, "/");
-	if(sizeof(vectorPathOriginal) == sizeof(vectorPathNuevo)){
-		comparador=0;
-		while (vectorPathOriginal[i+1] != NULL && comparador==0){ //el anterior a null es el que me interesa que sea distinto
-			comparador = strcmp(vectorPathOriginal[i], vectorPathNuevo[i]);
-			i++;
+	while (vectorPathOriginal[i] != NULL && idEncontrado != -1){
+		if (i == 0){
+			idEncontrado = 0; //el primero que cuelga de raiz
 		}
-		if(comparador==0){
-			//Magia acá
-		}
-		else {
-			printf("Aca mensaje de error\n");
-		}
+		idEncontrado = ExisteEnLaLista(directorios,vectorPathOriginal[i], idEncontrado);
+		i++;
+	}
+	if (idEncontrado == -1){
+		printf ("No existe el directorio para renombrar \n");
 	}
 	else{
-		printf("Aca mensaje de error\n");
+		i=0;
+		encontrado = 0;
+		idARenombrar = idEncontrado;
+		while(encontrado == 0 && i < tamanioLista){
+			elementoDeMiLista = list_get(directorios, i);
+			if (elementoDeMiLista->id == idARenombrar){
+				encontrado= 1;
+				strcpy(elementoDeMiLista->nombre, pathNuevo);
+			}
+			i++;
+		}
 	}
-
-*/
-
 }
 
 void MoverDirectorio(){
