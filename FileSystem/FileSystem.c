@@ -37,8 +37,8 @@ void EliminarArchivo();				//DESARROLLADA
 void RenombrarArchivo ();			//DESARROLLADA
 void MoverArchivo();				//DESARROLLADA
 void CrearDirectorio();				//DESARROLLADA, falta persistencia
-void EliminarDirectorio();			//DESARROLLADA, falta persistencia
-void RenombrarDirectorio();			//comienzo, no esta terminada
+void EliminarDirectorio();			//Andy En desarrollo
+void RenombrarDirectorio();			//DESARROLLADA, falta persistencia
 void MoverDirectorio();				//Andy TODAVIA NO DESARROLLADA
 void CopiarArchivoAMDFS();			//Pame TODAVIA NO DESARROLLADA
 void CopiarArchivoDelMDFS();		//Pame TODAVIA NO DESARROLLADA
