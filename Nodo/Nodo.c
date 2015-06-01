@@ -14,6 +14,7 @@
 
 #define BLOCK_SIZE 20971520 //block size 20MB
 #define BUF_SIZE 50
+#define MAPPER_SIZE 4096
 
 //Declaración de funciones
 char* mapearFileDeDatos();
@@ -297,6 +298,16 @@ void *manejador_de_escuchas(){
 							exit(-1);
 						}
 						printf("Se guardará el resultado del mapper en el archivo temporal %s\n",nomArchTemp);
+
+						//Recibirá la rutina mapper
+						char* rutinaMapper;
+						rutinaMapper=strdup("");
+						if(recv(socketModificado,rutinaMapper,MAPPER_SIZE,0)==-1){
+							perror("recv");
+							log_error(logger,"Fallo al recibir la rutina mapper");
+							exit(1);
+						}
+						printf("El script mapper es el siguiente:\n%s",rutinaMapper);
 					}
 				}
 

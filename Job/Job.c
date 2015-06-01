@@ -12,6 +12,7 @@
 
 #define BUF_SIZE 50
 #define BUF_ARCH 4096
+#define MAPPER_SIZE 4096
 
 //Declaración de funciones
 void* hilo_mapper(t_mapper*);
@@ -20,8 +21,6 @@ char* getFileContent(char*);
 //Declaración de variables
 t_config* configurador;
 t_log* logger;
-char* rutinaMap; //Tiene el contenido de la rutina de map
-char* rutinaReduce; //tiene el contenido de la rutina de reduce
 
 int main(void){
 	configurador= config_create("resources/jobConfig.conf"); //se asigna el archivo de configuración especificado en la ruta
@@ -32,7 +31,6 @@ int main(void){
 	int marta_sock; //socket de conexión a MaRTA
 	struct sockaddr_in marta_addr;
 	char** archivosDelJob;
-	char mensajeCombiner[3]; // Mensaje que se enviará a MaRTA con el atributo COMBINER
 	int contMensajeArch; //contador para recorrer el array de archivos a los que se aplica el Job
 	char mensajeArchivos[BUF_ARCH]; //cadena de caracteres que enviara a MaRTA los archivos a donde se aplica el Job. Formato: ",archivo1,archivo2,archivo3,...,archivo_n"
 
@@ -56,10 +54,6 @@ int main(void){
 	}
 	/*Conexión con MaRTA establecida*/
 
-	//Guardo rutinas map y reduce en las variables rutinaMap y rutinaReduce, luego se enviaran a los nodos
-	rutinaMap=getFileContent(config_get_string_value(configurador,"MAPPER"));
-	//rutinaReduce=getFileContent(config_get_string_value(configurador,"MAPPER"));
-
 	log_info(logger,"Se conectó a MaRTA. IP: %s, Puerto: %d",config_get_string_value(configurador,"IP_MARTA"),config_get_int_value(configurador,"PUERTO_MARTA")); //se agrega al log en modo de informacion la conexión con MaRTA
 
 	/*Creo un char[] que tenga los nombres de los archivos a trabajar separados con "," (una "," tambien al principio)
@@ -82,9 +76,7 @@ int main(void){
 	 * Envío a MaRTA si el Job acepta combiner o no
 	*/
 
-	strcat(mensajeCombiner,config_get_string_value(configurador,"COMBINER"));
-
-	if (send(marta_sock,mensajeCombiner,sizeof(mensajeCombiner),0)==-1){
+	if (send(marta_sock,config_get_string_value(configurador,"COMBINER"),3,0)==-1){
 		perror("send");
 		log_error(logger,"Falló el envío del atributo COMBINER");
 		exit(-1);
@@ -166,6 +158,12 @@ void* hilo_mapper(t_mapper* mapperStruct){
 		exit(-1);
 	}
 
+	//envío la rutina mapper
+	if(send(nodo_sock,(char*)getFileContent(config_get_string_value(configurador,"MAPPER")),MAPPER_SIZE,0)==-1){
+		perror("send");
+		log_error(logger,"Fallo el envio de la rutina mapper");
+		exit(1);
+	}
 
 
 }
