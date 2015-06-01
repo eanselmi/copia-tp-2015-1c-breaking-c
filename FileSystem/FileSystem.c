@@ -671,11 +671,69 @@ void CrearDirectorio(){
 
 
 void EliminarDirectorio(){
-	printf("Eligió Eliminar directorios\n");
+	//printf("Eligió Eliminar directorios\n");
+	char* pathAEliminar;
+	char** vectorpathAEliminar;
+	t_dir* elementoDeMiListaDir;
+	elementoDeMiListaDir = malloc(sizeof(t_dir));
+	t_archivo* elementoDeMiListaArch;
+	elementoDeMiListaArch = malloc(sizeof(t_archivo));
+	int tamanioListaDir = list_size(directorios);
+	int tamanioListaArch = list_size(archivos);
+	int i = 0;
+	uint32_t idAEliminar;
+	long idEncontrado = 0;
+	char tieneDirOArch; //0 si no tiene, 1 si tiene subdirectorio o archivo
+	printf ("Ingrese el path a eliminar desde raíz ejemplo /home/utnso \n");
+	scanf ("%s", pathAEliminar);
+	vectorpathAEliminar = string_split((char*) pathAEliminar, "/");
+	while (vectorpathAEliminar[i] != NULL && idEncontrado != -1){
+			if (i == 0){
+				idEncontrado = 0; //el primero que cuelga de raiz
+			}
+			idEncontrado = ExisteEnLaLista(directorios,vectorpathAEliminar[i], idEncontrado);
+			i++;
+		}
+		if (idEncontrado == -1){
+			printf ("No existe el directorio para eliminar \n");
+		}
+		else{
+			tieneDirOArch = 0;
+			idAEliminar = idEncontrado;
+			i = 0;
+			while(tieneDirOArch == 0 && i < tamanioListaDir){
+				elementoDeMiListaDir = list_get(directorios, i);
+				if (elementoDeMiListaDir->padre == idAEliminar){
+					tieneDirOArch = 1;
+				}
+				i++;
+			}
+			if (tieneDirOArch == 1){
+				printf ("El directorio que desea eliminar no puede ser eliminado ya que posee subdirectorios \n");
+			}
+			else{
+				i = 0;
+				while(tieneDirOArch == 0 && i < tamanioListaArch){
+					elementoDeMiListaArch = list_get(archivos, i);
+					if (elementoDeMiListaArch->padre == idAEliminar){
+						tieneDirOArch = 1;
+					}
+					i++;
+				}
+				if (tieneDirOArch == 1){
+					printf ("El directorio que desea eliminar no puede ser eliminado ya que posee archivos \n");
+				}
+				else{
+					//Aca hacer el borrado
+				}
+			}
+		}
+
+
 }
 
 void RenombrarDirectorio(){
-	printf("Eligió Renombrar directorios\n");
+	//printf("Eligió Renombrar directorios\n");
 	char* pathOriginal;
 	char** vectorPathOriginal;
 	char* pathNuevo;
