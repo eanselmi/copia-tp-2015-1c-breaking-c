@@ -54,6 +54,7 @@ static void eliminar_bloques(t_bloque *bloque);
 long ExisteEnLaLista(t_list* listaDirectorios, char* nombreDirectorioABuscar, uint32_t idPadre);
 int BuscarMenorIndiceLibre (char indiceDirectorios[]);
 static void directorio_destroy(t_dir* self);
+static void archivo_destroy(t_archivo* self);
 
 fd_set master; // conjunto maestro de descriptores de fichero
 fd_set read_fds; // conjunto temporal de descriptores de fichero para select()
@@ -546,6 +547,12 @@ void FormatearFilesystem (){
 	}
 }
 
+static void archivo_destroy(t_archivo* self) {
+    free(self->nombre);
+    free(self);
+}
+
+
 void EliminarArchivo(){
     printf("Eligió  Eliminar archivo\n");
     char* path = malloc(1);
@@ -561,7 +568,8 @@ void EliminarArchivo(){
 
     }
     //Elimnar nodo del archivo t_arhivo
-    list_remove_and_destroy_element(archivos, posArchivo, (void*)list_destroy);
+    //list_remove_and_destroy_element(t_list *, int index, void(*element_destroyer)(void*));
+    list_remove_and_destroy_element(archivos, posArchivo, (void*) archivo_destroy);
 }
 
 static void eliminar_bloques(t_bloque *bloque){
