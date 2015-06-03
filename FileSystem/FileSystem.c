@@ -552,6 +552,12 @@ static void archivo_destroy(t_archivo* self) {
     free(self);
 }
 
+static void eliminar_bloques(t_bloque *bloque){
+	free(bloque->copias[0].nodo);
+	free(bloque->copias[1].nodo);
+	free(bloque->copias[2].nodo);
+}
+
 
 void EliminarArchivo(){
     printf("Eligió  Eliminar archivo\n");
@@ -572,11 +578,7 @@ void EliminarArchivo(){
     list_remove_and_destroy_element(archivos, posArchivo, (void*) archivo_destroy);
 }
 
-static void eliminar_bloques(t_bloque *bloque){
-	free(bloque->copias[0].nodo);
-	free(bloque->copias[1].nodo);
-	free(bloque->copias[2].nodo);
-}
+
 
 void RenombrarArchivo (){
 	printf("Eligió Renombrar archivos\n");
