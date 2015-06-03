@@ -31,15 +31,16 @@ void *connection_handler_escucha(); // Esta funcion escucha continuamente si rec
 static t_nodo *agregar_nodo_a_lista(int socket,int est,char *ip, int port, int bloques_lib, int bloques_tot);
 void modificar_estado_nodo (int socket,char *ip,int port,int estado);
 void listar_nodos_conectados(t_list *nodos);
+char *obtener_md5(char *archivo);
 void formatear_nodos(void);
 void FormatearFilesystem ();		//Pame TODAVIA NO DESARROLLADA
 void EliminarArchivo();				//DESARROLLADA
 void RenombrarArchivo ();			//DESARROLLADA
 void MoverArchivo();				//DESARROLLADA
 void CrearDirectorio();				//DESARROLLADA, falta persistencia
-void EliminarDirectorio();			//DESARROLLA, falta persistencia y ver list_remove_and_destroy_element
+void EliminarDirectorio();			//DESARROLLADA, falta persistencia
 void RenombrarDirectorio();			//DESARROLLADA, falta persistencia
-void MoverDirectorio();				//Andy TODAVIA NO DESARROLLADA
+void MoverDirectorio();				//DESARROLLADA, falta persistencia
 void CopiarArchivoAMDFS();			//Pame TODAVIA NO DESARROLLADA
 void CopiarArchivoDelMDFS();		//Pame TODAVIA NO DESARROLLADA
 void MD5DeArchivo();				//Pame TODAVIA NO DESARROLLADA
@@ -54,6 +55,7 @@ static void eliminar_bloques(t_bloque *bloque);
 long ExisteEnLaLista(t_list* listaDirectorios, char* nombreDirectorioABuscar, uint32_t idPadre);
 int BuscarMenorIndiceLibre (char indiceDirectorios[]);
 static void directorio_destroy(t_dir* self);
+static void archivo_destroy(t_archivo* self);
 
 fd_set master; // conjunto maestro de descriptores de fichero
 fd_set read_fds; // conjunto temporal de descriptores de fichero para select()
@@ -302,6 +304,29 @@ static t_nodo *agregar_nodo_a_lista(int socket,int est,char *ip, int port, int b
 	return nodo_temporal;
 }
 
+char *obtener_md5(char *archivo){
+	int fd[2];
+	int childpid;
+	char *resultado;
+	pipe(fd);
+	char result[1000];
+	memset(result,'\0',1000);
+	if ( (childpid = fork() ) == -1){
+		fprintf(stderr, "Fallo el FORK");
+	} else if( childpid == 0) {
+		close(1);
+		dup2(fd[1], 1);
+		close(fd[0]);
+		execlp("/usr/bin/md5sum","md5sum",archivo,NULL);
+	}
+	wait(NULL);
+	read(fd[0], result, sizeof(result));
+	printf("%s",result);
+	resultado=malloc(sizeof(result));
+	strcpy(resultado,result);
+	return resultado;
+}
+
 void listar_nodos_conectados(t_list *nodos){
 	int i,cantidad_nodos;
 	t_nodo *elemento;
@@ -546,6 +571,18 @@ void FormatearFilesystem (){
 	}
 }
 
+static void archivo_destroy(t_archivo* self) {
+    free(self->nombre);
+    free(self);
+}
+
+static void eliminar_bloques(t_bloque *bloque){
+	free(bloque->copias[0].nodo);
+	free(bloque->copias[1].nodo);
+	free(bloque->copias[2].nodo);
+}
+
+
 void EliminarArchivo(){
     printf("Eligió  Eliminar archivo\n");
     char* path = malloc(1);
@@ -561,14 +598,11 @@ void EliminarArchivo(){
 
     }
     //Elimnar nodo del archivo t_arhivo
-    list_remove_and_destroy_element(archivos, posArchivo, (void*)list_destroy);
+    //list_remove_and_destroy_element(t_list *, int index, void(*element_destroyer)(void*));
+    list_remove_and_destroy_element(archivos, posArchivo, (void*) archivo_destroy);
 }
 
-static void eliminar_bloques(t_bloque *bloque){
-	free(bloque->copias[0].nodo);
-	free(bloque->copias[1].nodo);
-	free(bloque->copias[2].nodo);
-}
+
 
 void RenombrarArchivo (){
 	printf("Eligió Renombrar archivos\n");
@@ -795,7 +829,70 @@ void RenombrarDirectorio(){
 }
 
 void MoverDirectorio(){
-	printf("Eligió Mover directorios\n");
+	//printf("Eligió Mover directorios\n");
+	char* pathOriginal;
+	char** vectorPathOriginal;
+	char* pathNuevo;
+	char** vectorPathNuevo;
+	char* nombreDirAMover;
+	t_dir* elementoDeMiLista;
+	elementoDeMiLista = malloc(sizeof(t_dir));
+	int tamanioLista = list_size(directorios);
+	int i = 0;
+	uint32_t idDirAMover;
+	uint32_t idNuevoPadre;
+	long idEncontrado = 0;
+	char encontrado; //0 si no lo encontro, 1 si lo encontro
+	printf ("Ingrese el path original desde raíz ejemplo /home/utnso \n");
+	scanf ("%s", pathOriginal);
+	printf ("Ingrese el path del directorio al que desea moverlo desde raíz ejemplo /home/tp \n");
+	scanf ("%s", pathNuevo);
+	vectorPathOriginal = string_split((char*) pathOriginal, "/");
+	vectorPathNuevo = string_split((char*) pathNuevo, "/");
+	while (vectorPathOriginal[i] != NULL && idEncontrado != -1){
+		if (i == 0){
+			idEncontrado = 0; //el primero que cuelga de raiz
+		}
+		idEncontrado = ExisteEnLaLista(directorios,vectorPathOriginal[i], idEncontrado);
+		i++;
+	}
+	if (idEncontrado == -1){
+		printf ("No existe el path original \n");
+	}
+	else{
+		idDirAMover = idEncontrado;
+		strcpy(nombreDirAMover,vectorPathOriginal[i-1]); //revisar, puse -1 porque avancé hasta el NULL.
+		idEncontrado = 0;
+		i = 0;
+		while (vectorPathNuevo[i] != NULL && idEncontrado != -1){
+			if (i == 0){
+				idEncontrado = 0; //el primero que cuelga de raiz
+			}
+			idEncontrado = ExisteEnLaLista(directorios,vectorPathNuevo[i], idEncontrado);
+			i++;
+		}
+		if (idEncontrado == -1){
+				printf ("No existe el path al que desea moverlo \n");
+			}
+			else{
+				idNuevoPadre = idEncontrado;
+				if (ExisteEnLaLista(directorios,nombreDirAMover, idNuevoPadre) == -1){ //ver si el padre no tiene hijos que se llamen igual que el directorio a mover
+					i = 0;
+					encontrado = 0;
+					while(encontrado == 0 && i < tamanioLista){
+						elementoDeMiLista = list_get(directorios, i);
+						if (elementoDeMiLista->id == idDirAMover){
+							encontrado= 1;
+							elementoDeMiLista->padre = idNuevoPadre;
+						}
+						i++;
+					}
+				}
+				else {
+					printf ("El directorio no está vacío \n");
+				}
+			}
+	}
 }
 
 void CopiarArchivoAMDFS(){
