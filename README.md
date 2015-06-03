@@ -1,5 +1,10 @@
 # tp-2015-1c-breaking-c
 
+## Filesystem: Archivos y Directorios
+Falta persistir lo que sería tabla de directorios y de archivos.
+
+
+
 ## conexión Job-MaRTA
 Se configuro a MaRTA como server escuchando en el puerto 5000 y Job cliente, para probarlo cerciorarse de que este configurada la IP de MaRTA en el archivo .conf de Job y en el parametro MI_IP de MaRTA 
 
