@@ -165,6 +165,7 @@ void* hilo_mapper(t_mapper* mapperStruct){
 		exit(1);
 	}
 
+	pthread_exit((void*)0);
 
 }
 

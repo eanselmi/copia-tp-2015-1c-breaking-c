@@ -22,6 +22,7 @@ void setBloque(int bloque,char* datos);
 char* getBloque(int bloque);
 char* getFileContent(char* nombre);
 void* manejador_de_escuchas(); //Hilo que va a manejar las conexiones
+void crearmapper();
 int estaEnListaNodos(int socket);
 int estaEnListaMappers(int socket);
 int estaEnListaReducers(int socket);
@@ -51,6 +52,7 @@ int main(int argc , char *argv[]){
 
 	//-------------------------- Cuerpo ppal del programa ---------------------------------------
 	//------------ Variables locales a la funcion main --------------------
+
 
 	pthread_t escucha; // Hilo que va a escuchar nuevas conexiones
 	configurador= config_create("resources/nodoConfig.conf"); //se asigna el archivo de configuración especificado en la ruta
@@ -162,6 +164,7 @@ int main(int argc , char *argv[]){
 		log_error(logger,"Fallo la creación del hilo manejador de escuchas");
 		return 1;
 	}
+
 
 	pthread_join(escucha,NULL);
 	log_destroy(logger);
@@ -295,13 +298,12 @@ void *manejador_de_escuchas(){
 						printf("Se aplicará la rutina mapper en el bloque %d\n",*mensaje);
 
 						/*Recibe el nombre del archivo temporal a donde guardar el mapper*/
-						if(recv(socketModificado,nomArchTemp,100,0)==-1){
+						if(recv(socketModificado,nomArchTemp,sizeof(nomArchTemp),0)==-1){
 							perror("recv");
 							log_error(logger,"Fallo al recibir el nombre del archivo temporal donde guardar el Map");
 							exit(-1);
 						}
 						printf("Se guardará el resultado del mapper en el archivo temporal %s\n",nomArchTemp);
-
 						//Recibirá la rutina mapper
 
 
@@ -310,9 +312,9 @@ void *manejador_de_escuchas(){
 							log_error(logger,"Fallo al recibir la rutina mapper");
 							exit(1);
 						}
-						printf("El script mapper es el siguiente:\n%s",rutinaMapper);
+						printf("se recibió la rutina mapper:%s",rutinaMapper);
 
-						//crearmapper();
+						crearmapper();
 
 					}
 				}
@@ -380,44 +382,6 @@ int estaEnListaReducers(int socket){
 	return -1;
 }
 
-char* mapearFileDeDatos(){
-	char* fileDatos;
-
-	/*
-	 * Abro el archivo de datos. Éste archivo se crea localmente en la máquina que ejecutará el proceso Nodo
-	 * y luego se configura el nombre en el archivo de configuracion(ARCHIVO_BIN).
-	 * Una manera sencilla de crearlo es truncate -s "tamaño" nombrearchivo.bin
-	 * Por ejemplo el que use para las pruebas: truncate -s 50 datos.bin --> crea un file de 50 bytes
-	 */
-
-	int fileDescriptor = open((config_get_string_value(configurador,"ARCHIVO_BIN")),O_RDWR);
-	/*Chequeo de apertura del file exitosa*/
-		if (fileDescriptor==-1){
-			perror("open");
-			log_error(logger,"Fallo la apertura del file de datos");
-			exit(-1);
-		}
-	struct stat estadoDelFile; //declaro una estructura que guarda el estado de un archivo
-	if(fstat(fileDescriptor,&estadoDelFile)==-1){//guardo el estado del archivo de datos en la estructura
-		perror("fstat");
-		log_error(logger,"Falló el fstat");
-	}
-	sizeFileDatos=estadoDelFile.st_size; // guardo el tamaño (necesario para el mmap)
-
-	/*se mapea a memoria,fileDatos apuntará a una direccion en donde empieza el archivo, con permisos de
-	lectura escritura y ejecucion, los cambios en las direcciones de memoria a donde apunta se verán reflejados
-	 en el archivo*/
-
-	fileDatos=mmap(0,sizeFileDatos,(PROT_WRITE|PROT_READ|PROT_EXEC),MAP_SHARED,fileDescriptor,0);
-	/*Chequeo de mmap exitoso*/
-		if (fileDatos==MAP_FAILED){
-			perror("mmap");
-			log_error(logger,"Falló el mmap, no se pudo asignar la direccion de memoria para el archivo de datos");
-			exit(-1);
-		}
-	close(fileDescriptor); //Cierro el archivo
-	return fileDatos;
-}
 
 void setBloque(int numBloque,char* datosAEscribir){
 	/*
@@ -486,12 +450,53 @@ char* getFileContent(char* nombreFile){
 
 void crearmapper(){
 	FILE* scriptMap;
-	//scriptMap=malloc(MAPPER_SIZE);
-	if(scriptMap=fopen("./Maps/mapJob.sh","w+")==NULL){
+	if((scriptMap=fopen("./Maps/mapJob.sh","w+"))==NULL){
 		perror("fopen");
 		log_error(logger,"Fallo al crear el script del mapper");
 		exit(1);
 	}
-	fputs("LALSDASA\n",scriptMap);
-	close(scriptMap);
+	fprintf(scriptMap,"LALSDASA\n");
+	fputs("HOLAHOLAHOAL\n",scriptMap);
+	fclose(scriptMap);
+	return;
 }
+
+char* mapearFileDeDatos(){
+	char* fileDatos;
+
+	/*
+	 * Abro el archivo de datos. Éste archivo se crea localmente en la máquina que ejecutará el proceso Nodo
+	 * y luego se configura el nombre en el archivo de configuracion(ARCHIVO_BIN).
+	 * Una manera sencilla de crearlo es truncate -s "tamaño" nombrearchivo.bin
+	 * Por ejemplo el que use para las pruebas: truncate -s 50 datos.bin --> crea un file de 50 bytes
+	 */
+
+	int fileDescriptor = open((config_get_string_value(configurador,"ARCHIVO_BIN")),O_RDWR);
+	/*Chequeo de apertura del file exitosa*/
+		if (fileDescriptor==-1){
+			perror("open");
+			log_error(logger,"Fallo la apertura del file de datos");
+			exit(-1);
+		}
+	struct stat estadoDelFile; //declaro una estructura que guarda el estado de un archivo
+	if(fstat(fileDescriptor,&estadoDelFile)==-1){//guardo el estado del archivo de datos en la estructura
+		perror("fstat");
+		log_error(logger,"Falló el fstat");
+	}
+	sizeFileDatos=estadoDelFile.st_size; // guardo el tamaño (necesario para el mmap)
+
+	/*se mapea a memoria,fileDatos apuntará a una direccion en donde empieza el archivo, con permisos de
+	lectura escritura y ejecucion, los cambios en las direcciones de memoria a donde apunta se verán reflejados
+	 en el archivo*/
+
+	fileDatos=mmap(0,sizeFileDatos,(PROT_WRITE|PROT_READ|PROT_EXEC),MAP_SHARED,fileDescriptor,0);
+	/*Chequeo de mmap exitoso*/
+		if (fileDatos==MAP_FAILED){
+			perror("mmap");
+			log_error(logger,"Falló el mmap, no se pudo asignar la direccion de memoria para el archivo de datos");
+			exit(-1);
+		}
+	close(fileDescriptor); //Cierro el archivo
+	return fileDatos;
+}
+
