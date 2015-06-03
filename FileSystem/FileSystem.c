@@ -38,9 +38,9 @@ void EliminarArchivo();				//DESARROLLADA
 void RenombrarArchivo ();			//DESARROLLADA
 void MoverArchivo();				//DESARROLLADA
 void CrearDirectorio();				//DESARROLLADA, falta persistencia
-void EliminarDirectorio();			//DESARROLLA, falta persistencia y ver list_remove_and_destroy_element
+void EliminarDirectorio();			//DESARROLLADA, falta persistencia
 void RenombrarDirectorio();			//DESARROLLADA, falta persistencia
-void MoverDirectorio();				//Andy TODAVIA NO DESARROLLADA
+void MoverDirectorio();				//DESARROLLADA, falta persistencia
 void CopiarArchivoAMDFS();			//Pame TODAVIA NO DESARROLLADA
 void CopiarArchivoDelMDFS();		//Pame TODAVIA NO DESARROLLADA
 void MD5DeArchivo();				//Pame TODAVIA NO DESARROLLADA
@@ -829,7 +829,70 @@ void RenombrarDirectorio(){
 }
 
 void MoverDirectorio(){
-	printf("Eligió Mover directorios\n");
+	//printf("Eligió Mover directorios\n");
+	char* pathOriginal;
+	char** vectorPathOriginal;
+	char* pathNuevo;
+	char** vectorPathNuevo;
+	char* nombreDirAMover;
+	t_dir* elementoDeMiLista;
+	elementoDeMiLista = malloc(sizeof(t_dir));
+	int tamanioLista = list_size(directorios);
+	int i = 0;
+	uint32_t idDirAMover;
+	uint32_t idNuevoPadre;
+	long idEncontrado = 0;
+	char encontrado; //0 si no lo encontro, 1 si lo encontro
+	printf ("Ingrese el path original desde raíz ejemplo /home/utnso \n");
+	scanf ("%s", pathOriginal);
+	printf ("Ingrese el path del directorio al que desea moverlo desde raíz ejemplo /home/tp \n");
+	scanf ("%s", pathNuevo);
+	vectorPathOriginal = string_split((char*) pathOriginal, "/");
+	vectorPathNuevo = string_split((char*) pathNuevo, "/");
+	while (vectorPathOriginal[i] != NULL && idEncontrado != -1){
+		if (i == 0){
+			idEncontrado = 0; //el primero que cuelga de raiz
+		}
+		idEncontrado = ExisteEnLaLista(directorios,vectorPathOriginal[i], idEncontrado);
+		i++;
+	}
+	if (idEncontrado == -1){
+		printf ("No existe el path original \n");
+	}
+	else{
+		idDirAMover = idEncontrado;
+		strcpy(nombreDirAMover,vectorPathOriginal[i-1]); //revisar, puse -1 porque avancé hasta el NULL.
+		idEncontrado = 0;
+		i = 0;
+		while (vectorPathNuevo[i] != NULL && idEncontrado != -1){
+			if (i == 0){
+				idEncontrado = 0; //el primero que cuelga de raiz
+			}
+			idEncontrado = ExisteEnLaLista(directorios,vectorPathNuevo[i], idEncontrado);
+			i++;
+		}
+		if (idEncontrado == -1){
+				printf ("No existe el path al que desea moverlo \n");
+			}
+			else{
+				idNuevoPadre = idEncontrado;
+				if (ExisteEnLaLista(directorios,nombreDirAMover, idNuevoPadre) == -1){ //ver si el padre no tiene hijos que se llamen igual que el directorio a mover
+					i = 0;
+					encontrado = 0;
+					while(encontrado == 0 && i < tamanioLista){
+						elementoDeMiLista = list_get(directorios, i);
+						if (elementoDeMiLista->id == idDirAMover){
+							encontrado= 1;
+							elementoDeMiLista->padre = idNuevoPadre;
+						}
+						i++;
+					}
+				}
+				else {
+					printf ("El directorio no está vacío \n");
+				}
+			}
+	}
 }
 
 void CopiarArchivoAMDFS(){
