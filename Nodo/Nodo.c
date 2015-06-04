@@ -67,6 +67,7 @@ int main(int argc , char *argv[]){
 	char identificacion[BUF_SIZE]; //para el mensaje que envie al conectarse para identificarse, puede cambiar
 	//char bloquesTotales[2]; //tendra la cantidad de bloques totales del file de datos
 	int *bloquesTotales;
+	int *puerto_escucha;
 	struct sockaddr_in filesystem; //direccion del fs a donde se conectará
 	struct sockaddr_in nodoAddr; //direccion del nodo que será servidor
 	memset(&filesystem, 0, sizeof(filesystem));
@@ -83,7 +84,8 @@ int main(int argc , char *argv[]){
 	filesystem.sin_addr.s_addr = inet_addr(config_get_string_value(configurador,"IP_FS"));
 	filesystem.sin_port = htons(config_get_int_value(configurador,"PUERTO_FS"));
 	//-------------------------------
-
+	puerto_escucha=malloc(sizeof(int));
+	*puerto_escucha=filesystem.sin_addr.s_addr;
 	if ((conectorFS = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
 		perror ("socket");
 		log_error(logger,"FALLO la creacion del socket");
@@ -109,6 +111,11 @@ int main(int argc , char *argv[]){
 			}
 			//envio cantidad de bloques totales
 			if((send(conectorFS,bloquesTotales,sizeof(int),0))==-1){
+				perror("send");
+				log_error(logger,"FALLO el envío de la cantidad de bloques totales al FS");
+				exit(-1);
+			}
+			if((send(conectorFS,puerto_escucha,sizeof(int),0))==-1){
 				perror("send");
 				log_error(logger,"FALLO el envío de la cantidad de bloques totales al FS");
 				exit(-1);
