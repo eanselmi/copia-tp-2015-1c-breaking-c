@@ -457,12 +457,17 @@ char* getFileContent(char* nombreFile){
 
 void crearmapper(char* rutina){
 	FILE* scriptMap;
-	if((scriptMap=fopen("./Maps/mapJob.sh","w+"))==NULL){
+	if((scriptMap=fopen("./RutinasMap/mapJob.sh","w+"))==NULL){ //path donde guardara el script
 		perror("fopen");
 		log_error(logger,"Fallo al crear el script del mapper");
 		exit(1);
 	}
 	fputs(rutina,scriptMap);
+	if(chmod("./RutinasMap/mapJob.sh",S_IRWXU|S_IRWXG|S_IROTH|S_IXOTH)==-1){ // agrego permisos de ejecucion
+		perror("chmod");
+		log_error(logger,"Fallo el cambio de permisos para el script de map");
+		exit(1);
+	}
 	fclose(scriptMap);
 	return;
 }
