@@ -28,7 +28,7 @@
 int Menu();
 void DibujarMenu();
 void *connection_handler_escucha(); // Esta funcion escucha continuamente si recibo nuevos mensajes
-static t_nodo *agregar_nodo_a_lista(int socket,int est,char *ip, int port, int bloques_lib, int bloques_tot);
+static t_nodo *agregar_nodo_a_lista(int socket,int est,char *ip, int port,int puerto_escucha, int bloques_lib, int bloques_tot);
 void modificar_estado_nodo (int socket,char *ip,int port,int estado);
 void listar_nodos_conectados(t_list *nodos);
 char *obtener_md5(char *archivo);
@@ -81,6 +81,7 @@ int marta_sock;
 char indiceDirectorios[MAX_DIRECTORIOS]; //cantidad maxima de directorios
 int directoriosDisponibles; //reservo raiz
 int j; //variable para recorrer el vector de indices
+int *puerto_escucha_nodo;
 
 //Variables para la persistencia con mongo
 mongoc_client_t *client;
@@ -165,8 +166,14 @@ int main(int argc , char *argv[]){
 				log_error(logger,"FALLO el RECV");
 				exit (-1);
 			}
+			puerto_escucha_nodo=malloc(sizeof(int));
+			if ((read_size = recv(newfd, puerto_escucha_nodo ,sizeof(int) , 0))==-1) {
+				perror ("recv");
+				log_error(logger,"FALLO el RECV");
+				exit (-1);
+			}
 			if (read_size > 0){
-				list_add (nodos, agregar_nodo_a_lista(newfd,0,inet_ntoa(remote_client.sin_addr),remote_client.sin_port,*bloquesTotales,*bloquesTotales));
+				list_add (nodos, agregar_nodo_a_lista(newfd,0,inet_ntoa(remote_client.sin_addr),remote_client.sin_port,*puerto_escucha_nodo,*bloquesTotales,*bloquesTotales));
 				printf ("Se conectó un nuevo nodo: %s con %d bloques totales\n",inet_ntoa(remote_client.sin_addr),*bloquesTotales);
 				log_info(logger,"Se conectó un nuevo nodo: %s con %d bloques totales",inet_ntoa(remote_client.sin_addr),*bloquesTotales);
 			}
@@ -259,7 +266,7 @@ int Menu(void){
 	}
 	return 0;
 }
-static t_nodo *agregar_nodo_a_lista(int socket,int est,char *ip, int port, int bloques_lib, int bloques_tot){
+static t_nodo *agregar_nodo_a_lista(int socket,int est,char *ip, int port,int puerto_escucha, int bloques_lib, int bloques_tot){
 	t_nodo *nodo_temporal = malloc (sizeof(t_nodo));
 
 
@@ -283,6 +290,7 @@ static t_nodo *agregar_nodo_a_lista(int socket,int est,char *ip, int port, int b
 	nodo_temporal->puerto = port;
 	nodo_temporal->bloques_libres = bloques_lib;
 	nodo_temporal->bloques_totales = bloques_tot;
+	nodo_temporal->puerto_escucha_nodo=puerto_escucha;
 
 	char *tmp_socket=malloc(sizeof(int));
 	char *tmp_estado=malloc(sizeof(int));
@@ -402,8 +410,15 @@ void *connection_handler_escucha(void){
 									log_error(logger,"FALLO el RECV");
 									exit (-1);
 								}
+								puerto_escucha_nodo=malloc(sizeof(int));
+								if ((read_size = recv(newfd, puerto_escucha_nodo , sizeof(int) , 0))==-1) {
+									perror ("recv");
+									log_error(logger,"FALLO el RECV");
+									exit (-1);
+								}
+
 								if (read_size > 0){
-									list_add (nodos, agregar_nodo_a_lista(newfd,0,inet_ntoa(remote_client.sin_addr),remote_client.sin_port,*bloquesTotales,*bloquesTotales));
+									list_add (nodos, agregar_nodo_a_lista(newfd,0,inet_ntoa(remote_client.sin_addr),remote_client.sin_port,*puerto_escucha_nodo,*bloquesTotales,*bloquesTotales));
 									printf ("Se conectó un nuevo nodo: %s con %d bloques totales\n",inet_ntoa(remote_client.sin_addr),*bloquesTotales);
 									log_info(logger,"Se conectó un nuevo nodo: %s con %d bloques totales",inet_ntoa(remote_client.sin_addr),*bloquesTotales);
 								}

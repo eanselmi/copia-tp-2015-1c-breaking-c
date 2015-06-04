@@ -23,6 +23,7 @@ typedef struct estructura_manejo_nodos {
 	int estado;
 	char *ip;
 	int puerto;
+	int puerto_escucha_nodo;
 	int bloques_libres;
 	int bloques_totales;
 } t_nodo;
