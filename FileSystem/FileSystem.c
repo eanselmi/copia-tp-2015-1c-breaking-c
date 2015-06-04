@@ -342,7 +342,7 @@ void listar_nodos_conectados(t_list *nodos){
 	for (i=0;i<=cantidad_nodos;i++){
 		elemento = list_get(nodos,i);
 		printf ("\n\n");
-		printf ("Nodo_ID: %s\nSocket: %d\nEstado: %d\nIP: %s\nPuerto_Origen: %d\nBloques_Libres: %d\nBloques_Totales: %d", elemento->nodo_id, elemento->socket,elemento->estado,elemento->ip,elemento->puerto,elemento->bloques_libres,elemento->bloques_totales);
+		printf ("Nodo_ID: %s\nSocket: %d\nEstado: %d\nIP: %s\nPuerto_Origen: %d\nPuerto_Escucha_Nodo: %d\nBloques_Libres: %d\nBloques_Totales: %d", elemento->nodo_id, elemento->socket,elemento->estado,elemento->ip,elemento->puerto,elemento->puerto_escucha_nodo,elemento->bloques_libres,elemento->bloques_totales);
 	}
 }
 void *connection_handler_escucha(void){

@@ -85,7 +85,7 @@ int main(int argc , char *argv[]){
 	filesystem.sin_port = htons(config_get_int_value(configurador,"PUERTO_FS"));
 	//-------------------------------
 	puerto_escucha=malloc(sizeof(int));
-	*puerto_escucha=filesystem.sin_addr.s_addr;
+	*puerto_escucha=config_get_int_value(configurador,"PUERTO_NODO");
 	if ((conectorFS = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
 		perror ("socket");
 		log_error(logger,"FALLO la creacion del socket");
