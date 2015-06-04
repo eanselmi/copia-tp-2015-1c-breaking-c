@@ -26,6 +26,7 @@ void crearmapper(char*);
 int estaEnListaNodos(int socket);
 int estaEnListaMappers(int socket);
 int estaEnListaReducers(int socket);
+void ejecutarScript(char *path,char *argumento,char *resultado);
 
 
 //Declaración de variables Globales
@@ -289,6 +290,7 @@ void *manejador_de_escuchas(){
 
 				if(estaEnListaMappers(socketModificado)==0){
 					char nomArchTemp[100];
+					FILE* scriptMap;
 					if ((nbytes=recv(socketModificado,mensaje,sizeof(mensaje),0))==-1){ //da error
 						perror("recv");
 						log_error(logger,"Falló el receive");
@@ -321,7 +323,28 @@ void *manejador_de_escuchas(){
 						}
 						printf("se recibió la rutina mapper:%s",rutinaMapper);
 
-						crearmapper(rutinaMapper);
+						//Creo el archivo que guarda la rutina de map enviada por el Job
+
+						if((scriptMap=fopen("./RutinasMap/mapJob.sh","w+"))==NULL){ //path donde guardara el script
+							perror("fopen");
+							log_error(logger,"Fallo al crear el script del mapper");
+							exit(1);
+						}
+						fputs(rutinaMapper,scriptMap);
+						// agrego permisos de ejecucion
+
+						if(chmod("./RutinasMap/mapJob.sh",S_IRWXU|S_IRWXG|S_IROTH|S_IXOTH)==-1){
+							perror("chmod");
+							log_error(logger,"Fallo el cambio de permisos para el script de map");
+							exit(1);
+						}
+						fclose(scriptMap); //cierro el file
+
+						//Envío por STDIN en "argumento" al script en "path", se guarda el resultado en "resultado"
+						//void ejecutarScript(char *path,char *argumento,char *resultado);
+
+						ejecutarScript("./RutinasMap/mapJob.sh","Hola","/tmp/resultado");
+
 
 					}
 				}
@@ -456,20 +479,7 @@ char* getFileContent(char* nombreFile){
 
 
 void crearmapper(char* rutina){
-	FILE* scriptMap;
-	if((scriptMap=fopen("./RutinasMap/mapJob.sh","w+"))==NULL){ //path donde guardara el script
-		perror("fopen");
-		log_error(logger,"Fallo al crear el script del mapper");
-		exit(1);
-	}
-	fputs(rutina,scriptMap);
-	if(chmod("./RutinasMap/mapJob.sh",S_IRWXU|S_IRWXG|S_IROTH|S_IXOTH)==-1){ // agrego permisos de ejecucion
-		perror("chmod");
-		log_error(logger,"Fallo el cambio de permisos para el script de map");
-		exit(1);
-	}
-	fclose(scriptMap);
-	return;
+
 }
 
 char* mapearFileDeDatos(){
@@ -511,3 +521,26 @@ char* mapearFileDeDatos(){
 	return fileDatos;
 }
 
+void ejecutarScript(char *path,char *argumento,char *resultado){
+	int fd[2];
+	FILE* archivo_resultado;
+	archivo_resultado=fopen(resultado,"w+");
+	int childpid;
+	pipe(fd);
+	char result[100];
+	memset(result,'\0',100);
+
+	if ( (childpid = fork() ) == -1){
+	   fprintf(stderr, "FORK failed");
+
+	} else if( childpid == 0) {
+	   close(1);
+	   dup2(fd[1], 1);
+	   close(fd[0]);
+	   execlp(path,path,argumento,NULL);
+	}
+	wait(NULL);
+	read(fd[0], result, sizeof(result));
+	fprintf(archivo_resultado,"%s",result);
+	fclose(archivo_resultado);
+}
