@@ -159,7 +159,7 @@ void* hilo_mapper(t_mapper* mapperStruct){
 	}
 
 	//envío la rutina mapper
-	if(send(nodo_sock,(char*)getFileContent(config_get_string_value(configurador,"MAPPER")),MAPPER_SIZE,0)==-1){
+	if(send(nodo_sock,getFileContent(config_get_string_value(configurador,"MAPPER")),MAPPER_SIZE,0)==-1){
 		perror("send");
 		log_error(logger,"Fallo el envio de la rutina mapper");
 		exit(1);

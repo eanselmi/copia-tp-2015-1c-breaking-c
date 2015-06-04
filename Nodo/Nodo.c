@@ -22,7 +22,7 @@ void setBloque(int bloque,char* datos);
 char* getBloque(int bloque);
 char* getFileContent(char* nombre);
 void* manejador_de_escuchas(); //Hilo que va a manejar las conexiones
-void crearmapper();
+void crearmapper(char*);
 int estaEnListaNodos(int socket);
 int estaEnListaMappers(int socket);
 int estaEnListaReducers(int socket);
@@ -47,6 +47,8 @@ t_list* listaReducersConectados; //lista con los reducers conectados
 int* socketNodo; //para identificar los que son nodos conectados
 int* socketMapper; //para identificar los que son mappers conectados
 int* socketReducer; //para identificar los que son reducers conectados
+char rutinaMapper[MAPPER_SIZE]; //En este buffer se guardarán las rutinas mapper para luego pasarlas a un archivo local
+
 
 int main(int argc , char *argv[]){
 
@@ -291,8 +293,6 @@ void *manejador_de_escuchas(){
 					}
 					else{
 						/* -- el mapper envío un mensaje a tratar -- */
-						char* rutinaMapper;
-						rutinaMapper=strdup("");
 
 						/*En el mensaje recibio el bloque a donde aplicar mapper*/
 						printf("Se aplicará la rutina mapper en el bloque %d\n",*mensaje);
@@ -314,7 +314,7 @@ void *manejador_de_escuchas(){
 						}
 						printf("se recibió la rutina mapper:%s",rutinaMapper);
 
-						crearmapper();
+						crearmapper(rutinaMapper);
 
 					}
 				}
@@ -448,15 +448,14 @@ char* getFileContent(char* nombreFile){
 }
 
 
-void crearmapper(){
+void crearmapper(char* rutina){
 	FILE* scriptMap;
 	if((scriptMap=fopen("./Maps/mapJob.sh","w+"))==NULL){
 		perror("fopen");
 		log_error(logger,"Fallo al crear el script del mapper");
 		exit(1);
 	}
-	fprintf(scriptMap,"LALSDASA\n");
-	fputs("HOLAHOLAHOAL\n",scriptMap);
+	fputs(rutina,scriptMap);
 	fclose(scriptMap);
 	return;
 }
