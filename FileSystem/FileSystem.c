@@ -51,7 +51,7 @@ void AgregarNodo();					//Andy TODAVIA NO DESARROLLADA
 void EliminarNodo();  				//Andy TODAVIA NO DESARROLLADA
 uint32_t BuscarArchivoPorNombre (); //DESARROLLADA
 uint32_t BuscarPadre ();            //DESARROLLADA
-static void eliminar_bloques(t_bloque *bloque);
+static void eliminar_bloques(t_copias *bloque);
 long ExisteEnLaLista(t_list* listaDirectorios, char* nombreDirectorioABuscar, uint32_t idPadre);
 int BuscarMenorIndiceLibre (char indiceDirectorios[]);
 static void directorio_destroy(t_dir* self);
@@ -66,6 +66,8 @@ t_list* directorios; //lista de directorios del FS
 t_bloque* bloque; //Un Bloque del Archivo
 t_config * configurador;
 t_archivo* unArchivo; //Un archivo de la lista de archivos del FS
+t_bloque *unBloque;
+t_copias *unaCopia;
 int fdmax; // número máximo de descriptores de fichero
 int listener; // descriptor de socket a la escucha
 struct sockaddr_in filesystem; // dirección del servidor
@@ -591,27 +593,29 @@ static void archivo_destroy(t_archivo* self) {
     free(self);
 }
 
-static void eliminar_bloques(t_bloque *bloque){
-	free(bloque->copias[0].nodo);
-	free(bloque->copias[1].nodo);
-	free(bloque->copias[2].nodo);
+static void eliminar_bloques(t_copias *bloque){
+	free(bloque->nodo);
+	free(bloque);
 }
 
 
 void EliminarArchivo(){
     printf("Eligió  Eliminar archivo\n");
     char* path = malloc(1);
+    int i,j;
     printf ("Ingrese el path del archivo \n");
     scanf ("%s", path);
     uint32_t idPadre = BuscarPadre(path);
     uint32_t posArchivo = BuscarArchivoPorNombre (path,idPadre);
     unArchivo = list_get(archivos,posArchivo);
     //Eliminar bloques del archivo
-    while(unArchivo->bloques!=NULL){
-    	list_destroy_and_destroy_elements(unArchivo->bloques, (void*)eliminar_bloques);
-    	break;
-
+    for (i=0;i<list_size(unArchivo->bloques);i++){
+    	unBloque=list_get(unArchivo->bloques,i);
+    	for (j=0;i<list_size(unBloque->copias);j++){
+    		list_destroy_and_destroy_elements(unBloque->copias,(void*)eliminar_bloques);
+    	}
     }
+
     //Elimnar nodo del archivo t_arhivo
     //list_remove_and_destroy_element(t_list *, int index, void(*element_destroyer)(void*));
     list_remove_and_destroy_element(archivos, posArchivo, (void*) archivo_destroy);

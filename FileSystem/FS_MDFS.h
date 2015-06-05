@@ -14,7 +14,7 @@ typedef struct estructura_copia {
 } t_copias;
 
 typedef struct estructura_bloque {
-	t_copias copias[3];
+	t_list *copias;
 } t_bloque;
 
 typedef struct estructura_manejo_nodos {
@@ -25,6 +25,7 @@ typedef struct estructura_manejo_nodos {
 	int puerto;
 	int puerto_escucha_nodo;
 	int bloques_libres;
+	//bitarray
 	int bloques_totales;
 } t_nodo;
 
