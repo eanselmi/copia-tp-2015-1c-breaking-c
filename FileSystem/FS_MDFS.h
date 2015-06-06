@@ -1,8 +1,3 @@
-
-
-
-
-
 //se creara una lista de archivos, que contendra elementos del tipo "t_archivo"
 
 typedef struct estructura_filesystem {
@@ -26,6 +21,7 @@ typedef struct estructura_manejo_nodos {
 	int socket;
 	char nodo_id[10];
 	int estado;
+	int estado_red;
 	char *ip;
 	int puerto;
 	int puerto_escucha_nodo;
