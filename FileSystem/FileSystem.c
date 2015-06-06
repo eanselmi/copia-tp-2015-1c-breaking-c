@@ -57,9 +57,6 @@ bson_error_t error;
 bson_oid_t oid;
 bson_t *doc;
 
-
-
-
 int main(int argc , char *argv[]){
 
 	pthread_t escucha; //Hilo que va a manejar los mensajes recibidos
