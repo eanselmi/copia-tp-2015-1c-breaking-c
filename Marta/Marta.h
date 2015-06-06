@@ -1,3 +1,6 @@
+#define BUF_SIZE 50
+#define MENSAJE_SIZE 4096
+
 //Estructura para manejar los Jobs
 
 typedef struct estructura_job{
@@ -15,3 +18,6 @@ typedef struct estructura_mapper {
 	int bloque;
 	char nombreArchivoTemporal[100];
 } __attribute__((packed)) t_mapper;
+
+//Prototipos de funciones
+void *connection_handler_jobs(); // Esta funcion escucha continuamente si recibo nuevos mensajes

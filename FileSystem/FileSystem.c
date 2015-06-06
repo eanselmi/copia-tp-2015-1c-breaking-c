@@ -10,8 +10,6 @@
 #include <string.h>
 #include <pthread.h>
 #include <commons/collections/list.h>
-#include "FS_MDFS.h"
-
 #include <commons/log.h>
 #include <commons/config.h>
 #include <commons/string.h>
@@ -20,44 +18,9 @@
 #include <bson.h>
 #include <mongoc.h>
 
-#define BUF_SIZE 50
-#define BLOCK_SIZE 20971520
-#define MENSAJE_SIZE 4096
-#define MAX_DIRECTORIOS 1024
+#include "FS_MDFS.h"
 
-//Prototipos de Funciones
-int Menu();
-void DibujarMenu();
-void *connection_handler_escucha(); // Esta funcion escucha continuamente si recibo nuevos mensajes
-static t_nodo *agregar_nodo_a_lista(int socket,int est,int estado_red,char *ip, int port,int puerto_escucha, int bloques_lib, int bloques_tot);
-void modificar_estado_nodo (int socket,char *ip,int port,int estado);
-void listar_nodos_conectados(t_list *nodos);
-char *obtener_md5(char *archivo);
-void formatear_nodos(void);
-void FormatearFilesystem ();		//Pame TODAVIA NO DESARROLLADA
-void EliminarArchivo();				//DESARROLLADA
-void RenombrarArchivo ();			//DESARROLLADA
-void MoverArchivo();				//DESARROLLADA
-void CrearDirectorio();				//DESARROLLADA, falta persistencia
-void EliminarDirectorio();			//DESARROLLADA, falta persistencia
-void RenombrarDirectorio();			//DESARROLLADA, falta persistencia
-void MoverDirectorio();				//DESARROLLADA, falta persistencia
-void CopiarArchivoAMDFS();			//Pame TODAVIA NO DESARROLLADA
-void CopiarArchivoDelMDFS();		//Pame TODAVIA NO DESARROLLADA
-void MD5DeArchivo();				//Pame TODAVIA NO DESARROLLADA
-void VerBloques();					//Andy TODAVIA NO DESARROLLADA
-void BorrarBloques();				//Andy TODAVIA NO DESARROLLADA
-void CopiarBloques();				//Andy TODAVIA NO DESARROLLADA
-void AgregarNodo();					//Andy TODAVIA NO DESARROLLADA
-void EliminarNodo();  				//Andy TODAVIA NO DESARROLLADA
-uint32_t BuscarArchivoPorNombre (); //DESARROLLADA
-uint32_t BuscarPadre ();            //DESARROLLADA
-static void eliminar_bloques(t_copias *bloque);
-long ExisteEnLaLista(t_list* listaDirectorios, char* nombreDirectorioABuscar, uint32_t idPadre);
-int BuscarMenorIndiceLibre (char indiceDirectorios[]);
-static void directorio_destroy(t_dir* self);
-static void archivo_destroy(t_archivo* self);
-
+//Variables globales
 fd_set master; // conjunto maestro de descriptores de fichero
 fd_set read_fds; // conjunto temporal de descriptores de fichero para select()
 t_log* logger;
@@ -93,6 +56,10 @@ mongoc_cursor_t *cursor;
 bson_error_t error;
 bson_oid_t oid;
 bson_t *doc;
+
+
+
+
 int main(int argc , char *argv[]){
 
 	pthread_t escucha; //Hilo que va a manejar los mensajes recibidos

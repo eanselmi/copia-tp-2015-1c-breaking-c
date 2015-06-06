@@ -15,13 +15,6 @@
 #include <commons/string.h>
 #include "Marta.h"
 
-#define BUF_SIZE 50
-#define MENSAJE_SIZE 4096
-
-
-
-//Prototipos de funciones
-void *connection_handler_jobs(); // Esta funcion escucha continuamente si recibo nuevos mensajes
 
 
 //Variables Globales

@@ -5,18 +5,12 @@
 #include <netinet/in.h>
 #include <commons/collections/list.h>
 #include <pthread.h>
-#include "Job.h"
 #include <fcntl.h>
 #include <sys/mman.h>
 
+#include "Job.h"
 
-#define BUF_SIZE 50
-#define BUF_ARCH 4096
-#define MAPPER_SIZE 4096
 
-//Declaración de funciones
-void* hilo_mapper(t_mapper*);
-char* getFileContent(char*);
 
 //Declaración de variables
 t_config* configurador;

@@ -1,5 +1,10 @@
-//se creara una lista de archivos, que contendra elementos del tipo "t_archivo"
+#define BUF_SIZE 50
+#define BLOCK_SIZE 20971520
+#define MENSAJE_SIZE 4096
+#define MAX_DIRECTORIOS 1024
 
+
+//se creara una lista de archivos, que contendra elementos del tipo "t_archivo"
 typedef struct estructura_filesystem {
 	char* nombre;
 	uint32_t padre;
@@ -37,3 +42,35 @@ typedef struct estructura_directorio{
 }t_dir;
 
 
+//Prototipos de Funciones
+int Menu();
+void DibujarMenu();
+void *connection_handler_escucha(); // Esta funcion escucha continuamente si recibo nuevos mensajes
+static t_nodo *agregar_nodo_a_lista(int socket,int est,int estado_red,char *ip, int port,int puerto_escucha, int bloques_lib, int bloques_tot);
+void modificar_estado_nodo (int socket,char *ip,int port,int estado);
+void listar_nodos_conectados(t_list *nodos);
+char *obtener_md5(char *archivo);
+void formatear_nodos(void);
+void FormatearFilesystem ();		//Pame TODAVIA NO DESARROLLADA
+void EliminarArchivo();				//DESARROLLADA
+void RenombrarArchivo ();			//DESARROLLADA
+void MoverArchivo();				//DESARROLLADA
+void CrearDirectorio();				//DESARROLLADA, falta persistencia
+void EliminarDirectorio();			//DESARROLLADA, falta persistencia
+void RenombrarDirectorio();			//DESARROLLADA, falta persistencia
+void MoverDirectorio();				//DESARROLLADA, falta persistencia
+void CopiarArchivoAMDFS();			//Pame TODAVIA NO DESARROLLADA
+void CopiarArchivoDelMDFS();		//Pame TODAVIA NO DESARROLLADA
+void MD5DeArchivo();				//Pame TODAVIA NO DESARROLLADA
+void VerBloques();					//Andy TODAVIA NO DESARROLLADA
+void BorrarBloques();				//Andy TODAVIA NO DESARROLLADA
+void CopiarBloques();				//Andy TODAVIA NO DESARROLLADA
+void AgregarNodo();					//Andy TODAVIA NO DESARROLLADA
+void EliminarNodo();  				//Andy TODAVIA NO DESARROLLADA
+uint32_t BuscarArchivoPorNombre (); //DESARROLLADA
+uint32_t BuscarPadre ();            //DESARROLLADA
+static void eliminar_bloques(t_copias *bloque);
+long ExisteEnLaLista(t_list* listaDirectorios, char* nombreDirectorioABuscar, uint32_t idPadre);
+int BuscarMenorIndiceLibre (char indiceDirectorios[]);
+static void directorio_destroy(t_dir* self);
+static void archivo_destroy(t_archivo* self);

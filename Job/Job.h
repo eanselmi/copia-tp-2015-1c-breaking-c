@@ -1,3 +1,7 @@
+#define BUF_SIZE 50
+#define BUF_ARCH 4096
+#define MAPPER_SIZE 4096
+
 typedef struct estructura_mapper {
 	char ip_nodo[20];
 	int puerto_nodo;
@@ -18,3 +22,8 @@ typedef struct lista_nodos_reduce{
 	int puerto_nodo;
 	char* archivoAAplicarReduce;
 } t_reduce_otrosnodos;
+
+
+//Declaración de funciones
+void* hilo_mapper(t_mapper*);
+char* getFileContent(char*);
