@@ -11,6 +11,7 @@
 #include <pthread.h>
 #include <commons/collections/list.h>
 #include "FS_MDFS.h"
+
 #include <commons/log.h>
 #include <commons/config.h>
 #include <commons/string.h>
@@ -92,8 +93,6 @@ mongoc_cursor_t *cursor;
 bson_error_t error;
 bson_oid_t oid;
 bson_t *doc;
-
-
 int main(int argc , char *argv[]){
 
 	pthread_t escucha; //Hilo que va a manejar los mensajes recibidos
@@ -916,7 +915,31 @@ void MoverDirectorio(){
 
 void CopiarArchivoAMDFS(){
 	printf("Eligió Copiar un archivo local al MDFS\n");
+    FILE * archivoLocal;
+	char* path = malloc(1);
+	int cantBytes=0;
+    printf ("Ingrese el path del archivo local \n");
+    scanf ("%s", path);
+    archivoLocal = fopen("path","r");
+	if (archivoLocal == NULL){
+		printf("No se puede abrir el archivo \n");
+	}
+	int tamArch = sizeof(archivoLocal);
+//	int cantBloques = tamArch / BLOCK_SIZE;
+//  crear listas -> list_create
+	while (archivoLocal != NULL){
+		if (cantBytes <= BLOCK_SIZE){
+			fgetc(archivoLocal); //Lee un caracter del archivo
+			cantBytes++;
+			//Falta la restricción de "\n"
+		} else{
+			//copiar a los bloques por triplicado
+		}
+	}
+	fclose(archivoLocal);
 }
+
+
 
 void CopiarArchivoDelMDFS(){
 	printf("Eligió Copiar un archivo del MDFS al filesystem local\n");
@@ -924,12 +947,6 @@ void CopiarArchivoDelMDFS(){
 
 void MD5DeArchivo(){
 	printf("Eligió Solicitar el MD5 de un archivo en MDFS\n");
-//    char* path = malloc(1);
-//    printf ("Ingrese el path del archivo \n");
-//	scanf ("%s", path);
-//	uint32_t idPadre = BuscarPadre(path);
-//	uint32_t posArchivo = BuscarArchivoPorNombre (path,idPadre);
-//	unArchivo = list_get(archivos,posArchivo);
 }
 
 void VerBloques(){

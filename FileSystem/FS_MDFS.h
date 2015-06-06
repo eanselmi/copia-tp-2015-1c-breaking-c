@@ -1,3 +1,8 @@
+
+
+
+
+
 //se creara una lista de archivos, que contendra elementos del tipo "t_archivo"
 
 typedef struct estructura_filesystem {
