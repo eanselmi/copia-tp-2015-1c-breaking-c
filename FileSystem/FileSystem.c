@@ -162,15 +162,17 @@ int main(int argc , char *argv[]){
 
 	archivos=list_create(); //Crea la lista de archivos
 	directorios=list_create(); //crea la lista de directorios
-	Menu();
-	log_destroy(logger);
-
 	//inicializo los indices para los directorios, 0 si está libre, 1 ocupado.
 	for (j =1; j < sizeof(indiceDirectorios); j++){
 		indiceDirectorios[j] = 0;
 	}
 	indiceDirectorios[0]=1; //raiz queda reservado como ocupado
-	directoriosDisponibles= MAX_DIRECTORIOS-1;
+	directoriosDisponibles= (MAX_DIRECTORIOS - 1);
+
+	Menu();
+	log_destroy(logger);
+
+
 	return 0;
 }
 
@@ -507,13 +509,18 @@ uint32_t BuscarArchivoPorNombre (const char *path, uint32_t idPadre){
 
 
 int BuscarMenorIndiceLibre (char indiceDirectorios[]){
-	int i;
-	while (i < sizeof(indiceDirectorios) && indiceDirectorios[i] == 1)
+	//Tengo un vector donde guardo los indices para ver cuales tengo libres ya que no puedo superar 1024
+	int i = 0;
+	while (i < sizeof(indiceDirectorios) && indiceDirectorios[i] == 1){ //Mientas sea menor a 1024 y esté ocupado, sigo buscando
 		i++;
-	if (i < sizeof(indiceDirectorios))
-			return i; //devuelvo el menor indice libre
-	else
-		return -1;
+	}
+
+	if (i < sizeof(indiceDirectorios)){
+		return i; //devuelvo el menor indice libre
+	}
+	else{
+		return -1; //no puedo seguir creando, me protejo de esta situación con la variable directoriosDisponibles
+	}
 }
 
 void modificar_estado_nodo (int socket,char *ip,int port,int estado){
@@ -621,12 +628,14 @@ long ExisteEnLaLista(t_list* listaDirectorios, char* nombreDirectorioABuscar, ui
 	t_dir* elementoDeMiLista;
 	elementoDeMiLista = malloc(sizeof(t_dir));
 	long encontrado = -1; //trae -1 si no lo encuentra, sino trae el id del elemento
+	//uso long para encontrado para cubrir el universo de uint32_t y además el -1 que necesito si no encuentro
 	int tamanioLista = list_size(listaDirectorios);
 	int i = 0;
 	while(encontrado == -1 && i < tamanioLista){
 		elementoDeMiLista = list_get(listaDirectorios, i);
-		if (strcmp(elementoDeMiLista->nombre, nombreDirectorioABuscar)){
-			if (elementoDeMiLista->padre == idPadre){
+		if (strcmp(elementoDeMiLista->nombre, nombreDirectorioABuscar) == 0){ //está en mi lista un directorio con ese nombre?
+			if (elementoDeMiLista->padre == idPadre){ //el que encuentro con el mismo nombre, tiene el mismo padre?
+				//considero directorios con mismo nombre pero con distintos padres Ej: /utnso/tp/operativos y /utnso/operativos
 				encontrado= elementoDeMiLista->id;
 			}
 		}
@@ -638,41 +647,42 @@ long ExisteEnLaLista(t_list* listaDirectorios, char* nombreDirectorioABuscar, ui
 void CrearDirectorio(){
 	//printf("Eligió Crear directorios\n");
 	uint32_t idPadre;
-	char* path;
+	char* path = malloc(1);
 	char** directorioNuevo;
 	t_dir* directorioACrear;
+	int resultadoScanf;
 	int cantDirACrear=0;
 	directorioACrear = malloc(sizeof(t_dir));
 	long idAValidar; //uso este tipo para cubrir rango de uint32_t y el -1,  deberia mejorar el nombre de la variable
 	printf ("Ingrese el path del directorio desde raíz ejemplo /home/utnso \n");
-	scanf ("%s", path);
+	resultadoScanf = scanf ("%s", path);
     directorioNuevo = string_split((char*) path, "/"); //Devuelve un array del path del directorio a crear
-    int indiceVectorDirNuevo=1;
-    while( directorioNuevo[indiceVectorDirNuevo]!=NULL){ //empiezo desde 1 porque nivel prof 0 es raiz y no existe en la lista
+    //int indiceVectorDirNuevo=1;
+    int indiceVectorDirNuevo=0; //empiezo por el primero del split
+    while( directorioNuevo[indiceVectorDirNuevo]!=NULL){
     	//list_find(directorios,(void*) ExisteEnLaLista());  //ver más adelante de usar la función de lcommons
-    	if (indiceVectorDirNuevo == 1){
+    	if (indiceVectorDirNuevo == 0){ //el primero del split siempre va a ser hijo de raiz
     		idPadre = 0;
     	}
     	idAValidar = ExisteEnLaLista(directorios, directorioNuevo[indiceVectorDirNuevo], idPadre);
-    	//quiere decir que existe
-    	if (idAValidar != -1){
-    		idPadre = (uint32_t) idAValidar;
+    	if (idAValidar != -1){  //quiere decir que existe
+    		idPadre = (uint32_t) idAValidar; //actualizo valor del padre con el que existe y avanzo en split para ver el siguiente directorio
     		indiceVectorDirNuevo++;
     	}
-    	else {
+    	else { //hay que crear directorio
     		int indiceDirectoriosNuevos;
     		for(indiceDirectoriosNuevos=indiceVectorDirNuevo; directorioNuevo[indiceDirectoriosNuevos] != NULL; indiceDirectoriosNuevos++){
     			cantDirACrear++;
     		}
-    		if(cantDirACrear <= directoriosDisponibles ){
+    		if(cantDirACrear <= directoriosDisponibles ){ //controlo que no supere la cantidad maxima que es 1024
         		while( directorioNuevo[indiceVectorDirNuevo]!=NULL){
         	          directorioACrear->nombre = directorioNuevo[indiceVectorDirNuevo];
         	          directorioACrear->padre = idPadre;
         	          //persistir en la db: pendiente
-        	          int id = BuscarMenorIndiceLibre(indiceDirectorios);
+        	          int id = BuscarMenorIndiceLibre(indiceDirectorios); //el nuevo id será el menor libre del vector de indices de directorios, siempre menor a 1024
         	          directorioACrear->id = id;
-        	          indiceDirectorios[id]=1;
-        	          directoriosDisponibles--;
+        	          indiceDirectorios[id]=1; //marco como ocupado el indice correspondiente
+        	          directoriosDisponibles--; //actualizo mi variable para saber cantidad de directorios máximos a crear
         	          idPadre = directorioACrear->id;
         	          list_add(directorios, directorioACrear);
         	          indiceVectorDirNuevo++;
@@ -696,7 +706,7 @@ static void directorio_destroy(t_dir* self) {
 
 void EliminarDirectorio(){
 	//printf("Eligió Eliminar directorios\n");
-	char* pathAEliminar;
+	char* pathAEliminar = malloc(1);
 	char** vectorpathAEliminar;
 	t_dir* elementoDeMiListaDir;
 	elementoDeMiListaDir = malloc(sizeof(t_dir));
@@ -707,7 +717,7 @@ void EliminarDirectorio(){
 	int i = 0;
 	uint32_t idAEliminar;
 	long idEncontrado = 0;
-	char encontrePos; //0 si no lo encuentra, 1 si lo encuentra
+	char encontrePos; //0 si no lo encuentra en la lista de directorios, 1 si lo encuentra
 	char tieneDirOArch; //0 si no tiene, 1 si tiene subdirectorio o archivo
 	int posicionElementoAEliminar;
 	printf ("Ingrese el path a eliminar desde raíz ejemplo /home/utnso \n");
@@ -762,6 +772,8 @@ void EliminarDirectorio(){
 					posicionElementoAEliminar = i -1;
 					//list_remove_and_destroy_element(t_list *, int index, void(*element_destroyer)(void*));
 					list_remove_and_destroy_element(directorios, posicionElementoAEliminar, (void*) directorio_destroy);
+					indiceDirectorios[idAEliminar] = 0; //Desocupo el indice en vector de indices disponibles para poder usar ese id en el futuro
+					directoriosDisponibles++; //Incremento la cantidad de directorios libres
 				}
 			}
 		}
@@ -771,9 +783,9 @@ void EliminarDirectorio(){
 
 void RenombrarDirectorio(){
 	//printf("Eligió Renombrar directorios\n");
-	char* pathOriginal;
+	char* pathOriginal = malloc(1);
 	char** vectorPathOriginal;
-	char* pathNuevo;
+	char* pathNuevo = malloc(1);
 	t_dir* elementoDeMiLista;
 	elementoDeMiLista = malloc(sizeof(t_dir));
 	int tamanioLista = list_size(directorios);
@@ -813,9 +825,9 @@ void RenombrarDirectorio(){
 
 void MoverDirectorio(){
 	//printf("Eligió Mover directorios\n");
-	char* pathOriginal;
+	char* pathOriginal = malloc(1);
 	char** vectorPathOriginal;
-	char* pathNuevo;
+	char* pathNuevo = malloc(1);
 	char** vectorPathNuevo;
 	char* nombreDirAMover;
 	t_dir* elementoDeMiLista;
