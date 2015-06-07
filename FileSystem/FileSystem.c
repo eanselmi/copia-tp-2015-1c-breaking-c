@@ -878,14 +878,19 @@ void MoverDirectorio(){
 	}
 }
 
-void CopiarArchivoAMDFS(){
+
+
+
+int CopiarArchivoAMDFS(){
 	printf("Eligió Copiar un archivo local al MDFS\n");
     FILE * archivoLocal;
 	char* path = strdup("");
+	char* pathMDFS = strdup("");
 	int cantBytes=0;
 	int pos=0;
 	char car;
 	char buf[BLOCK_SIZE];
+	int j;
 	printf ("Ingrese el path del archivo local \n");
     scanf ("%s", path);
     archivoLocal = fopen("path","r");
@@ -899,20 +904,52 @@ void CopiarArchivoAMDFS(){
 		}
 		if(buf == BLOCK_SIZE){
 			if(car == "\n"){ //Caso Feliz
-				//Crear estructuras: Directorios y lista de archivos
-				//Ordenar los bloques según el espacio disponible
+				printf ("Ingrese el path del archivo destino \n");
+			    scanf ("%s", pathMDFS);
+			    //Buscar Directorio. Si no existe se muestra mensaje de error y se debe volver al menú para crearlo
+			    uint32_t idPadre = BuscarPadre(pathMDFS);
+			    if(idPadre == -1){
+			    	printf("El directorio no existe. Se debe crear el directorio desde el menú. \n");
+			    	exit(-1);
+			    }
+			    //Buscar Archivo. Si no existe se muestra mensaje de error y se debe volver al menú para crearlo
+			    uint32_t posArchivo = BuscarArchivoPorNombre (pathMDFS,idPadre);
+			    if(posArchivo == -1){
+				    printf("El archivo no existe. Se debe crear el archivo desde el menú. \n");
+				    exit(-1);
+			    }
+			    unArchivo = list_get(archivos,posArchivo);
+			    //Ordenar los bloques del archivo según el espacio disponible
+			    //Copiar el contenido del Buffer en los bloques mas vacios por triplicado
+			    //Vaciar el Buffer
+			    // pos = 0;
+			}else{ //Caso en que el bloque no termina en "\n"
+				//fseek(pos,archivo); //Retroceder hasta el "\n" anterior
+				for(j=pos;j<BLOCK_SIZE;j++){
+					strcat(buf[j],"\0"); //Completar el buffer con "\0"
+				}
+				//Buscar Directorio. Si no existe se muestra mensaje de error y se debe volver al menú para crearlo
+				uint32_t idPadre = BuscarPadre(pathMDFS);
+				if(idPadre == -1){
+					printf("El directorio no existe. Se debe crear el directorio desde el menú. \n");
+					exit(-1);
+				}
+				//Buscar Archivo. Si no existe se muestra mensaje de error y se debe volver al menú para crearlo
+			    uint32_t posArchivo = BuscarArchivoPorNombre (pathMDFS,idPadre);
+				if(posArchivo == -1){
+					printf("El archivo no existe. Se debe crear el archivo desde el menú. \n");
+					exit(-1);
+				}
+				unArchivo = list_get(archivos,posArchivo);
+				//Ordenar los bloques del archivo según el espacio disponible
 				//Copiar el contenido del Buffer en los bloques mas vacios por triplicado
 				//Vaciar el Buffer
-			}else{
-				//Retroceder hasta el "\n" anterior
-				//Completar el buffer con "\0"
-				//Crear estructuras: Directorios y lista de archivos
-				//Ordenar los bloques según el espacio disponible
-				//Copiar el contenido del Buffer en los bloques mas vacios por triplicado
-				//Vaciar el Buffer
+				//pos = 0;
 			}
 		}
 	}
+    fclose(archivoLocal);
+    return 0;
 }
 
 

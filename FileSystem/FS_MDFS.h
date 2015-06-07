@@ -59,7 +59,7 @@ void CrearDirectorio();				//DESARROLLADA, falta persistencia
 void EliminarDirectorio();			//DESARROLLADA, falta persistencia
 void RenombrarDirectorio();			//DESARROLLADA, falta persistencia
 void MoverDirectorio();				//DESARROLLADA, falta persistencia
-void CopiarArchivoAMDFS();			//Pame TODAVIA NO DESARROLLADA
+int CopiarArchivoAMDFS();			//Pame TODAVIA NO DESARROLLADA
 void CopiarArchivoDelMDFS();		//Pame TODAVIA NO DESARROLLADA
 void MD5DeArchivo();				//Pame TODAVIA NO DESARROLLADA
 void VerBloques();					//Andy TODAVIA NO DESARROLLADA
