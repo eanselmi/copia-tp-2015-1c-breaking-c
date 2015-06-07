@@ -881,27 +881,38 @@ void MoverDirectorio(){
 void CopiarArchivoAMDFS(){
 	printf("Eligió Copiar un archivo local al MDFS\n");
     FILE * archivoLocal;
-	char* path = malloc(1);
+	char* path = strdup("");
 	int cantBytes=0;
-    printf ("Ingrese el path del archivo local \n");
+	int pos=0;
+	char car;
+	char buf[BLOCK_SIZE];
+	printf ("Ingrese el path del archivo local \n");
     scanf ("%s", path);
     archivoLocal = fopen("path","r");
-	if (archivoLocal == NULL){
-		printf("No se puede abrir el archivo \n");
-	}
-	int tamArch = sizeof(archivoLocal);
-//	int cantBloques = tamArch / BLOCK_SIZE;
-//  crear listas -> list_create
-	while (archivoLocal != NULL){
-		if (cantBytes <= BLOCK_SIZE){
-			fgetc(archivoLocal); //Lee un caracter del archivo
-			cantBytes++;
-			//Falta la restricción de "\n"
-		} else{
-			//copiar a los bloques por triplicado
+    memset(buf,'\0',BLOCK_SIZE);
+    while (!feof(archivoLocal)){
+		car = fgetc (archivoLocal);
+		cantBytes++;
+		strcat(buf,car);
+		if(car == "\n"){
+			pos = cantBytes -1;
+		}
+		if(buf == BLOCK_SIZE){
+			if(car == "\n"){ //Caso Feliz
+				//Crear estructuras: Directorios y lista de archivos
+				//Ordenar los bloques según el espacio disponible
+				//Copiar el contenido del Buffer en los bloques mas vacios por triplicado
+				//Vaciar el Buffer
+			}else{
+				//Retroceder hasta el "\n" anterior
+				//Completar el buffer con "\0"
+				//Crear estructuras: Directorios y lista de archivos
+				//Ordenar los bloques según el espacio disponible
+				//Copiar el contenido del Buffer en los bloques mas vacios por triplicado
+				//Vaciar el Buffer
+			}
 		}
 	}
-	fclose(archivoLocal);
 }
 
 
