@@ -511,11 +511,11 @@ uint32_t BuscarArchivoPorNombre (const char *path, uint32_t idPadre){
 int BuscarMenorIndiceLibre (char indiceDirectorios[]){
 	//Tengo un vector donde guardo los indices para ver cuales tengo libres ya que no puedo superar 1024
 	int i = 0;
-	while (i < sizeof(indiceDirectorios) && indiceDirectorios[i] == 1){ //Mientas sea menor a 1024 y esté ocupado, sigo buscando
+	while (i < MAX_DIRECTORIOS && indiceDirectorios[i] == 1){ //Mientas sea menor a 1024 y esté ocupado, sigo buscando
 		i++;
 	}
 
-	if (i < sizeof(indiceDirectorios)){
+	if (i < MAX_DIRECTORIOS){
 		return i; //devuelvo el menor indice libre
 	}
 	else{
@@ -650,12 +650,11 @@ void CrearDirectorio(){
 	char* path = malloc(1);
 	char** directorioNuevo;
 	t_dir* directorioACrear;
-	int resultadoScanf;
 	int cantDirACrear=0;
 	directorioACrear = malloc(sizeof(t_dir));
 	long idAValidar; //uso este tipo para cubrir rango de uint32_t y el -1,  deberia mejorar el nombre de la variable
 	printf ("Ingrese el path del directorio desde raíz ejemplo /home/utnso \n");
-	resultadoScanf = scanf ("%s", path);
+	scanf ("%s", path);
     directorioNuevo = string_split((char*) path, "/"); //Devuelve un array del path del directorio a crear
     //int indiceVectorDirNuevo=1;
     int indiceVectorDirNuevo=0; //empiezo por el primero del split
@@ -666,7 +665,12 @@ void CrearDirectorio(){
     	}
     	idAValidar = ExisteEnLaLista(directorios, directorioNuevo[indiceVectorDirNuevo], idPadre);
     	if (idAValidar != -1){  //quiere decir que existe
-    		idPadre = (uint32_t) idAValidar; //actualizo valor del padre con el que existe y avanzo en split para ver el siguiente directorio
+    		if (directorioNuevo[indiceVectorDirNuevo + 1]==NULL){
+    			printf("El directorio ingresado ya existe. No se realizara ninguna accion \n");
+    		}
+    		else{
+    			idPadre = (uint32_t) idAValidar; //actualizo valor del padre con el que existe y avanzo en split para ver el siguiente directorio
+    		}
     		indiceVectorDirNuevo++;
     	}
     	else { //hay que crear directorio
