@@ -680,7 +680,8 @@ void CrearDirectorio(){
     		}
     		if(cantDirACrear <= directoriosDisponibles ){ //controlo que no supere la cantidad maxima que es 1024
         		while( directorioNuevo[indiceVectorDirNuevo]!=NULL){
-        	          directorioACrear->nombre = directorioNuevo[indiceVectorDirNuevo];
+        			directorioACrear = malloc(sizeof(t_dir));
+        			directorioACrear->nombre = directorioNuevo[indiceVectorDirNuevo];
         	          directorioACrear->padre = idPadre;
         	          //persistir en la db: pendiente
         	          int id = BuscarMenorIndiceLibre(indiceDirectorios); //el nuevo id será el menor libre del vector de indices de directorios, siempre menor a 1024
@@ -690,7 +691,9 @@ void CrearDirectorio(){
         	          idPadre = directorioACrear->id;
         	          list_add(directorios, directorioACrear);
         	          indiceVectorDirNuevo++;
+
         		}
+        		printf("El directorio se ha creado satisfactoriamente \n");
     		}
     		else{
     			printf("No se puede crear el directorio ya que sobrepasaría el límite máximo de directorios permitidos: %d\n", MAX_DIRECTORIOS);
@@ -743,7 +746,7 @@ void EliminarDirectorio(){
 			i = 0;
 			while(tieneDirOArch == 0 && i < tamanioListaDir){
 				elementoDeMiListaDir = list_get(directorios, i);
-				if (elementoDeMiListaDir->padre == idAEliminar){
+				if (elementoDeMiListaDir->padre == idAEliminar){ //Si tengo directorios que tengan como padre al dir que quiero eliminar
 					tieneDirOArch = 1;
 				}
 				i++;
@@ -778,6 +781,7 @@ void EliminarDirectorio(){
 					list_remove_and_destroy_element(directorios, posicionElementoAEliminar, (void*) directorio_destroy);
 					indiceDirectorios[idAEliminar] = 0; //Desocupo el indice en vector de indices disponibles para poder usar ese id en el futuro
 					directoriosDisponibles++; //Incremento la cantidad de directorios libres
+					printf("El directorio se ha eliminado correctamente. \n");
 				}
 			}
 		}
@@ -824,6 +828,7 @@ void RenombrarDirectorio(){
 			}
 			i++;
 		}
+		printf("El directorio se ha renombrado exitosamente. \n");
 	}
 }
 
