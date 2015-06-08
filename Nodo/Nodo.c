@@ -12,6 +12,10 @@
 #include <pthread.h>
 #include <commons/collections/list.h>
 #include <commons/temporal.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+
+
 
 #include "Nodo.h"
 
@@ -35,6 +39,7 @@ int* socketNodo; //para identificar los que son nodos conectados
 int* socketMapper; //para identificar los que son mappers conectados
 int* socketReducer; //para identificar los que son reducers conectados
 char rutinaMapper[MAPPER_SIZE]; //En este buffer se guardarán las rutinas mapper para luego pasarlas a un archivo local
+char *nodo_id;
 
 
 int main(int argc , char *argv[]){
@@ -73,6 +78,7 @@ int main(int argc , char *argv[]){
 	//-------------------------------
 	puerto_escucha=malloc(sizeof(int));
 	*puerto_escucha=config_get_int_value(configurador,"PUERTO_NODO");
+	nodo_id=config_get_string_value(configurador,"NODO_ID");
 	if ((conectorFS = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
 		perror ("socket");
 		log_error(logger,"FALLO la creacion del socket");
@@ -103,6 +109,11 @@ int main(int argc , char *argv[]){
 				exit(-1);
 			}
 			if((send(conectorFS,puerto_escucha,sizeof(int),0))==-1){
+				perror("send");
+				log_error(logger,"FALLO el envío de la cantidad de bloques totales al FS");
+				exit(-1);
+			}
+			if((send(conectorFS,nodo_id,sizeof(int),0))==-1){
 				perror("send");
 				log_error(logger,"FALLO el envío de la cantidad de bloques totales al FS");
 				exit(-1);
@@ -373,6 +384,7 @@ void *manejador_de_escuchas(){
 void ejecutarMapper(char *script,int bloque,char *resultado){
 	int outfd[2];
 	int bak,pid,archivo_resultado;
+	bak=0;
 	char *path;
 	pipe(outfd); /* Donde escribe el padre */
 	if((pid=fork())==-1){
