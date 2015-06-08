@@ -16,6 +16,7 @@ typedef struct estructura_filesystem {
 typedef struct estructura_copia {
 	char* nodo;
 	int bloqueNodo;
+	char md5[32];
 } t_copias;
 
 typedef struct estructura_bloque {
@@ -31,7 +32,7 @@ typedef struct estructura_manejo_nodos {
 	int puerto;
 	int puerto_escucha_nodo;
 	char *bloques_bitarray;
-	t_bitarray bloques_del_nodo;
+	t_bitarray *bloques_del_nodo;
 	int bloques_libres;
 	int bloques_totales;
 } t_nodo;

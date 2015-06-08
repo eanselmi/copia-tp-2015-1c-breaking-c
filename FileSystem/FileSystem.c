@@ -6,6 +6,8 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 #include <unistd.h>
 #include <string.h>
 #include <pthread.h>
@@ -138,6 +140,7 @@ int main(int argc , char *argv[]){
 				log_error(logger,"FALLO el RECV");
 				exit (-1);
 			}
+			*puerto_escucha_nodo=21211;
 			if (read_size > 0){
 				list_add (nodos, agregar_nodo_a_lista(newfd,0,1,inet_ntoa(remote_client.sin_addr),remote_client.sin_port,*puerto_escucha_nodo,*bloquesTotales,*bloquesTotales));
 				printf ("Se conectó un nuevo nodo: %s con %d bloques totales\n",inet_ntoa(remote_client.sin_addr),*bloquesTotales);
@@ -228,7 +231,19 @@ int Menu(void){
 	      case 15: AgregarNodo(); break;
 	      case 16: EliminarNodo(); break;
 	      //case 17: printf("Eligió Salir\n"); break;
-	      case 17: listar_nodos_conectados(nodos); break;
+	      case 17:{ //listar_nodos_conectados(nodos); break;
+	    	  int i,j,cantidad_nodos;
+	    	  	t_nodo *elemento;
+	    	  	cantidad_nodos= list_size(nodos);
+	    	  	for (i=0;i<=cantidad_nodos;i++){
+	    	  		elemento = list_get(nodos,i);
+	    	  		printf ("\n\n");
+	    	  		printf ("Nodo_ID: %s\nSocket: %d\nEstado: %d\nIP: %s\nPuerto_Origen: %d\nPuerto_Escucha_Nodo: %d\nBloques_Libres: %d\nBloques_Totales: %d", elemento->nodo_id, elemento->socket,elemento->estado,elemento->ip,elemento->puerto,elemento->puerto_escucha_nodo,elemento->bloques_libres,elemento->bloques_totales);
+	    	  		printf ("\n");
+	    	  		for (j=0;j<elemento->bloques_totales;j++)
+	    	  			printf ("%d",bitarray_test_bit(elemento->bloques_del_nodo,j));
+	    	  	}}
+	    	  	break;
 	      default: printf("Opción incorrecta. Por favor ingrese una opción del 1 al 17\n");break;
 		}
 	}
@@ -237,7 +252,6 @@ int Menu(void){
 static t_nodo *agregar_nodo_a_lista(int socket,int est,int est_red,char *ip, int port,int puerto_escucha, int bloques_lib, int bloques_tot){
 	t_nodo *nodo_temporal = malloc (sizeof(t_nodo));
 
-
 	//===========================================================================
 	//Preparo el nombre que identificara al nodo, esto antes lo hacia una funcion
 	//===========================================================================
@@ -245,6 +259,7 @@ static t_nodo *agregar_nodo_a_lista(int socket,int est,int est_red,char *ip, int
 	char *numero_nodo=malloc(sizeof(int));
 	sprintf(numero_nodo,"%d",cantidad_nodos_historico);
 	strcat(nombre_temporal,numero_nodo);
+	int i;
 
 	//===========================================================================
 	//===========================================================================
@@ -261,6 +276,13 @@ static t_nodo *agregar_nodo_a_lista(int socket,int est,int est_red,char *ip, int
 	nodo_temporal->bloques_totales = bloques_tot;
 	nodo_temporal->puerto_escucha_nodo=puerto_escucha;
 
+	//Creo e inicializo el bitarray del nodo, 0 es bloque libre, 1 es blloque ocupado
+	//Como recien se esta conectadno el nodo, todos sus bloques son libres
+	for (i=8;i<bloques_tot;i+=8);
+	nodo_temporal->bloques_bitarray=malloc(i/8);
+	nodo_temporal->bloques_del_nodo = bitarray_create(nodo_temporal->bloques_bitarray,i/8);
+	for (i=0;i<nodo_temporal->bloques_totales;i++)
+			bitarray_clean_bit(nodo_temporal->bloques_del_nodo,i);
 	char *tmp_socket=malloc(sizeof(int));
 	char *tmp_estado=malloc(sizeof(int));
 	char *tmp_puerto=malloc(sizeof(int));
@@ -271,7 +293,6 @@ static t_nodo *agregar_nodo_a_lista(int socket,int est,int est_red,char *ip, int
 	sprintf(tmp_puerto,"%d",port);
 	sprintf(tmp_bl_lib,"%d",bloques_lib);
 	sprintf(tmp_bl_tot,"%d",bloques_tot);
-	printf ("%s",tmp_socket);
 	//Persistencia del nodo agregado a la base de mongo
 	doc = BCON_NEW ("Socket",tmp_socket,"Nodo_ID",nombre_temporal,"Estado",tmp_estado,"IP",ip,"Puerto",tmp_puerto,"Bloques_Libres",tmp_bl_lib,"Bloques_Totales",tmp_bl_tot);
 	if (!mongoc_collection_insert (collection, MONGOC_INSERT_NONE, doc, NULL, &error)) {
@@ -305,13 +326,16 @@ char *obtener_md5(char *archivo){
 }
 
 void listar_nodos_conectados(t_list *nodos){
-	int i,cantidad_nodos;
+	int i,j,cantidad_nodos;
 	t_nodo *elemento;
 	cantidad_nodos= list_size(nodos);
 	for (i=0;i<=cantidad_nodos;i++){
 		elemento = list_get(nodos,i);
 		printf ("\n\n");
 		printf ("Nodo_ID: %s\nSocket: %d\nEstado: %d\nIP: %s\nPuerto_Origen: %d\nPuerto_Escucha_Nodo: %d\nBloques_Libres: %d\nBloques_Totales: %d", elemento->nodo_id, elemento->socket,elemento->estado,elemento->ip,elemento->puerto,elemento->puerto_escucha_nodo,elemento->bloques_libres,elemento->bloques_totales);
+		printf ("\n");
+		for (j=0;j<elemento->bloques_totales;j++)
+			printf ("%d",bitarray_test_bit(elemento->bloques_del_nodo,j));
 	}
 }
 void *connection_handler_escucha(void){
@@ -532,12 +556,14 @@ void modificar_estado_nodo (int socket,char *ip,int port,int estado){
 		if (socket==-1){
 			if ((strcmp(tmp->ip,ip)==0) && tmp->puerto==port){
 				tmp->estado=estado;
+				tmp->estado_red=0;
 				break;
 			}
 		}else{
 			if ((strcmp(tmp->ip,ip)==0) && tmp->puerto==port){
 				tmp->estado=estado;
 				tmp->socket=socket;
+				tmp->estado_red=1;
 				break;
 			}
 		}
