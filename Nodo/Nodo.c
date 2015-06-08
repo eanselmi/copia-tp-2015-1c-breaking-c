@@ -328,7 +328,7 @@ void *manejador_de_escuchas(){
 						//Envío por STDIN en "argumento" al script en "path", se guarda el resultado en "resultado"
 						//void ejecutarScript(char *path,char *argumento,char *resultado);
 
-						ejecutarScript("./RutinasMap/mapJob.sh","Hola","/tmp/resultado");
+						ejecutarMapper("mapJob.sh",*mensaje,"/tmp/resultado");
 
 
 					}
@@ -357,6 +357,39 @@ void *manejador_de_escuchas(){
 	}
 }
 
+void ejecutarMapper(char *script,int bloque,char *resultado){
+	int outfd[2];
+	int bak,pid,archivo_resultado;
+	char *path;
+	pipe(outfd); /* Donde escribe el padre */
+	if((pid=fork())==-1){
+		perror("fork");
+	}
+	else if(pid==0)
+	{
+
+	archivo_resultado=open(resultado,O_RDWR|O_CREAT,S_IRWXU|S_IRWXG);
+	fflush(stdout);
+	bak=dup(STDOUT_FILENO);
+	dup2(archivo_resultado,STDOUT_FILENO);
+	close(archivo_resultado);
+	close(STDIN_FILENO);
+	dup2(outfd[0], STDIN_FILENO);
+	close(outfd[0]); /* innecesarios para el hijo */
+	close(outfd[1]);
+	path=strdup("");
+	strcat(path,"/home/utnso/TP/tp-2015-1c-breaking-c/Nodo/RutinasMap/");
+	strcat(path,script);
+	execlp(path,script,NULL);
+	}
+	else
+	{
+	close(outfd[0]); /* Estan siendo usados por el hijo */
+	write(outfd[1],getBloque(bloque),BLOCK_SIZE);/* Escribe en el stdin del hijo*/
+	close(outfd[1]);
+	dup2(bak,STDOUT_FILENO);
+	}
+}
 
 int estaEnListaNodos(int socket){
 	int i,tamanio;
@@ -462,11 +495,6 @@ char* getFileContent(char* nombreFile){
 	return fileMapeado;
 }
 
-
-void crearmapper(char* rutina){
-
-}
-
 char* mapearFileDeDatos(){
 	char* fileDatos;
 
@@ -506,26 +534,3 @@ char* mapearFileDeDatos(){
 	return fileDatos;
 }
 
-void ejecutarScript(char *path,char *argumento,char *resultado){
-	int fd[2];
-	FILE* archivo_resultado;
-	archivo_resultado=fopen(resultado,"w+");
-	int childpid;
-	pipe(fd);
-	char result[100];
-	memset(result,'\0',100);
-
-	if ( (childpid = fork() ) == -1){
-	   fprintf(stderr, "FORK failed");
-
-	} else if( childpid == 0) {
-	   close(1);
-	   dup2(fd[1], 1);
-	   close(fd[0]);
-	   execlp(path,path,argumento,NULL);
-	}
-	wait(NULL);
-	read(fd[0], result, sizeof(result));
-	fprintf(archivo_resultado,"%s",result);
-	fclose(archivo_resultado);
-}

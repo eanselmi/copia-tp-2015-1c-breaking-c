@@ -8,9 +8,8 @@ void setBloque(int bloque,char* datos);
 char* getBloque(int bloque);
 char* getFileContent(char* nombre);
 void* manejador_de_escuchas(); //Hilo que va a manejar las conexiones
-void crearmapper(char*);
 int estaEnListaNodos(int socket);
 int estaEnListaMappers(int socket);
 int estaEnListaReducers(int socket);
-void ejecutarScript(char *path,char *argumento,char *resultado);
+void ejecutarMapper(char *script,int bloque,char *resultado);
 
