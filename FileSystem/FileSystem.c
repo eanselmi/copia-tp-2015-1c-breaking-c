@@ -997,9 +997,56 @@ void CopiarBloques(){
 }
 
 void AgregarNodo(){
-	printf("Eligió Agregar un nodo de datos\n");
+	//printf("Eligió Agregar un nodo de datos\n");
+	int i,cantNodos, nodoEncontrado;
+	nodoEncontrado =0; //0 no lo encontró, 1 lo encontró
+	t_nodo* nodoAEvaluar;
+	char* nodoID = malloc(1);
+	cantNodos= list_size(nodos);
+	for (i=0;i<cantNodos;i++){
+		nodoAEvaluar = list_get(nodos,i);
+		if (nodoAEvaluar->estado_red == 1 && nodoAEvaluar->estado == 0){
+			printf ("Nodo ID: %s\n Socket: %d\nEstado: %d\nIP: %s\nPuerto_Origen: %d\nPuerto_Escucha_Nodo: %d\nBloques_Libres: %d\nBloques_Totales: %d", nodoAEvaluar->nodo_id, nodoAEvaluar->socket,nodoAEvaluar->estado,nodoAEvaluar->ip,nodoAEvaluar->puerto,nodoAEvaluar->puerto_escucha_nodo,nodoAEvaluar->bloques_libres,nodoAEvaluar->bloques_totales);
+			printf("\n");
+		}
+	}
+	printf("Ingrese el ID del nodo que desea agregar\n");
+	scanf("%s", nodoID);
+	i = 0;
+	while (i < cantNodos && nodoEncontrado == 0){
+		nodoAEvaluar = list_get(nodos,i);
+		if (nodoAEvaluar->nodo_id == nodoID) {
+			nodoEncontrado = 1;
+		}
+		i++;
+	}
+	modificar_estado_nodo(nodoAEvaluar->socket ,nodoAEvaluar->ip,nodoAEvaluar->puerto,1); //cambio su estado de la lista a 1 que es activo
+	printf("Se ha agregado el nodo correctamente\n");
 }
 
 void EliminarNodo(){
-	printf("Eligió Eliminar un nodo de datos\n");
+	//printf("Eligió Eliminar un nodo de datos\n");
+	int i,cantNodos, nodoEncontrado;
+	nodoEncontrado =0; //0 no lo encontró, 1 lo encontró
+	t_nodo* nodoAEvaluar;
+	char* nodoID = malloc(1);
+	cantNodos= list_size(nodos);
+	for (i=0;i<cantNodos;i++){
+		nodoAEvaluar = list_get(nodos,i);
+		if (nodoAEvaluar->estado_red == 1 && nodoAEvaluar->estado == 1){
+			printf ("Nodo ID: %s\n Socket: %d\nEstado: %d\nIP: %s\nPuerto_Origen: %d\nPuerto_Escucha_Nodo: %d\nBloques_Libres: %d\nBloques_Totales: %d", nodoAEvaluar->nodo_id, nodoAEvaluar->socket,nodoAEvaluar->estado,nodoAEvaluar->ip,nodoAEvaluar->puerto,nodoAEvaluar->puerto_escucha_nodo,nodoAEvaluar->bloques_libres,nodoAEvaluar->bloques_totales);
+		}
+	}
+	printf("Ingrese el ID del nodo que desea eliminar\n");
+	scanf("%s", nodoID);
+	i = 0;
+	while (i < cantNodos && nodoEncontrado == 0){
+		nodoAEvaluar = list_get(nodos,i);
+		if (nodoAEvaluar->nodo_id == nodoID) {
+		nodoEncontrado = 1;
+	}
+		i++;
+	}
+	modificar_estado_nodo(nodoAEvaluar->socket ,nodoAEvaluar->ip,nodoAEvaluar->puerto,0); //cambio su estado de la lista a 0 que es inactivo
+	printf("Se ha eliminado el nodo correctamente\n");
 }

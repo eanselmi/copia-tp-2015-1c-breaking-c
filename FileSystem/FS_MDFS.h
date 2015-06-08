@@ -65,8 +65,8 @@ void MD5DeArchivo();				//Pame TODAVIA NO DESARROLLADA
 void VerBloques();					//Andy TODAVIA NO DESARROLLADA
 void BorrarBloques();				//Andy TODAVIA NO DESARROLLADA
 void CopiarBloques();				//Andy TODAVIA NO DESARROLLADA
-void AgregarNodo();					//Andy TODAVIA NO DESARROLLADA
-void EliminarNodo();  				//Andy TODAVIA NO DESARROLLADA
+void AgregarNodo();					//DESARROLLADA
+void EliminarNodo();  				//DESARROLLADA
 uint32_t BuscarArchivoPorNombre (); //DESARROLLADA
 uint32_t BuscarPadre ();            //DESARROLLADA
 static void eliminar_bloques(t_copias *bloque);
