@@ -838,7 +838,7 @@ void MoverDirectorio(){
 	char** vectorPathOriginal;
 	char* pathNuevo = malloc(1);
 	char** vectorPathNuevo;
-	char* nombreDirAMover;
+	char* nombreDirAMover = malloc(1);
 	t_dir* elementoDeMiLista;
 	elementoDeMiLista = malloc(sizeof(t_dir));
 	int tamanioLista = list_size(directorios);
@@ -865,7 +865,7 @@ void MoverDirectorio(){
 	}
 	else{
 		idDirAMover = idEncontrado;
-		strcpy(nombreDirAMover,vectorPathOriginal[i-1]); //revisar, puse -1 porque avancé hasta el NULL.
+		strcpy(nombreDirAMover,vectorPathOriginal[(i-1)]); //revisar, puse -1 porque avancé hasta el NULL.
 		idEncontrado = 0;
 		i = 0;
 		while (vectorPathNuevo[i] != NULL && idEncontrado != -1){
@@ -891,6 +891,7 @@ void MoverDirectorio(){
 						}
 						i++;
 					}
+					printf("El directorio se ha movido satisfactoriamente \n");
 				}
 				else {
 					printf ("El directorio no está vacío \n");
