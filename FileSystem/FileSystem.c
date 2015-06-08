@@ -76,6 +76,7 @@ int main(int argc , char *argv[]){
 	collection = mongoc_client_get_collection (client, "NODOS", "lista_nodos");
 	bson_oid_init (&oid, NULL);
 
+
 	if ((listener = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
 		perror("socket");
 		log_error(logger,"FALLO la creacion del socket");
