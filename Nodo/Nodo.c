@@ -39,7 +39,7 @@ int* socketNodo; //para identificar los que son nodos conectados
 int* socketMapper; //para identificar los que son mappers conectados
 int* socketReducer; //para identificar los que son reducers conectados
 char rutinaMapper[MAPPER_SIZE]; //En este buffer se guardarán las rutinas mapper para luego pasarlas a un archivo local
-char *nodo_id;
+char nodo_id[6];
 
 
 int main(int argc , char *argv[]){
@@ -78,7 +78,7 @@ int main(int argc , char *argv[]){
 	//-------------------------------
 	puerto_escucha=malloc(sizeof(int));
 	*puerto_escucha=config_get_int_value(configurador,"PUERTO_NODO");
-	nodo_id=config_get_string_value(configurador,"NODO_ID");
+	strcpy(nodo_id,config_get_string_value(configurador,"NODO_ID"));
 	if ((conectorFS = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
 		perror ("socket");
 		log_error(logger,"FALLO la creacion del socket");
@@ -113,7 +113,7 @@ int main(int argc , char *argv[]){
 				log_error(logger,"FALLO el envío de la cantidad de bloques totales al FS");
 				exit(-1);
 			}
-			if((send(conectorFS,nodo_id,sizeof(int),0))==-1){
+			if((send(conectorFS,nodo_id,sizeof(nodo_id),0))==-1){
 				perror("send");
 				log_error(logger,"FALLO el envío de la cantidad de bloques totales al FS");
 				exit(-1);

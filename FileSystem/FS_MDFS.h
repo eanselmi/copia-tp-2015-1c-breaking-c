@@ -25,7 +25,7 @@ typedef struct estructura_bloque {
 
 typedef struct estructura_manejo_nodos {
 	int socket;
-	char nodo_id[10];
+	char nodo_id[6];
 	int estado;
 	int estado_red;
 	char *ip;
@@ -48,8 +48,8 @@ typedef struct estructura_directorio{
 int Menu();
 void DibujarMenu();
 void *connection_handler_escucha(); // Esta funcion escucha continuamente si recibo nuevos mensajes
-static t_nodo *agregar_nodo_a_lista(int socket,int est,int estado_red,char *ip, int port,int puerto_escucha, int bloques_lib, int bloques_tot);
-void modificar_estado_nodo (int socket,char *ip,int port,int estado);
+static t_nodo *agregar_nodo_a_lista(char nodo_id[6],int socket,int est,int estado_red,char *ip, int port,int puerto_escucha, int bloques_lib, int bloques_tot);
+void modificar_estado_nodo (int socket,char *ip,int port,int estado,int estado_red);
 void listar_nodos_conectados(t_list *nodos);
 char *obtener_md5(char *archivo);
 void formatear_nodos(void);

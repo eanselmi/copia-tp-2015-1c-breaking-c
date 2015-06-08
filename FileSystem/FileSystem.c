@@ -51,6 +51,7 @@ char indiceDirectorios[MAX_DIRECTORIOS]; //cantidad maxima de directorios
 int directoriosDisponibles; //reservo raiz
 int j; //variable para recorrer el vector de indices
 int *puerto_escucha_nodo;
+char nodo_id[6];
 
 //Variables para la persistencia con mongo
 mongoc_client_t *client;
@@ -140,9 +141,13 @@ int main(int argc , char *argv[]){
 				log_error(logger,"FALLO el RECV");
 				exit (-1);
 			}
-			*puerto_escucha_nodo=21211;
+			if ((read_size = recv(newfd, nodo_id ,sizeof(nodo_id) , 0))==-1) {
+				perror ("recv");
+				log_error(logger,"FALLO el RECV");
+				exit (-1);
+			}
 			if (read_size > 0){
-				list_add (nodos, agregar_nodo_a_lista(newfd,0,1,inet_ntoa(remote_client.sin_addr),remote_client.sin_port,*puerto_escucha_nodo,*bloquesTotales,*bloquesTotales));
+				list_add (nodos, agregar_nodo_a_lista(nodo_id,newfd,0,1,inet_ntoa(remote_client.sin_addr),remote_client.sin_port,*puerto_escucha_nodo,*bloquesTotales,*bloquesTotales));
 				printf ("Se conectó un nuevo nodo: %s con %d bloques totales\n",inet_ntoa(remote_client.sin_addr),*bloquesTotales);
 				log_info(logger,"Se conectó un nuevo nodo: %s con %d bloques totales",inet_ntoa(remote_client.sin_addr),*bloquesTotales);
 			}
@@ -231,43 +236,32 @@ int Menu(void){
 	      case 15: AgregarNodo(); break;
 	      case 16: EliminarNodo(); break;
 	      //case 17: printf("Eligió Salir\n"); break;
-	      case 17:{ //listar_nodos_conectados(nodos); break;
-	    	  int i,j,cantidad_nodos;
-	    	  	t_nodo *elemento;
-	    	  	cantidad_nodos= list_size(nodos);
-	    	  	for (i=0;i<=cantidad_nodos;i++){
-	    	  		elemento = list_get(nodos,i);
-	    	  		printf ("\n\n");
-	    	  		printf ("Nodo_ID: %s\nSocket: %d\nEstado: %d\nIP: %s\nPuerto_Origen: %d\nPuerto_Escucha_Nodo: %d\nBloques_Libres: %d\nBloques_Totales: %d", elemento->nodo_id, elemento->socket,elemento->estado,elemento->ip,elemento->puerto,elemento->puerto_escucha_nodo,elemento->bloques_libres,elemento->bloques_totales);
-	    	  		printf ("\n");
-	    	  		for (j=0;j<elemento->bloques_totales;j++)
-	    	  			printf ("%d",bitarray_test_bit(elemento->bloques_del_nodo,j));
-	    	  	}}
-	    	  	break;
+	      case 17: listar_nodos_conectados(nodos); break;
 	      default: printf("Opción incorrecta. Por favor ingrese una opción del 1 al 17\n");break;
 		}
 	}
 	return 0;
 }
-static t_nodo *agregar_nodo_a_lista(int socket,int est,int est_red,char *ip, int port,int puerto_escucha, int bloques_lib, int bloques_tot){
+static t_nodo *agregar_nodo_a_lista(char nodo_id[6],int socket,int est,int est_red,char *ip, int port,int puerto_escucha, int bloques_lib, int bloques_tot){
 	t_nodo *nodo_temporal = malloc (sizeof(t_nodo));
 
 	//===========================================================================
 	//Preparo el nombre que identificara al nodo, esto antes lo hacia una funcion
 	//===========================================================================
-	char nombre_temporal[10]="nodo";
+	//char nombre_temporal[10]="nodo";
 	char *numero_nodo=malloc(sizeof(int));
 	sprintf(numero_nodo,"%d",cantidad_nodos_historico);
-	strcat(nombre_temporal,numero_nodo);
+	//strcat(nombre_temporal,numero_nodo);
 	int i;
 
 	//===========================================================================
 	//===========================================================================
 	//===========================================================================
 
-	memset(nodo_temporal->nodo_id,'\0',10);
+	memset(nodo_temporal->nodo_id,'\0',6);
+	strcpy(nodo_temporal->nodo_id,nodo_id);
 	nodo_temporal->socket = socket;
-	strcat(nodo_temporal->nodo_id,nombre_temporal);
+	//strcat(nodo_temporal->nodo_id,nombre_temporal);
 	nodo_temporal->estado = est;
 	nodo_temporal->estado_red = est_red;
 	nodo_temporal->ip = strdup (ip);
@@ -294,7 +288,7 @@ static t_nodo *agregar_nodo_a_lista(int socket,int est,int est_red,char *ip, int
 	sprintf(tmp_bl_lib,"%d",bloques_lib);
 	sprintf(tmp_bl_tot,"%d",bloques_tot);
 	//Persistencia del nodo agregado a la base de mongo
-	doc = BCON_NEW ("Socket",tmp_socket,"Nodo_ID",nombre_temporal,"Estado",tmp_estado,"IP",ip,"Puerto",tmp_puerto,"Bloques_Libres",tmp_bl_lib,"Bloques_Totales",tmp_bl_tot);
+	doc = BCON_NEW ("Socket",tmp_socket,"Nodo_ID",nodo_id,"Estado",tmp_estado,"IP",ip,"Puerto",tmp_puerto,"Bloques_Libres",tmp_bl_lib,"Bloques_Totales",tmp_bl_tot);
 	if (!mongoc_collection_insert (collection, MONGOC_INSERT_NONE, doc, NULL, &error)) {
 		printf ("%s\n", error.message);
 	}
@@ -332,7 +326,7 @@ void listar_nodos_conectados(t_list *nodos){
 	for (i=0;i<=cantidad_nodos;i++){
 		elemento = list_get(nodos,i);
 		printf ("\n\n");
-		printf ("Nodo_ID: %s\nSocket: %d\nEstado: %d\nIP: %s\nPuerto_Origen: %d\nPuerto_Escucha_Nodo: %d\nBloques_Libres: %d\nBloques_Totales: %d", elemento->nodo_id, elemento->socket,elemento->estado,elemento->ip,elemento->puerto,elemento->puerto_escucha_nodo,elemento->bloques_libres,elemento->bloques_totales);
+		printf ("Nodo_ID: %s\nSocket: %d\nEstado: %d\nEstado de Conexion: %d\nIP: %s\nPuerto_Origen: %d\nPuerto_Escucha_Nodo: %d\nBloques_Libres: %d\nBloques_Totales: %d", elemento->nodo_id, elemento->socket,elemento->estado,elemento->estado_red,elemento->ip,elemento->puerto,elemento->puerto_escucha_nodo,elemento->bloques_libres,elemento->bloques_totales);
 		printf ("\n");
 		for (j=0;j<elemento->bloques_totales;j++)
 			printf ("%d",bitarray_test_bit(elemento->bloques_del_nodo,j));
@@ -409,9 +403,13 @@ void *connection_handler_escucha(void){
 									log_error(logger,"FALLO el RECV");
 									exit (-1);
 								}
-
+								if ((read_size = recv(newfd, nodo_id ,sizeof(nodo_id) , 0))==-1) {
+									perror ("recv");
+									log_error(logger,"FALLO el RECV");
+									exit (-1);
+								}
 								if (read_size > 0){
-									list_add (nodos, agregar_nodo_a_lista(newfd,0,1,inet_ntoa(remote_client.sin_addr),remote_client.sin_port,*puerto_escucha_nodo,*bloquesTotales,*bloquesTotales));
+									list_add (nodos, agregar_nodo_a_lista(nodo_id,newfd,0,1,inet_ntoa(remote_client.sin_addr),remote_client.sin_port,*puerto_escucha_nodo,*bloquesTotales,*bloquesTotales));
 									printf ("Se conectó un nuevo nodo: %s con %d bloques totales\n",inet_ntoa(remote_client.sin_addr),*bloquesTotales);
 									log_info(logger,"Se conectó un nuevo nodo: %s con %d bloques totales",inet_ntoa(remote_client.sin_addr),*bloquesTotales);
 								}
@@ -422,7 +420,7 @@ void *connection_handler_escucha(void){
 								if (newfd > fdmax) { // actualizar el máximo
 									fdmax = newfd;
 								}
-								modificar_estado_nodo (i,inet_ntoa(remote_client.sin_addr),remote_client.sin_port,1); //cambio su estado de la lista a 1 que es activo
+								modificar_estado_nodo (i,inet_ntoa(remote_client.sin_addr),remote_client.sin_port,0,1); //cambio su estado de la lista a 1 que es activo
 								printf ("Se reconectó el nodo %s\n",inet_ntoa(remote_client.sin_addr));
 								log_info(logger,"Se reconectó el nodo %s",inet_ntoa(remote_client.sin_addr));
 							}
@@ -450,7 +448,7 @@ void *connection_handler_escucha(void){
 									log_error(logger,"Fallo el getpeername");
 									exit(-1);
 								}
-								modificar_estado_nodo (i,inet_ntoa(remote_client.sin_addr),remote_client.sin_port,0);
+								modificar_estado_nodo (i,inet_ntoa(remote_client.sin_addr),remote_client.sin_port,0,0);
 								printf ("Se desconecto el nodo %s, %d\n",inet_ntoa(remote_client.sin_addr),remote_client.sin_port);
 								close(i); // ¡Hasta luego!
 								FD_CLR(i, &master); // eliminar del conjunto maestro
@@ -548,22 +546,21 @@ int BuscarMenorIndiceLibre (char indiceDirectorios[]){
 	}
 }
 
-void modificar_estado_nodo (int socket,char *ip,int port,int estado){
+void modificar_estado_nodo (int socket,char *ip,int port,int estado,int estado_red){
 	int i;
 	t_nodo *tmp;
 	for (i=0;i<list_size(nodos);i++){
 		tmp = list_get(nodos,i);
-		if (socket==-1){
-			if ((strcmp(tmp->ip,ip)==0) && tmp->puerto==port){
-				tmp->estado=estado;
-				tmp->estado_red=0;
-				break;
-			}
-		}else{
-			if ((strcmp(tmp->ip,ip)==0) && tmp->puerto==port){
+
+		if ((strcmp(tmp->ip,ip)==0) && tmp->puerto==port){
+			if (estado_red==99){
 				tmp->estado=estado;
 				tmp->socket=socket;
-				tmp->estado_red=1;
+				break;
+			}else{
+				tmp->estado=estado;
+				tmp->socket=socket;
+				tmp->estado_red=estado;
 				break;
 			}
 		}
@@ -1047,7 +1044,7 @@ void AgregarNodo(){
 		}
 		i++;
 	}
-	modificar_estado_nodo(nodoAEvaluar->socket ,nodoAEvaluar->ip,nodoAEvaluar->puerto,1); //cambio su estado de la lista a 1 que es activo
+	modificar_estado_nodo(nodoAEvaluar->socket ,nodoAEvaluar->ip,nodoAEvaluar->puerto,1,99); //cambio su estado de la lista a 1 que es activo
 	printf("Se ha agregado el nodo correctamente\n");
 }
 
@@ -1074,6 +1071,6 @@ void EliminarNodo(){
 	}
 		i++;
 	}
-	modificar_estado_nodo(nodoAEvaluar->socket ,nodoAEvaluar->ip,nodoAEvaluar->puerto,0); //cambio su estado de la lista a 0 que es inactivo
+	modificar_estado_nodo(nodoAEvaluar->socket ,nodoAEvaluar->ip,nodoAEvaluar->puerto,0,99); //cambio su estado de la lista a 0 que es inactivo
 	printf("Se ha eliminado el nodo correctamente\n");
 }
