@@ -30,8 +30,9 @@ typedef struct estructura_manejo_nodos {
 	char *ip;
 	int puerto;
 	int puerto_escucha_nodo;
+	char *bloques_bitarray;
+	t_bitarray bloques_del_nodo;
 	int bloques_libres;
-	//bitarray
 	int bloques_totales;
 } t_nodo;
 

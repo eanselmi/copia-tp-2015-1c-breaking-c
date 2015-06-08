@@ -13,11 +13,12 @@
 #include <commons/log.h>
 #include <commons/config.h>
 #include <commons/string.h>
+#include <commons/bitarray.h>
+
 
 //Includes para mongo
 #include <bson.h>
 #include <mongoc.h>
-
 #include "FS_MDFS.h"
 
 //Variables globales
