@@ -348,7 +348,9 @@ void *manejador_de_escuchas(){
 						fclose(scriptMap); //cierro el file
 
 						//Genero nombre para el resultado temporal (luego a este se debera aplicar sort)
-						char *resultadoTemporal=strdup("/tmp/resultado");
+						char *resultadoTemporal=strdup("/tmp/map.result.");
+						strcat(resultadoTemporal,tiempo);
+						strcat(resultadoTemporal,".tmp");
 						/*
 						 * Envío por STDIN el "bloque" al script "nombreNuevoMap" , se guarda el resultado
 						 * en "resultado": void ejecutarMapper(char *path,char *bloque,char *resultado);
@@ -410,7 +412,8 @@ void ejecutarMapper(char *script,int bloque,char *resultado){
 	else
 	{
 	close(outfd[0]); /* Estan siendo usados por el hijo */
-	write(outfd[1],getBloque(bloque),BLOCK_SIZE);/* Escribe en el stdin del hijo el contenido del bloque*/
+	char *datoos="WBAN,Date,Time,StationType,SkyCondition,SkyConditionFlag,Visibility,VisibilityFlag,WeatherType,WeatherTypeFlag,DryBulbFarenheit,DryBulbFarenheitFlag,DryBulbCelsius,DryBulbCelsiusFlag,WetBulbFarenheit,WetBulbFarenheitFlag,WetBulbCelsius,WetBulbCelsiusFlag,DewPointFarenheit,DewPointFarenheitFlag,DewPointCelsius,DewPointCelsiusFlag,RelativeHumidity,RelativeHumidityFlag,WindSpeed,WindSpeedFlag,WindDirection,WindDirectionFlag,ValueForWindCharacter,ValueForWindCharacterFlag,StationPressure,StationPressureFlag,PressureTendency,PressureTendencyFlag,PressureChange,PressureChangeFlag,SeaLevelPressure,SeaLevelPressureFlag,RecordType,RecordTypeFlag,HourlyPrecip,HourlyPrecipFlag,Altimeter,AltimeterFlag\n03011,20130101,0000,0,OVC, , 5.00, , , ,M, ,M, ,M, ,M, ,M, ,M, ,M, , 5, ,120, , , ,M, , , , , ,M, ,AA, , , ,29.93, \n03011,20130101,0015,0,SCT011 SCT020, , 7.00, ,-SN, ,M, ,M, ,M, ,M, ,M, ,M, ,M, , 6, ,120, , , ,21.33, , , , , ,M, ,AA, , , ,29.93, \n03011,20130101,0035,0,CLR, ,10.00, , , ,M, ,M, ,M, ,M, ,M, ,M, ,M, , 6, ,120, , , ,21.33, , , , , ,M, ,AA, , , ,29.93, \n03011,20130101,0055,0,CLR, ,10.00, , , ,M, ,M, ,M, ,M, ,M, ,M, ,M, , 5, ,120, , , ,21.33, , , , , ,M, ,AA, , , ,29.93, \n";
+	write(outfd[1],datoos,strlen(datoos));/* Escribe en el stdin del hijo el contenido del bloque*/
 	close(outfd[1]);
 	dup2(bak,STDOUT_FILENO);
 	}
