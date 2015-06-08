@@ -947,12 +947,12 @@ int CopiarArchivoAMDFS(){
     while (!feof(archivoLocal)){
 		car = fgetc (archivoLocal);
 		cantBytes++;
-		strcat(buf,car);
-		if(car == "\n"){
+		strcat(buf,car); //CAR NO ES UNA CADENA, NO PODES APLICAR STRCAT
+		if(car == "\n"){  //SON TIPOS DE DATOS DIFERENTES
 			pos = cantBytes -1;
 		}
-		if(buf == BLOCK_SIZE){
-			if(car == "\n"){ //Caso Feliz
+		if(buf == BLOCK_SIZE){ //BUF ES UN VECTOR, NO PODES PREGUNTAR CON ==
+			if(car == "\n"){ //Caso Feliz  ---------- SON TIPOS DE DATOS DIFERENTES
 				printf ("Ingrese el path del archivo destino \n");
 			    scanf ("%s", pathMDFS);
 			    //Buscar Directorio. Si no existe se muestra mensaje de error y se debe volver al menú para crearlo
@@ -975,7 +975,7 @@ int CopiarArchivoAMDFS(){
 			}else{ //Caso en que el bloque no termina en "\n"
 				//fseek(pos,archivo); //Retroceder hasta el "\n" anterior
 				for(j=pos;j<BLOCK_SIZE;j++){
-					strcat(buf[j],"\0"); //Completar el buffer con "\0"
+					strcat(buf[j],"\0"); //Completar el buffer con "\0"   //CAR NO ES UNA CADENA, NO PODES APLICAR STRCAT
 				}
 				//Buscar Directorio. Si no existe se muestra mensaje de error y se debe volver al menú para crearlo
 				uint32_t idPadre = BuscarPadre(pathMDFS);
