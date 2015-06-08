@@ -11,6 +11,7 @@
 #include <commons/string.h>
 #include <pthread.h>
 #include <commons/collections/list.h>
+#include <commons/temporal.h>
 
 #include "Nodo.h"
 
@@ -309,27 +310,39 @@ void *manejador_de_escuchas(){
 						printf("se recibió la rutina mapper:%s",rutinaMapper);
 
 						//Creo el archivo que guarda la rutina de map enviada por el Job
+						//Generar un nombre para este script Map
+						char *nombreNuevoMap=strdup("mapJob"); //será el nombre del nuevo map
+						char** arrayTiempo=string_split(temporal_get_string_time(),":");
+						char *tiempo=strdup(strcat(arrayTiempo[0],arrayTiempo[1]));
+						strcat(tiempo,arrayTiempo[2]);
+						strcat(tiempo,arrayTiempo[3]);
+						strcat(nombreNuevoMap,tiempo); //Concateno la fecha en formato hhmmssmmmm al nombre map
+						strcat(nombreNuevoMap,".sh");
+						char *pathNuevoMap=strdup(PATHMAPPERS); //El path completo del nuevo Map
+						strcat(pathNuevoMap,nombreNuevoMap);
 
-						if((scriptMap=fopen("./RutinasMap/mapJob.sh","w+"))==NULL){ //path donde guardara el script
+						if((scriptMap=fopen(pathNuevoMap,"w+"))==NULL){ //path donde guardara el script
 							perror("fopen");
 							log_error(logger,"Fallo al crear el script del mapper");
 							exit(1);
 						}
 						fputs(rutinaMapper,scriptMap);
-						// agrego permisos de ejecucion
 
-						if(chmod("./RutinasMap/mapJob.sh",S_IRWXU|S_IRWXG|S_IROTH|S_IXOTH)==-1){
+						// agrego permisos de ejecucion
+						if(chmod(pathNuevoMap,S_IRWXU|S_IRWXG|S_IROTH|S_IXOTH)==-1){
 							perror("chmod");
 							log_error(logger,"Fallo el cambio de permisos para el script de map");
 							exit(1);
 						}
 						fclose(scriptMap); //cierro el file
 
-						//Envío por STDIN en "argumento" al script en "path", se guarda el resultado en "resultado"
-						//void ejecutarScript(char *path,char *argumento,char *resultado);
-
-						ejecutarMapper("mapJob.sh",*mensaje,"/tmp/resultado");
-
+						//Genero nombre para el resultado temporal (luego a este se debera aplicar sort)
+						char *resultadoTemporal=strdup("/tmp/resultado");
+						/*
+						 * Envío por STDIN el "bloque" al script "nombreNuevoMap" , se guarda el resultado
+						 * en "resultado": void ejecutarMapper(char *path,char *bloque,char *resultado);
+						*/
+						ejecutarMapper(nombreNuevoMap,*mensaje,resultadoTemporal);
 
 					}
 				}
@@ -368,24 +381,24 @@ void ejecutarMapper(char *script,int bloque,char *resultado){
 	else if(pid==0)
 	{
 
-	archivo_resultado=open(resultado,O_RDWR|O_CREAT,S_IRWXU|S_IRWXG);
+	archivo_resultado=open(resultado,O_RDWR|O_CREAT,S_IRWXU|S_IRWXG); //abro file resultado, si no esta lo crea, asigno permisos
 	fflush(stdout);
 	bak=dup(STDOUT_FILENO);
-	dup2(archivo_resultado,STDOUT_FILENO);
+	dup2(archivo_resultado,STDOUT_FILENO); //STDOUT de este proceso se grabara en el file resultado
 	close(archivo_resultado);
 	close(STDIN_FILENO);
-	dup2(outfd[0], STDIN_FILENO);
+	dup2(outfd[0], STDIN_FILENO); //STDIN de este proceso será STDOUT del proceso padre
 	close(outfd[0]); /* innecesarios para el hijo */
 	close(outfd[1]);
 	path=strdup("");
 	strcat(path,"/home/utnso/TP/tp-2015-1c-breaking-c/Nodo/RutinasMap/");
 	strcat(path,script);
-	execlp(path,script,NULL);
+	execlp(path,script,NULL); //Ejecuto el script
 	}
 	else
 	{
 	close(outfd[0]); /* Estan siendo usados por el hijo */
-	write(outfd[1],getBloque(bloque),BLOCK_SIZE);/* Escribe en el stdin del hijo*/
+	write(outfd[1],getBloque(bloque),BLOCK_SIZE);/* Escribe en el stdin del hijo el contenido del bloque*/
 	close(outfd[1]);
 	dup2(bak,STDOUT_FILENO);
 	}

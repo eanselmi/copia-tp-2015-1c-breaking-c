@@ -10,8 +10,6 @@
 
 #include "Job.h"
 
-
-
 //Declaración de variables
 t_config* configurador;
 t_log* logger;

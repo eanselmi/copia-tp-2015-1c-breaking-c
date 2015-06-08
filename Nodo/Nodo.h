@@ -1,6 +1,7 @@
 #define BLOCK_SIZE 20971520 //block size 20MB
 #define BUF_SIZE 50
 #define MAPPER_SIZE 4096
+#define PATHMAPPERS "./RutinasMap/"
 
 //Declaración de funciones
 char* mapearFileDeDatos();
