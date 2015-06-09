@@ -52,7 +52,7 @@ int directoriosDisponibles; //reservo raiz
 int j; //variable para recorrer el vector de indices
 int *puerto_escucha_nodo;
 char nodo_id[6];
-char *id_nodo;
+char id_nodo[6];
 //Variables para la persistencia con mongo
 mongoc_client_t *client;
 mongoc_collection_t *collection;
@@ -164,10 +164,6 @@ int main(int argc , char *argv[]){
 			printf ("Se conecto algo pero no se que fue, lo rechazo\n");
 		}
 	}
-	printf ("Nodos conectados %d\n",list_size(nodos));
-	printf ("Informacion del nodo 2\n");
-	printf ("Socket %d, ip %s, Estado %d, Nodos Libres %d\n",((t_nodo*)list_get(nodos,1))->socket,((t_nodo*)list_get(nodos,1))->ip,((t_nodo*)list_get(nodos,1))->estado,((t_nodo*)list_get(nodos,1))->bloques_libres);
-	//sleep(5);
 	//Cuando sale de este ciclo el proceso FileSystem ya se encuentra en condiciones de iniciar sus tareas
 
 	//Este hilo va a manejar las conexiones con los nodos de forma paralela a la ejecucion del proceso
@@ -305,22 +301,22 @@ static t_nodo *agregar_nodo_a_lista(char nodo_id[6],int socket,int est,int est_r
 }
 
 int validar_nodo_nuevo (char nodo_id[6],char *ip){
-	int i;
+	/*int i;
 	t_nodo *tmp;
 	for (i=0;i<list_size(nodos);i++){
 		tmp = list_get(nodos,i);
 		if ((strcmp(tmp->nodo_id,nodo_id)==0) || (strcmp(tmp->ip,ip)==0))	return 1;
-	}
+	}*/
 	return 0;
 }
 int validar_nodo_reconectado (char nodo_id[6],char *ip){
-	int i;
+	/*int i;
 	t_nodo *tmp;
 	for (i=0;i<list_size(nodos);i++){
 		tmp = list_get(nodos,i);
 		if ((strcmp(tmp->nodo_id,nodo_id)==0) && (strcmp(tmp->ip,ip)==0))	return 0;
 	}
-	return 1;
+	return 1;*/return 0;
 }
 char *buscar_nodo_id(char *ip){
 	int i;
