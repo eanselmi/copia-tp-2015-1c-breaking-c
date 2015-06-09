@@ -13,4 +13,5 @@ int estaEnListaNodos(int socket);
 int estaEnListaMappers(int socket);
 int estaEnListaReducers(int socket);
 void ejecutarMapper(char *script,int bloque,char *resultado);
+void ordenarMapper(char *nombreMapperTemporal, char* nombreMapperOrdenado);
 

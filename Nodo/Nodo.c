@@ -361,7 +361,7 @@ void *manejador_de_escuchas(){
 						 * en "resultado": void ejecutarMapper(char *path,char *bloque,char *resultado);
 						*/
 						ejecutarMapper(nombreNuevoMap,*mensaje,resultadoTemporal);
-
+						ordenarMapper(resultadoTemporal,nomArchTemp);
 					}
 				}
 
@@ -387,6 +387,47 @@ void *manejador_de_escuchas(){
 		}
 	}
 }
+
+void ordenarMapper(char* nombreMapperTemporal, char* nombreMapperOrdenado){
+	printf("Entro en la función ordenar mapper\n");
+	int outfd[2];
+	int bak,pid,archivo_resultado;
+	bak=0;
+	char *path;
+	pipe(outfd);
+	if((pid=fork())==-1){
+		perror("fork");
+	}
+	else if(pid==0)
+	{
+		archivo_resultado=open(nombreMapperOrdenado,O_RDWR|O_CREAT,S_IRWXU|S_IRWXG); //abro file resultado, si no esta lo crea, asigno permisos
+		fflush(stdout);
+		bak=dup(STDOUT_FILENO);
+		dup2(archivo_resultado,STDOUT_FILENO); //STDOUT de este proceso se grabara en el file resultado
+		close(archivo_resultado);
+		close(STDIN_FILENO);
+		dup2(outfd[0], STDIN_FILENO); //STDIN de este proceso será STDOUT del proceso padre
+		close(outfd[0]); /* innecesarios para el hijo */
+		close(outfd[1]);
+	    char *name[] = {
+	        "/bin/sh",
+			"-c",
+	        "sort",
+			//nombreMapperTemporal,
+	        NULL
+	    };
+	    execvp(name[0], name);
+	}
+	else
+	{
+		close(outfd[0]); /* Estan siendo usados por el hijo */
+
+		write(outfd[1],getFileContent(nombreMapperTemporal),strlen(getFileContent(nombreMapperTemporal)));/* Escribe en el stdin del hijo el contenido del bloque*/
+		close(outfd[1]);
+		dup2(bak,STDOUT_FILENO);
+	}
+}
+
 
 void ejecutarMapper(char *script,int bloque,char *resultado){
 	int outfd[2];
