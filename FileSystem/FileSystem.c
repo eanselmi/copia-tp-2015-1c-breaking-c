@@ -144,7 +144,7 @@ int main(int argc , char *argv[]){
 				exit (-1);
 			}
 			if (read_size > 0){
-				if (validar_nodo_nuevo (nodo_id,inet_ntoa(remote_client.sin_addr))==0){
+				if (validar_nodo_nuevo (nodo_id)==0){
 					cantidad_nodos++;
 					cantidad_nodos_historico=cantidad_nodos;
 					FD_SET(newfd, &master); // añadir al conjunto maestro
@@ -300,23 +300,23 @@ static t_nodo *agregar_nodo_a_lista(char nodo_id[6],int socket,int est,int est_r
 	return nodo_temporal;
 }
 
-int validar_nodo_nuevo (char nodo_id[6],char *ip){
-	/*int i;
+int validar_nodo_nuevo (char nodo_id[6]){
+	int i;
 	t_nodo *tmp;
 	for (i=0;i<list_size(nodos);i++){
 		tmp = list_get(nodos,i);
-		if ((strcmp(tmp->nodo_id,nodo_id)==0) || (strcmp(tmp->ip,ip)==0))	return 1;
-	}*/
+		if (strcmp(tmp->nodo_id,nodo_id)==0) return 1;
+	}
 	return 0;
 }
-int validar_nodo_reconectado (char nodo_id[6],char *ip){
-	/*int i;
+int validar_nodo_reconectado (char nodo_id[6]){
+	int i;
 	t_nodo *tmp;
 	for (i=0;i<list_size(nodos);i++){
 		tmp = list_get(nodos,i);
-		if ((strcmp(tmp->nodo_id,nodo_id)==0) && (strcmp(tmp->ip,ip)==0))	return 0;
+		if (strcmp(tmp->nodo_id,nodo_id)==0) return 0;
 	}
-	return 1;*/return 0;
+	return 1;
 }
 char *buscar_nodo_id(char *ip){
 	int i;
@@ -440,7 +440,7 @@ void *connection_handler_escucha(void){
 									exit (-1);
 								}
 								if (read_size > 0){
-									if (validar_nodo_nuevo (nodo_id,inet_ntoa(remote_client.sin_addr))==0){
+									if (validar_nodo_nuevo (nodo_id)==0){
 										cantidad_nodos++;
 										cantidad_nodos_historico=cantidad_nodos;
 										FD_SET(newfd, &master); // añadir al conjunto maestro
@@ -462,7 +462,7 @@ void *connection_handler_escucha(void){
 									log_error(logger,"FALLO el RECV");
 									exit (-1);
 								}
-								if ((validar_nodo_reconectado (nodo_id,inet_ntoa(remote_client.sin_addr))) == 0){
+								if ((validar_nodo_reconectado (nodo_id)) == 0){
 									cantidad_nodos++;
 									FD_SET(newfd, &master); // añadir al conjunto maestro
 									if (newfd > fdmax) { // actualizar el máximo
