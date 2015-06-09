@@ -318,13 +318,13 @@ int validar_nodo_reconectado (char nodo_id[6]){
 	}
 	return 1;
 }
-char *buscar_nodo_id(char *ip){
+char *buscar_nodo_id(char *ip, int port){
 	int i;
 	char *id_temporal=malloc(6);
 	t_nodo *tmp;
 	for (i=0;i<list_size(nodos);i++){
 		tmp = list_get(nodos,i);
-		if (strcmp(tmp->ip,ip)==0){
+		if ((strcmp(tmp->ip,ip)==0) && (tmp->puerto==port)){
 			strcpy(id_temporal,tmp->nodo_id);
 			return id_temporal;
 		}
@@ -502,7 +502,7 @@ void *connection_handler_escucha(void){
 									exit(-1);
 								}
 								char *id_temporal;
-								id_temporal = buscar_nodo_id(inet_ntoa(remote_client.sin_addr));
+								id_temporal = buscar_nodo_id(inet_ntoa(remote_client.sin_addr),remote_client.sin_port);
 								if (id_temporal!=NULL){
 									strcpy(id_nodo,id_temporal);
 									modificar_estado_nodo (id_nodo,i,remote_client.sin_port,0,0);

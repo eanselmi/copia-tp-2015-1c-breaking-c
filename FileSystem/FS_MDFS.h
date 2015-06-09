@@ -54,6 +54,7 @@ void listar_nodos_conectados(t_list *nodos);
 char *obtener_md5(char *archivo);
 int validar_nodo_nuevo (char nodo_id[6]);
 int validar_nodo_reconectado (char nodo_id[6]);
+char *buscar_nodo_id(char *ip, int port);
 char *obtener_id_nodo(char *ip);
 void formatear_nodos(void);
 void FormatearFilesystem ();		//Pame TODAVIA NO DESARROLLADA
