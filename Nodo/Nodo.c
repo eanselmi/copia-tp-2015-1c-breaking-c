@@ -127,6 +127,11 @@ int main(int argc , char *argv[]){
 					log_error(logger,"FALLO el envio del saludo al FS");
 					exit(-1);
 			}
+			if((send(conectorFS,nodo_id,sizeof(nodo_id),0))==-1){
+				perror("send");
+				log_error(logger,"FALLO el envío de la cantidad de bloques totales al FS");
+				exit(-1);
+			}
 		}
 
 	/*
