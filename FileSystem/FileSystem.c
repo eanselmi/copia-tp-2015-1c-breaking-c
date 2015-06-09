@@ -52,7 +52,7 @@ int directoriosDisponibles; //reservo raiz
 int j; //variable para recorrer el vector de indices
 int *puerto_escucha_nodo;
 char nodo_id[6];
-
+char *id_nodo;
 //Variables para la persistencia con mongo
 mongoc_client_t *client;
 mongoc_collection_t *collection;
@@ -125,10 +125,6 @@ int main(int argc , char *argv[]){
 			exit (-1);
 		}
 		if (read_size > 0 && strncmp(identificacion,"nuevo",5)==0){
-			cantidad_nodos++;
-			cantidad_nodos_historico=cantidad_nodos;
-			FD_SET(newfd, &master);
-			if (newfd>fdmax) fdmax = newfd;
 			bloquesTotales=malloc(sizeof(int));
 			//Segundo recv, aca espero recibir la capacidad del nodo
 			if ((read_size = recv(newfd, bloquesTotales ,sizeof(int) , 0))==-1) {
@@ -148,9 +144,20 @@ int main(int argc , char *argv[]){
 				exit (-1);
 			}
 			if (read_size > 0){
-				list_add (nodos, agregar_nodo_a_lista(nodo_id,newfd,0,1,inet_ntoa(remote_client.sin_addr),remote_client.sin_port,*puerto_escucha_nodo,*bloquesTotales,*bloquesTotales));
-				printf ("Se conectó un nuevo nodo: %s con %d bloques totales\n",inet_ntoa(remote_client.sin_addr),*bloquesTotales);
-				log_info(logger,"Se conectó un nuevo nodo: %s con %d bloques totales",inet_ntoa(remote_client.sin_addr),*bloquesTotales);
+				if (validar_nodo_nuevo (nodo_id,inet_ntoa(remote_client.sin_addr))==0){
+					cantidad_nodos++;
+					cantidad_nodos_historico=cantidad_nodos;
+					FD_SET(newfd, &master); // añadir al conjunto maestro
+					if (newfd > fdmax) { // actualizar el máximo
+						fdmax = newfd;
+					}
+					list_add (nodos, agregar_nodo_a_lista(nodo_id,newfd,0,1,inet_ntoa(remote_client.sin_addr),remote_client.sin_port,*puerto_escucha_nodo,*bloquesTotales,*bloquesTotales));
+					printf ("Se conectó un nuevo nodo: %s con %d bloques totales\n",inet_ntoa(remote_client.sin_addr),*bloquesTotales);
+					log_info(logger,"Se conectó un nuevo nodo: %s con %d bloques totales",inet_ntoa(remote_client.sin_addr),*bloquesTotales);
+				}else{
+					printf("Ya existe un nodo con el mismo id o direccion ip\n");
+					close(newfd);
+				}
 			}
 		}else {
 			close(newfd);
@@ -297,6 +304,39 @@ static t_nodo *agregar_nodo_a_lista(char nodo_id[6],int socket,int est,int est_r
 	return nodo_temporal;
 }
 
+int validar_nodo_nuevo (char nodo_id[6],char *ip){
+	int i;
+	t_nodo *tmp;
+	for (i=0;i<list_size(nodos);i++){
+		tmp = list_get(nodos,i);
+		if ((strcmp(tmp->nodo_id,nodo_id)==0) || (strcmp(tmp->ip,ip)==0))	return 1;
+	}
+	return 0;
+}
+int validar_nodo_reconectado (char nodo_id[6],char *ip){
+	int i;
+	t_nodo *tmp;
+	for (i=0;i<list_size(nodos);i++){
+		tmp = list_get(nodos,i);
+		if ((strcmp(tmp->nodo_id,nodo_id)==0) && (strcmp(tmp->ip,ip)==0))	return 0;
+	}
+	return 1;
+}
+char *buscar_nodo_id(char *ip){
+	int i;
+	char *id_temporal=malloc(6);
+	t_nodo *tmp;
+	for (i=0;i<list_size(nodos);i++){
+		tmp = list_get(nodos,i);
+		if (strcmp(tmp->ip,ip)==0){
+			strcpy(id_temporal,tmp->nodo_id);
+			return id_temporal;
+		}
+	}
+	return NULL;
+}
+
+
 char *obtener_md5(char *archivo){
 	int fd[2];
 	int childpid;
@@ -386,12 +426,6 @@ void *connection_handler_escucha(void){
 
 							}
 							if (read_size > 0 && strncmp(identificacion,"nuevo",5)==0){
-								cantidad_nodos++;
-								cantidad_nodos_historico=cantidad_nodos;
-								FD_SET(newfd, &master); // añadir al conjunto maestro
-								if (newfd > fdmax) { // actualizar el máximo
-									fdmax = newfd;
-								}
 								bloquesTotales=malloc(sizeof(int));
 								if ((read_size = recv(newfd, bloquesTotales , sizeof(int) , 0))==-1) {
 									perror ("recv");
@@ -410,20 +444,42 @@ void *connection_handler_escucha(void){
 									exit (-1);
 								}
 								if (read_size > 0){
-									list_add (nodos, agregar_nodo_a_lista(nodo_id,newfd,0,1,inet_ntoa(remote_client.sin_addr),remote_client.sin_port,*puerto_escucha_nodo,*bloquesTotales,*bloquesTotales));
-									printf ("Se conectó un nuevo nodo: %s con %d bloques totales\n",inet_ntoa(remote_client.sin_addr),*bloquesTotales);
-									log_info(logger,"Se conectó un nuevo nodo: %s con %d bloques totales",inet_ntoa(remote_client.sin_addr),*bloquesTotales);
+									if (validar_nodo_nuevo (nodo_id,inet_ntoa(remote_client.sin_addr))==0){
+										cantidad_nodos++;
+										cantidad_nodos_historico=cantidad_nodos;
+										FD_SET(newfd, &master); // añadir al conjunto maestro
+										if (newfd > fdmax) { // actualizar el máximo
+											fdmax = newfd;
+										}
+										list_add (nodos, agregar_nodo_a_lista(nodo_id,newfd,0,1,inet_ntoa(remote_client.sin_addr),remote_client.sin_port,*puerto_escucha_nodo,*bloquesTotales,*bloquesTotales));
+										printf ("Se conectó un nuevo nodo: %s con %d bloques totales\n",inet_ntoa(remote_client.sin_addr),*bloquesTotales);
+										log_info(logger,"Se conectó un nuevo nodo: %s con %d bloques totales",inet_ntoa(remote_client.sin_addr),*bloquesTotales);
+									}else{
+										printf("Ya existe un nodo con el mismo id o direccion ip\n");
+										close(newfd);
+									}
 								}
 							}
 							if (read_size > 0 && strncmp(identificacion,"reconectado",11)==0){
-								cantidad_nodos++;
-								FD_SET(newfd, &master); // añadir al conjunto maestro
-								if (newfd > fdmax) { // actualizar el máximo
-									fdmax = newfd;
+								if ((read_size = recv(newfd, nodo_id ,sizeof(nodo_id) , 0))==-1) {
+									perror ("recv");
+									log_error(logger,"FALLO el RECV");
+									exit (-1);
 								}
-								modificar_estado_nodo (i,inet_ntoa(remote_client.sin_addr),remote_client.sin_port,0,1); //cambio su estado de la lista a 1 que es activo
-								printf ("Se reconectó el nodo %s\n",inet_ntoa(remote_client.sin_addr));
-								log_info(logger,"Se reconectó el nodo %s",inet_ntoa(remote_client.sin_addr));
+								if ((validar_nodo_reconectado (nodo_id,inet_ntoa(remote_client.sin_addr))) == 0){
+									cantidad_nodos++;
+									FD_SET(newfd, &master); // añadir al conjunto maestro
+									if (newfd > fdmax) { // actualizar el máximo
+										fdmax = newfd;
+									}
+									modificar_estado_nodo (nodo_id,newfd,remote_client.sin_port,0,1); //cambio su estado de la lista a 1 que es activo
+									printf ("Se reconectó el nodo %s\n",inet_ntoa(remote_client.sin_addr));
+									log_info(logger,"Se reconectó el nodo %s",inet_ntoa(remote_client.sin_addr));
+								}else{
+									printf("Se reconecto un nodo con datos alterados, se lo desconecta\n");
+									close(newfd);
+								}
+
 							}
 						}
 					}
@@ -449,10 +505,18 @@ void *connection_handler_escucha(void){
 									log_error(logger,"Fallo el getpeername");
 									exit(-1);
 								}
-								modificar_estado_nodo (i,inet_ntoa(remote_client.sin_addr),remote_client.sin_port,0,0);
-								printf ("Se desconecto el nodo %s, %d\n",inet_ntoa(remote_client.sin_addr),remote_client.sin_port);
-								close(i); // ¡Hasta luego!
-								FD_CLR(i, &master); // eliminar del conjunto maestro
+								char *id_temporal;
+								id_temporal = buscar_nodo_id(inet_ntoa(remote_client.sin_addr));
+								if (id_temporal!=NULL){
+									strcpy(id_nodo,id_temporal);
+									modificar_estado_nodo (id_nodo,i,remote_client.sin_port,0,0);
+									printf ("Se desconecto el nodo %s, %d\n",inet_ntoa(remote_client.sin_addr),remote_client.sin_port);
+									close(i); // ¡Hasta luego!
+									FD_CLR(i, &master); // eliminar del conjunto maestro
+								}else{
+									printf ("ALGO SALIO MUY MAL\n");
+									exit(-1);
+								}
 							}
 						} else {
 							perror("recv");

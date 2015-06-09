@@ -49,9 +49,12 @@ int Menu();
 void DibujarMenu();
 void *connection_handler_escucha(); // Esta funcion escucha continuamente si recibo nuevos mensajes
 static t_nodo *agregar_nodo_a_lista(char nodo_id[6],int socket,int est,int estado_red,char *ip, int port,int puerto_escucha, int bloques_lib, int bloques_tot);
-void modificar_estado_nodo (int socket,char *ip,int port,int estado,int estado_red);
+void modificar_estado_nodo (char nodo_id[6],int socket,int port,int estado,int estado_red);
 void listar_nodos_conectados(t_list *nodos);
 char *obtener_md5(char *archivo);
+int validar_nodo_nuevo (char nodo_id[6],char *ip);
+int validar_nodo_reconectado (char nodo_id[6],char *ip);
+char *obtener_id_nodo(char *ip);
 void formatear_nodos(void);
 void FormatearFilesystem ();		//Pame TODAVIA NO DESARROLLADA
 void EliminarArchivo();				//DESARROLLADA
