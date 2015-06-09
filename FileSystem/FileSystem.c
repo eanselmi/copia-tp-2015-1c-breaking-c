@@ -547,21 +547,22 @@ int BuscarMenorIndiceLibre (char indiceDirectorios[]){
 	}
 }
 
-void modificar_estado_nodo (int socket,char *ip,int port,int estado,int estado_red){
+void modificar_estado_nodo (char nodo_id[6],int socket,int port,int estado,int estado_red){
 	int i;
 	t_nodo *tmp;
 	for (i=0;i<list_size(nodos);i++){
 		tmp = list_get(nodos,i);
 
-		if ((strcmp(tmp->ip,ip)==0) && tmp->puerto==port){
+		if (strcmp(tmp->nodo_id,nodo_id)==0){
 			if (estado_red==99){
 				tmp->estado=estado;
 				tmp->socket=socket;
 				break;
 			}else{
+				tmp->puerto=port;
 				tmp->estado=estado;
 				tmp->socket=socket;
-				tmp->estado_red=estado;
+				tmp->estado_red=estado_red;
 				break;
 			}
 		}
