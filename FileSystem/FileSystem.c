@@ -620,7 +620,6 @@ void modificar_estado_nodo (char nodo_id[6],int socket,int port,int estado,int e
 		if (strcmp(tmp->nodo_id,nodo_id)==0){
 			if (estado_red==99){
 				tmp->estado=estado;
-				tmp->socket=socket;
 				break;
 			}else{
 				tmp->puerto=port;
