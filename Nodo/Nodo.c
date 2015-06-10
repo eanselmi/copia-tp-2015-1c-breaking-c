@@ -71,6 +71,17 @@ int main(int argc , char *argv[]){
 	bloquesTotales=malloc(sizeof(int));
 	*bloquesTotales=sizeFileDatos/20971520;
 
+			/*Generacion de datos para probar el funcionamiento de la funcion setBloque*/
+				char* datosAEscribir;
+				datosAEscribir=malloc(BLOCK_SIZE);
+				datosAEscribir=crearBloqueFalso();
+				//memset(datosAEscribir,'A',BLOCK_SIZE);
+				int bloqueAEscribir=1;
+			//
+
+			// Grabará los datos enviados en el bloque solicitado
+			setBloque(bloqueAEscribir,datosAEscribir);
+
 	//Estructura para conexion con FS
 	filesystem.sin_family = AF_INET;
 	filesystem.sin_addr.s_addr = inet_addr(config_get_string_value(configurador,"IP_FS"));
@@ -369,29 +380,28 @@ void *manejador_de_escuchas(){
 							printf("Nombre del nuevo map:%s\n",nombreNuevoMap);
 							printf("Path completo del nuevo map:%s\n",pathNuevoMap);
 							printf("Nombre del map temporal(antes del sort):%s\n",resultadoTemporal);
-//
-//							if((scriptMap=fopen(pathNuevoMap,"w+"))==NULL){ //path donde guardara el script
-//								perror("fopen");
-//								log_error(logger,"Fallo al crear el script del mapper");
-//								exit(1);
-//							}
-//							fputs(rutinaMapper,scriptMap);
-//
-//							// agrego permisos de ejecucion
-//							if(chmod(pathNuevoMap,S_IRWXU|S_IRWXG|S_IROTH|S_IXOTH)==-1){
-//								perror("chmod");
-//								log_error(logger,"Fallo el cambio de permisos para el script de map");
-//								exit(1);
-//							}
-//							fclose(scriptMap); //cierro el file
-//
 
-//							/*
-//							 * Envío por STDIN el "bloque" al script "nombreNuevoMap" , se guarda el resultado
-//							 * en "resultado": void ejecutarMapper(char *path,char *bloque,char *resultado);
-//							*/
-//							ejecutarMapper(nombreNuevoMap,*mensaje,resultadoTemporal);
-//
+							if((scriptMap=fopen(pathNuevoMap,"w+"))==NULL){ //path donde guardara el script
+								perror("fopen");
+								log_error(logger,"Fallo al crear el script del mapper");
+								exit(1);
+							}
+							fputs(rutinaMapper,scriptMap);
+
+							// agrego permisos de ejecucion
+							if(chmod(pathNuevoMap,S_IRWXU|S_IRWXG|S_IROTH|S_IXOTH)==-1){
+								perror("chmod");
+								log_error(logger,"Fallo el cambio de permisos para el script de map");
+								exit(1);
+							}
+							fclose(scriptMap); //cierro el file
+
+							/*
+							 * Envío por STDIN el "bloque" al script "nombreNuevoMap" , se guarda el resultado
+							 * en "resultado": void ejecutarMapper(char *path,char *bloque,char *resultado);
+							*/
+							ejecutarMapper(nombreNuevoMap,*bloque,resultadoTemporal);
+
 //							ordenarMapper(resultadoTemporal,nomArchTemp);
 						}
 					}
@@ -482,7 +492,8 @@ void ejecutarMapper(char *script,int bloque,char *resultado){
 	close(outfd[0]); /* innecesarios para el hijo */
 	close(outfd[1]);
 	path=string_new();
-	string_append(&path,"/home/utnso/TP/tp-2015-1c-breaking-c/Nodo/RutinasMap/");
+	string_append(&path,PATHTP);
+	string_append(&path,"/tp-2015-1c-breaking-c/Nodo/RutinasMap/");
 	string_append(&path,script);
 	execlp(path,script,NULL); //Ejecuto el script
 	}

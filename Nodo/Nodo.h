@@ -1,7 +1,8 @@
 #define BLOCK_SIZE 20971520 //block size 20MB
 #define BUF_SIZE 50
 #define MAPPER_SIZE 4096
-#define PATHMAPPERS "./RutinasMap/"
+#define PATHMAPPERS "./RutinasMap/" //Donde guardará las rutinas Map que lleguen
+#define PATHTP "/home/utnso/TP" //Donde se hace el git clone
 
 //Declaración de funciones
 char* mapearFileDeDatos();
