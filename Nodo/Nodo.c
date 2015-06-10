@@ -547,7 +547,7 @@ void setBloque(int numBloque,char* datosAEscribir){
 
 	char *ubicacionEnElFile;
 	ubicacionEnElFile=malloc(BLOCK_SIZE);
-	ubicacionEnElFile=fileDeDatos+(BLOCK_SIZE*(numBloque-1));
+	ubicacionEnElFile=fileDeDatos+(BLOCK_SIZE*(numBloque));
 	memcpy(ubicacionEnElFile,datosAEscribir,BLOCK_SIZE); //Copia el valor de BLOCK_SIZE bytes desde la direccion de memoria apuntada por datos a la direccion de memoria apuntada por fileDeDatos
 	log_info(logger_archivo,"Se escribió el bloque %d",numBloque);
 	return;
@@ -564,7 +564,7 @@ char* getBloque(int numBloque){
 	char *ubicacionEnElFile;
 	datosLeidos=malloc(BLOCK_SIZE);
 	ubicacionEnElFile=malloc(BLOCK_SIZE);
-	ubicacionEnElFile=fileDeDatos+(BLOCK_SIZE*(numBloque-1));
+	ubicacionEnElFile=fileDeDatos+(BLOCK_SIZE*(numBloque));
 	memcpy(datosLeidos,ubicacionEnElFile,BLOCK_SIZE); //Copia el valor de BLOCK_SIZE bytes desde la direccion de memoria apuntada por fileDeDatos a la direccion de memoria apuntada por datosLeidos
 	log_info(logger_archivo,"Se leyó el bloque %d",numBloque);
 	return datosLeidos;

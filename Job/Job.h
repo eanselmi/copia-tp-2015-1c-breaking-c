@@ -26,4 +26,4 @@ typedef struct lista_nodos_reduce{
 
 //Declaración de funciones
 void* hilo_mapper(t_mapper*);
-char* getFileContent(char*);
+char* getFileContent(char*); //Devuelve el contenido de un file, hasta 4096 bytes -> 4 KB (MAPPER_SIZE)
