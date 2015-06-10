@@ -1027,11 +1027,11 @@ int CopiarArchivoAMDFS(){
     while (!feof(archivoLocal)){
 		car = fgetc (archivoLocal);
 		cantBytes++;
-		strcat(buf,car); //CAR NO ES UNA CADENA, NO PODES APLICAR STRCAT
+		strcat(bufBloque,car); //CAR NO ES UNA CADENA, NO PODES APLICAR STRCAT
 		if(car == '\n'){  //SON TIPOS DE DATOS DIFERENTES
 			pos = cantBytes -1;
 		}
-		if(buf == BLOCK_SIZE){ //BUF ES UN VECTOR, NO PODES PREGUNTAR CON ==
+		if(bufBloque == BLOCK_SIZE){ //BUF ES UN VECTOR, NO PODES PREGUNTAR CON ==
 			if(car == '\n'){ //Caso Feliz  ---------- SON TIPOS DE DATOS DIFERENTES
 
 			    //Ordenar los bloques del archivo según el espacio disponible
@@ -1041,7 +1041,7 @@ int CopiarArchivoAMDFS(){
 			}else{ //Caso en que el bloque no termina en "\n"
 				//fseek(pos,archivo); //Retroceder hasta el "\n" anterior
 				for(j=pos+1;j<BLOCK_SIZE;j++){
-					strcat(buf[j],"\0"); //Completar el buffer con "\0"   //CAR NO ES UNA CADENA, NO PODES APLICAR STRCAT
+					strcat(bufBloque[j],"\0"); //Completar el buffer con "\0"   //CAR NO ES UNA CADENA, NO PODES APLICAR STRCAT
 				}
 				//Ordenar los bloques del archivo según el espacio disponible
 				//Copiar el contenido del Buffer en los bloques mas vacios por triplicado
