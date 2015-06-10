@@ -208,46 +208,26 @@ int main(int argc, char *argv[]) {
 
 //Consola Menu
 void DibujarMenu(void) {
-	printf(
-			"################################################################\n");
-	printf(
-			"# Ingrese una opción para continuar:                           #\n");
-	printf(
-			"#  1) Formatear el MDFS                                        #\n");
-	printf(
-			"#  2) Eliminar archivos                                        #\n");
-	printf(
-			"#  3) Renombrar archivos                                       #\n");
-	printf(
-			"#  4) Mover archivos                                           #\n");
-	printf(
-			"#  5) Crear directorios                                        #\n");
-	printf(
-			"#  6) Eliminar directorios                                     #\n");
-	printf(
-			"#  7) Renombrar directorios                                    #\n");
-	printf(
-			"#  8) Mover directorios                                        #\n");
-	printf(
-			"#  9) Copiar un archivo local al MDFS                          #\n");
-	printf(
-			"# 10) Copiar un archivo del MDFS al filesystem local           #\n");
-	printf(
-			"# 11) Solicitar el MD5 de un archivo en MDFS                   #\n");
-	printf(
-			"# 12) Ver los bloques que componen un archivo                  #\n");
-	printf(
-			"# 13) Borrar los bloques que componen un archivo               #\n");
-	printf(
-			"# 14) Copiar los bloques que componen un archivo               #\n");
-	printf(
-			"# 15) Agregar un nodo de datos                                 #\n");
-	printf(
-			"# 16) Eliminar un nodo de datos                                #\n");
-	printf(
-			"# 17) Salir                                                    #\n");
-	printf(
-			"################################################################\n");
+	printf("################################################################\n");
+	printf("# Ingrese una opción para continuar:                           #\n");
+	printf("#  1) Formatear el MDFS                                        #\n");
+	printf("#  2) Eliminar archivos                                        #\n");
+	printf("#  3) Renombrar archivos                                       #\n");
+	printf("#  4) Mover archivos                                           #\n");
+	printf("#  5) Crear directorios                                        #\n");
+	printf("#  6) Eliminar directorios                                     #\n");
+	printf("#  7) Renombrar directorios                                    #\n");
+	printf("#  8) Mover directorios                                        #\n");
+	printf("#  9) Copiar un archivo local al MDFS                          #\n");
+	printf("# 10) Copiar un archivo del MDFS al filesystem local           #\n");
+	printf("# 11) Solicitar el MD5 de un archivo en MDFS                   #\n");
+	printf("# 12) Ver los bloques que componen un archivo                  #\n");
+	printf("# 13) Borrar los bloques que componen un archivo               #\n");
+	printf("# 14) Copiar los bloques que componen un archivo               #\n");
+	printf("# 15) Agregar un nodo de datos                                 #\n");
+	printf("# 16) Eliminar un nodo de datos                                #\n");
+	printf("# 17) Salir                                                    #\n");
+	printf("################################################################\n");
 }
 
 int Menu(void) {
@@ -261,61 +241,41 @@ int Menu(void) {
 		opcion = atoi(opchar);
 		switch (opcion) {
 		case 1:
-			FormatearFilesystem();
-			break;
+			FormatearFilesystem();	break;
 		case 2:
-			EliminarArchivo();
-			break;
+			EliminarArchivo(); break;
 		case 3:
-			RenombrarArchivo();
-			break;
+			RenombrarArchivo();	break;
 		case 4:
-			MoverArchivo();
-			break;
+			MoverArchivo();	break;
 		case 5:
-			CrearDirectorio();
-			break;
+			CrearDirectorio();	break;
 		case 6:
-			EliminarDirectorio();
-			break;
+			EliminarDirectorio();	break;
 		case 7:
-			RenombrarDirectorio();
-			break;
+			RenombrarDirectorio();	break;
 		case 8:
-			MoverDirectorio();
-			break;
+			MoverDirectorio();	break;
 		case 9:
-			CopiarArchivoAMDFS();
-			break;
+			CopiarArchivoAMDFS();	break;
 		case 10:
-			CopiarArchivoDelMDFS();
-			break;
+			CopiarArchivoDelMDFS();	break;
 		case 11:
-			MD5DeArchivo();
-			break;
+			MD5DeArchivo();	break;
 		case 12:
-			VerBloques();
-			break;
+			VerBloques(); break;
 		case 13:
-			BorrarBloques();
-			break;
+			BorrarBloques(); break;
 		case 14:
-			CopiarBloques();
-			break;
+			CopiarBloques(); break;
 		case 15:
-			AgregarNodo();
-			break;
+			AgregarNodo(); break;
 		case 16:
-			EliminarNodo();
-			break;
+			EliminarNodo();	break;
 			//case 17: printf("Eligió Salir\n"); break;
-		case 17:
-			listar_nodos_conectados(nodos);
-			break;
+		case 17: listar_nodos_conectados(nodos); break;
 		default:
-			printf(
-					"Opción incorrecta. Por favor ingrese una opción del 1 al 17\n");
-			break;
+			printf("Opción incorrecta. Por favor ingrese una opción del 1 al 17\n"); break;
 		}
 	}
 	return 0;
@@ -415,27 +375,45 @@ char *buscar_nodo_id(char *ip, int port) {
 	return NULL;
 }
 
-char *obtener_md5(char *archivo) {
+char *obtener_md5(char *bloque) {
+	int count,bak0,bak1;
 	int fd[2];
+	int md[2];
 	int childpid;
-	char *resultado;
 	pipe(fd);
-	char result[1000];
-	memset(result, '\0', 1000);
-	if ((childpid = fork()) == -1) {
-		fprintf(stderr, "Fallo el FORK");
-	} else if (childpid == 0) {
-		close(1);
-		dup2(fd[1], 1);
+	pipe(md);
+	char result[36];
+	memset(result,'\0',50);
+	char *resultado_md5=malloc(32);
+	if ( (childpid = fork() ) == -1){
+		fprintf(stderr, "FORK failed");
+	} else if( childpid == 0) {
+		bak0=dup(0);
+		bak1=dup(1);
+		dup2(fd[0],0);
+		dup2(md[1],1);
+		close(fd[1]);
 		close(fd[0]);
-		execlp("/usr/bin/md5sum", "md5sum", archivo, NULL);
+		close(md[1]);
+		close(md[0]);
+		execlp("/usr/bin/md5sum","md5sum",NULL);
 	}
-	wait(NULL);
-	read(fd[0], result, sizeof(result));
-	printf("%s", result);
-	resultado = malloc(sizeof(result));
-	strcpy(resultado, result);
-	return resultado;
+	write(fd[1],bloque,strlen(bloque));
+	close(fd[1]);
+	close(fd[0]);
+	close(md[1]);
+	count=read(md[0],result,36);
+	close(md[0]);
+	dup2(bak0,0);
+	dup2(bak1,1);
+	if (count>0){
+		result[32]=0;
+		strcpy(resultado_md5,result);
+		return resultado_md5;
+	}else{
+		printf ("ERROR READ RESULT\n");
+		exit(-1);
+	}
 }
 
 void listar_nodos_conectados(t_list *nodos) {

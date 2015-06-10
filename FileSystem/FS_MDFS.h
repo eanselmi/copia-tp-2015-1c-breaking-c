@@ -50,7 +50,7 @@ void *connection_handler_escucha(); // Esta funcion escucha continuamente si rec
 static t_nodo *agregar_nodo_a_lista(char nodo_id[6],int socket,int est,int estado_red,char *ip, int port,int puerto_escucha, int bloques_lib, int bloques_tot);
 void modificar_estado_nodo (char nodo_id[6],int socket,int port,int estado,int estado_red);
 void listar_nodos_conectados(t_list *nodos);
-char *obtener_md5(char *archivo);
+char *obtener_md5(char *bloque);
 int validar_nodo_nuevo (char nodo_id[6]);
 int validar_nodo_reconectado (char nodo_id[6]);
 char *buscar_nodo_id(char *ip, int port);
