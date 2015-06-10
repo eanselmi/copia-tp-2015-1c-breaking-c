@@ -200,7 +200,6 @@ int main(int argc, char *argv[]) {
 	indiceDirectorios[0] = 1; //raiz queda reservado como ocupado
 	directoriosDisponibles = (MAX_DIRECTORIOS - 1);
 
-	listarDirectorios();
 	Menu();
 	log_destroy(logger);
 
@@ -869,7 +868,7 @@ long ExisteEnLaLista(t_list* listaDirectorios, char* nombreDirectorioABuscar,
 void CrearDirectorio() {
 	//printf("Eligió Crear directorios\n");
 	uint32_t idPadre;
-	char* path = malloc(1);
+	char* path = string_new();
 	char** directorioNuevo;
 	t_dir* directorioACrear;
 	int cantDirACrear = 0;
@@ -927,7 +926,6 @@ void CrearDirectorio() {
 			}
 		}
 	}
-	listarDirectorios();
 }
 
 static void directorio_destroy(t_dir* self) {
