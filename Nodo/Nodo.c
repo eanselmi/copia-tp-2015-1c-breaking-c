@@ -362,7 +362,7 @@ void *manejador_de_escuchas(){
 						 * en "resultado": void ejecutarMapper(char *path,char *bloque,char *resultado);
 						*/
 						ejecutarMapper(nombreNuevoMap,*mensaje,resultadoTemporal);
-						//ordenarMapper(resultadoTemporal,nomArchTemp);
+						ordenarMapper(resultadoTemporal,nomArchTemp);
 					}
 				}
 
@@ -422,9 +422,8 @@ void ordenarMapper(char* nombreMapperTemporal, char* nombreMapperOrdenado){
 	else
 	{
 		close(outfd[0]); /* Estan siendo usados por el hijo */
-		char *file;
-		strcpy(file,"Date;WBAN;DryBulbCelsius;Time\n20130101;03011;M;0000\n20130101;03011;M;0015\n");
-		write(outfd[1],file,strlen(file));/* Escribe en el stdin del hijo el contenido del bloque*/
+		//Se debe escribir el contenido de la rutina Map
+		write(outfd[1],"Date;WBAN;DryBulbCelsius;Time\n20130101;03011;M;0000\n20130101;03011;M;0015\n",74);/* Escribe en el stdin del hijo el contenido del bloque*/
 		close(outfd[1]);
 		dup2(bak,STDOUT_FILENO);
 	}
@@ -460,6 +459,7 @@ void ejecutarMapper(char *script,int bloque,char *resultado){
 	else
 	{
 	close(outfd[0]); /* Estan siendo usados por el hijo */
+	//Se escribiría un getBloque
 	char *datoos="WBAN,Date,Time,StationType,SkyCondition,SkyConditionFlag,Visibility,VisibilityFlag,WeatherType,WeatherTypeFlag,DryBulbFarenheit,DryBulbFarenheitFlag,DryBulbCelsius,DryBulbCelsiusFlag,WetBulbFarenheit,WetBulbFarenheitFlag,WetBulbCelsius,WetBulbCelsiusFlag,DewPointFarenheit,DewPointFarenheitFlag,DewPointCelsius,DewPointCelsiusFlag,RelativeHumidity,RelativeHumidityFlag,WindSpeed,WindSpeedFlag,WindDirection,WindDirectionFlag,ValueForWindCharacter,ValueForWindCharacterFlag,StationPressure,StationPressureFlag,PressureTendency,PressureTendencyFlag,PressureChange,PressureChangeFlag,SeaLevelPressure,SeaLevelPressureFlag,RecordType,RecordTypeFlag,HourlyPrecip,HourlyPrecipFlag,Altimeter,AltimeterFlag\n03011,20130101,0000,0,OVC, , 5.00, , , ,M, ,M, ,M, ,M, ,M, ,M, ,M, , 5, ,120, , , ,M, , , , , ,M, ,AA, , , ,29.93, \n03011,20130101,0015,0,SCT011 SCT020, , 7.00, ,-SN, ,M, ,M, ,M, ,M, ,M, ,M, ,M, , 6, ,120, , , ,21.33, , , , , ,M, ,AA, , , ,29.93, \n03011,20130101,0035,0,CLR, ,10.00, , , ,M, ,M, ,M, ,M, ,M, ,M, ,M, , 6, ,120, , , ,21.33, , , , , ,M, ,AA, , , ,29.93, \n03011,20130101,0055,0,CLR, ,10.00, , , ,M, ,M, ,M, ,M, ,M, ,M, ,M, , 5, ,120, , , ,21.33, , , , , ,M, ,AA, , , ,29.93, \n";
 	write(outfd[1],datoos,strlen(datoos));/* Escribe en el stdin del hijo el contenido del bloque*/
 	close(outfd[1]);
