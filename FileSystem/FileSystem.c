@@ -72,6 +72,7 @@ int main(int argc, char *argv[]) {
 	logger = log_create("fsLog.log", "FileSystem", false, LOG_LEVEL_INFO);
 	FD_ZERO(&master); // borra los conjuntos maestro y temporal
 	FD_ZERO(&read_fds);
+
 	mongoc_init();
 	client = mongoc_client_new("mongodb://localhost:27017/");
 	collection = mongoc_client_get_collection(client, "NODOS", "lista_nodos");
@@ -377,43 +378,43 @@ char *buscar_nodo_id(char *ip, int port) {
 
 char *obtener_md5(char *bloque) {
 	int count,bak0,bak1;
-	int fd[2];
-	int md[2];
-	int childpid;
-	pipe(fd);
-	pipe(md);
-	char result[36];
-	memset(result,'\0',50);
-	char *resultado_md5=malloc(32);
-	if ( (childpid = fork() ) == -1){
-		fprintf(stderr, "FORK failed");
-	} else if( childpid == 0) {
-		bak0=dup(0);
-		bak1=dup(1);
-		dup2(fd[0],0);
-		dup2(md[1],1);
-		close(fd[1]);
+		int fd[2];
+		int md[2];
+		int childpid;
+		pipe(fd);
+		pipe(md);
+		char result[50];
+		char *resultado_md5=malloc(32);
+		memset(result,'\0',50);
+		if ( (childpid = fork() ) == -1){
+			fprintf(stderr, "FORK failed");
+		} else if( childpid == 0) {
+			bak0=dup(0);
+			bak1=dup(1);
+			dup2(fd[0],0);
+			dup2(md[1],1);
+			close(fd[1]);
+			close(fd[0]);
+			close(md[1]);
+			close(md[0]);
+			execlp("/usr/bin/md5sum","md5sum",NULL);
+		}
+		write(fd[1],bloque,strlen(bloque));
+	    close(fd[1]);
 		close(fd[0]);
 		close(md[1]);
+		count=read(md[0],result,36);
 		close(md[0]);
-		execlp("/usr/bin/md5sum","md5sum",NULL);
-	}
-	write(fd[1],bloque,strlen(bloque));
-	close(fd[1]);
-	close(fd[0]);
-	close(md[1]);
-	count=read(md[0],result,36);
-	close(md[0]);
-	dup2(bak0,0);
-	dup2(bak1,1);
-	if (count>0){
-		result[32]=0;
-		strcpy(resultado_md5,result);
-		return resultado_md5;
-	}else{
-		printf ("ERROR READ RESULT\n");
-		exit(-1);
-	}
+		dup2(bak0,0);
+		dup2(bak1,1);
+		if (count>0){
+			result[32]=0;
+			strcpy(resultado_md5,result);
+			return resultado_md5;
+		}else{
+			printf ("ERROR READ RESULT\n");
+			exit(-1);
+		}
 }
 
 void listar_nodos_conectados(t_list *nodos) {
