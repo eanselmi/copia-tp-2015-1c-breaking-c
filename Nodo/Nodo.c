@@ -194,6 +194,12 @@ void *manejador_de_escuchas(){
 	bloque=malloc(sizeof(int));
 	char rutinaMapper[MAPPER_SIZE]; //En este buffer se guardarán las rutinas mapper para luego pasarlas a un archivo local
 	memset(rutinaMapper,'\0',MAPPER_SIZE);
+	char *resultadoTemporal=string_new();
+	char *nombreNuevoMap=string_new(); //será el nombre del nuevo map
+	char** arrayTiempo;
+	char *tiempo=string_new(); //string que tendrá la hora
+	char *pathNuevoMap=string_new();//El path completo del nuevo Map
+
 	printf("Nodo en la espera de conexiones/solicitudes del FS\n");
 	while(1) {
 		read_fds = master;
@@ -202,6 +208,10 @@ void *manejador_de_escuchas(){
 			log_error(logger,"FALLO el Select");
 			exit(-1);
 		}
+		resultadoTemporal=strdup("");
+		nombreNuevoMap=strdup(""); //será el nombre del nuevo map
+		tiempo=strdup(""); //string que tendrá la hora
+		pathNuevoMap=strdup("");//El path completo del nuevo Map
 		// explorar conexiones existentes en busca de datos que leer
 		for(socketModificado = 0; socketModificado <= fdmax; socketModificado++) {
 			if (FD_ISSET(socketModificado, &read_fds)) {	// ¡¡tenemos datos!!
@@ -336,23 +346,29 @@ void *manejador_de_escuchas(){
 								log_error(logger,"Fallo al recibir la rutina mapper");
 								exit(1);
 							}
-							printf("se recibió la rutina mapper:%s",rutinaMapper);
+							printf("se recibió la rutina mapper:\n%s",rutinaMapper);
 
-//							//Creo el archivo que guarda la rutina de map enviada por el Job
-//							//Generar un nombre para este script Map
-//							char *nombreNuevoMap=string_new(); //será el nombre del nuevo map
-//							string_append(&nombreNuevoMap,"mapJob");
-//							char** arrayTiempo=string_split(temporal_get_string_time(),":"); //creo array con hora minutos segundos y milisegundos separados
-//							char *tiempo=string_new(); //string que tendrá la hora
-//							string_append(&tiempo,arrayTiempo[0]);//Agrego horas
-//							string_append(&tiempo,arrayTiempo[1]);//Agrego minutos
-//							string_append(&tiempo,arrayTiempo[2]);//Agrego segundos
-//							string_append(&tiempo,arrayTiempo[3]);//Agrego milisegundos
-//							string_append(&nombreNuevoMap,tiempo); //Concateno la fecha en formato hhmmssmmmm al nombre map
-//							string_append(&nombreNuevoMap,".sh"); //agrego la extensión
-//							char *pathNuevoMap=string_new();//El path completo del nuevo Map
-//							string_append(&pathNuevoMap,PATHMAPPERS);
-//							string_append(&pathNuevoMap,nombreNuevoMap);
+							//Creo el archivo que guarda la rutina de map enviada por el Job
+							//Generar un nombre para este script Map
+							string_append(&nombreNuevoMap,"mapJob");
+							arrayTiempo=string_split(temporal_get_string_time(),":"); //creo array con hora minutos segundos y milisegundos separados
+							string_append(&tiempo,arrayTiempo[0]);//Agrego horas
+							string_append(&tiempo,arrayTiempo[1]);//Agrego minutos
+							string_append(&tiempo,arrayTiempo[2]);//Agrego segundos
+							string_append(&tiempo,arrayTiempo[3]);//Agrego milisegundos
+							string_append(&nombreNuevoMap,tiempo); //Concateno la fecha en formato hhmmssmmmm al nombre map
+							string_append(&nombreNuevoMap,".sh"); //agrego la extensión
+							string_append(&pathNuevoMap,PATHMAPPERS);
+							string_append(&pathNuevoMap,nombreNuevoMap);
+							//Genero nombre para el resultado temporal (luego a este se debera aplicar sort)
+							string_append(&resultadoTemporal,"/tmp/map.result.");
+							string_append(&resultadoTemporal,tiempo);
+							string_append(&resultadoTemporal,".tmp");
+
+							printf("Hora:%s\n",tiempo);
+							printf("Nombre del nuevo map:%s\n",nombreNuevoMap);
+							printf("Path completo del nuevo map:%s\n",pathNuevoMap);
+							printf("Nombre del map temporal(antes del sort):%s\n",resultadoTemporal);
 //
 //							if((scriptMap=fopen(pathNuevoMap,"w+"))==NULL){ //path donde guardara el script
 //								perror("fopen");
@@ -369,11 +385,7 @@ void *manejador_de_escuchas(){
 //							}
 //							fclose(scriptMap); //cierro el file
 //
-//							//Genero nombre para el resultado temporal (luego a este se debera aplicar sort)
-//							char *resultadoTemporal=string_new();
-//							string_append(&resultadoTemporal,"/tmp/map.result.");
-//							string_append(&resultadoTemporal,tiempo);
-//							string_append(&resultadoTemporal,".tmp");
+
 //							/*
 //							 * Envío por STDIN el "bloque" al script "nombreNuevoMap" , se guarda el resultado
 //							 * en "resultado": void ejecutarMapper(char *path,char *bloque,char *resultado);
