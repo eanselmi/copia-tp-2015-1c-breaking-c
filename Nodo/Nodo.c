@@ -116,7 +116,7 @@ int main(int argc , char *argv[]){
 			}
 			if((send(conectorFS,nodo_id,sizeof(nodo_id),0))==-1){
 				perror("send");
-				log_error(logger,"FALLO el envío de la cantidad de bloques totales al FS");
+				log_error(logger,"FALLO el envío del ID del nodo al FS");
 				exit(-1);
 			}
 		}
@@ -295,6 +295,7 @@ void *manejador_de_escuchas(){
 
 				if(estaEnListaMappers(socketModificado)==0){
 					char nomArchTemp[100];
+					memset(nomArchTemp,'\0',100);
 					FILE* scriptMap;
 					if ((nbytes=recv(socketModificado,mensaje,sizeof(mensaje),0))==-1){ //da error
 						perror("recv");
@@ -318,8 +319,8 @@ void *manejador_de_escuchas(){
 							exit(-1);
 						}
 						printf("Se guardará el resultado del mapper en el archivo temporal %s\n",nomArchTemp);
-						//Recibirá la rutina mapper
 
+						//Recibirá la rutina mapper
 
 						if(recv(socketModificado,rutinaMapper,MAPPER_SIZE,0)==-1){
 							perror("recv");
@@ -330,15 +331,19 @@ void *manejador_de_escuchas(){
 
 						//Creo el archivo que guarda la rutina de map enviada por el Job
 						//Generar un nombre para este script Map
-						char *nombreNuevoMap=strdup("mapJob"); //será el nombre del nuevo map
-						char** arrayTiempo=string_split(temporal_get_string_time(),":");
-						char *tiempo=strdup(strcat(arrayTiempo[0],arrayTiempo[1]));
-						strcat(tiempo,arrayTiempo[2]);
-						strcat(tiempo,arrayTiempo[3]);
-						strcat(nombreNuevoMap,tiempo); //Concateno la fecha en formato hhmmssmmmm al nombre map
-						strcat(nombreNuevoMap,".sh");
-						char *pathNuevoMap=strdup(PATHMAPPERS); //El path completo del nuevo Map
-						strcat(pathNuevoMap,nombreNuevoMap);
+						char *nombreNuevoMap=string_new(); //será el nombre del nuevo map
+						string_append(&nombreNuevoMap,"mapJob");
+//						char** arrayTiempo=string_split(temporal_get_string_time(),":"); //creo array con hora minutos segundos y milisegundos separados
+//						char *tiempo=string_new(); //string que tendrá la hora
+//						string_append(&tiempo,arrayTiempo[0]);//Agrego horas
+//						string_append(&tiempo,arrayTiempo[1]);//Agrego minutos
+//						string_append(&tiempo,arrayTiempo[2]);//Agrego segundos
+//						string_append(&tiempo,arrayTiempo[3]);//Agrego milisegundos
+//						string_append(&nombreNuevoMap,tiempo); //Concateno la fecha en formato hhmmssmmmm al nombre map
+//						string_append(&nombreNuevoMap,".sh"); //agrego la extensión
+						char *pathNuevoMap=string_new();//El path completo del nuevo Map
+						string_append(&pathNuevoMap,PATHMAPPERS);
+						string_append(&pathNuevoMap,nombreNuevoMap);
 
 						if((scriptMap=fopen(pathNuevoMap,"w+"))==NULL){ //path donde guardara el script
 							perror("fopen");
@@ -356,9 +361,10 @@ void *manejador_de_escuchas(){
 						fclose(scriptMap); //cierro el file
 
 						//Genero nombre para el resultado temporal (luego a este se debera aplicar sort)
-						char *resultadoTemporal=strdup("/tmp/map.result.");
-						strcat(resultadoTemporal,tiempo);
-						strcat(resultadoTemporal,".tmp");
+						char *resultadoTemporal=string_new();
+						string_append(&resultadoTemporal,"/tmp/map.result.tmp");
+//						string_append(&resultadoTemporal,tiempo);
+//						string_append(&resultadoTemporal,".tmp");
 						/*
 						 * Envío por STDIN el "bloque" al script "nombreNuevoMap" , se guarda el resultado
 						 * en "resultado": void ejecutarMapper(char *path,char *bloque,char *resultado);
@@ -396,7 +402,6 @@ void ordenarMapper(char* nombreMapperTemporal, char* nombreMapperOrdenado){
 	int outfd[2];
 	int bak,pid,archivo_resultado;
 	bak=0;
-	char *path;
 	pipe(outfd);
 	if((pid=fork())==-1){
 		perror("fork");
@@ -453,16 +458,17 @@ void ejecutarMapper(char *script,int bloque,char *resultado){
 	dup2(outfd[0], STDIN_FILENO); //STDIN de este proceso será STDOUT del proceso padre
 	close(outfd[0]); /* innecesarios para el hijo */
 	close(outfd[1]);
-	path=strdup("");
-	strcat(path,"/home/utnso/TP/tp-2015-1c-breaking-c/Nodo/RutinasMap/");
-	strcat(path,script);
+	path=string_new();
+	string_append(&path,"/home/utnso/TP/tp-2015-1c-breaking-c/Nodo/RutinasMap/");
+	string_append(&path,script);
 	execlp(path,script,NULL); //Ejecuto el script
 	}
 	else
 	{
 	close(outfd[0]); /* Estan siendo usados por el hijo */
 	//Se escribiría un getBloque
-	char *datoos="WBAN,Date,Time,StationType,SkyCondition,SkyConditionFlag,Visibility,VisibilityFlag,WeatherType,WeatherTypeFlag,DryBulbFarenheit,DryBulbFarenheitFlag,DryBulbCelsius,DryBulbCelsiusFlag,WetBulbFarenheit,WetBulbFarenheitFlag,WetBulbCelsius,WetBulbCelsiusFlag,DewPointFarenheit,DewPointFarenheitFlag,DewPointCelsius,DewPointCelsiusFlag,RelativeHumidity,RelativeHumidityFlag,WindSpeed,WindSpeedFlag,WindDirection,WindDirectionFlag,ValueForWindCharacter,ValueForWindCharacterFlag,StationPressure,StationPressureFlag,PressureTendency,PressureTendencyFlag,PressureChange,PressureChangeFlag,SeaLevelPressure,SeaLevelPressureFlag,RecordType,RecordTypeFlag,HourlyPrecip,HourlyPrecipFlag,Altimeter,AltimeterFlag\n03011,20130101,0000,0,OVC, , 5.00, , , ,M, ,M, ,M, ,M, ,M, ,M, ,M, , 5, ,120, , , ,M, , , , , ,M, ,AA, , , ,29.93, \n03011,20130101,0015,0,SCT011 SCT020, , 7.00, ,-SN, ,M, ,M, ,M, ,M, ,M, ,M, ,M, , 6, ,120, , , ,21.33, , , , , ,M, ,AA, , , ,29.93, \n03011,20130101,0035,0,CLR, ,10.00, , , ,M, ,M, ,M, ,M, ,M, ,M, ,M, , 6, ,120, , , ,21.33, , , , , ,M, ,AA, , , ,29.93, \n03011,20130101,0055,0,CLR, ,10.00, , , ,M, ,M, ,M, ,M, ,M, ,M, ,M, , 5, ,120, , , ,21.33, , , , , ,M, ,AA, , , ,29.93, \n";
+	char *datoos=string_new();
+	string_append(&datoos,"WBAN,Date,Time,StationType,SkyCondition,SkyConditionFlag,Visibility,VisibilityFlag,WeatherType,WeatherTypeFlag,DryBulbFarenheit,DryBulbFarenheitFlag,DryBulbCelsius,DryBulbCelsiusFlag,WetBulbFarenheit,WetBulbFarenheitFlag,WetBulbCelsius,WetBulbCelsiusFlag,DewPointFarenheit,DewPointFarenheitFlag,DewPointCelsius,DewPointCelsiusFlag,RelativeHumidity,RelativeHumidityFlag,WindSpeed,WindSpeedFlag,WindDirection,WindDirectionFlag,ValueForWindCharacter,ValueForWindCharacterFlag,StationPressure,StationPressureFlag,PressureTendency,PressureTendencyFlag,PressureChange,PressureChangeFlag,SeaLevelPressure,SeaLevelPressureFlag,RecordType,RecordTypeFlag,HourlyPrecip,HourlyPrecipFlag,Altimeter,AltimeterFlag\n03011,20130101,0000,0,OVC, , 5.00, , , ,M, ,M, ,M, ,M, ,M, ,M, ,M, , 5, ,120, , , ,M, , , , , ,M, ,AA, , , ,29.93, \n03011,20130101,0015,0,SCT011 SCT020, , 7.00, ,-SN, ,M, ,M, ,M, ,M, ,M, ,M, ,M, , 6, ,120, , , ,21.33, , , , , ,M, ,AA, , , ,29.93, \n03011,20130101,0035,0,CLR, ,10.00, , , ,M, ,M, ,M, ,M, ,M, ,M, ,M, , 6, ,120, , , ,21.33, , , , , ,M, ,AA, , , ,29.93, \n03011,20130101,0055,0,CLR, ,10.00, , , ,M, ,M, ,M, ,M, ,M, ,M, ,M, , 5, ,120, , , ,21.33, , , , , ,M, ,AA, , , ,29.93, \n");
 	write(outfd[1],datoos,strlen(datoos));/* Escribe en el stdin del hijo el contenido del bloque*/
 	close(outfd[1]);
 	dup2(bak,STDOUT_FILENO);

@@ -7,6 +7,15 @@
 #include <pthread.h>
 #include <fcntl.h>
 #include <sys/mman.h>
+#include <commons/string.h>
+#include <stdlib.h>
+#include <arpa/inet.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
+
 
 #include "Job.h"
 
@@ -19,7 +28,7 @@ int main(void){
 	logger = log_create("./jobLog.log", "Job", true, LOG_LEVEL_INFO); //se crea la instancia de log, que tambien imprimira en pantalla
 	//Variables locales a main
 	pthread_t mapperThread;
-	pthread_t reduceThread;
+	//pthread_t reduceThread;
 	int marta_sock; //socket de conexión a MaRTA
 	struct sockaddr_in marta_addr;
 	char** archivosDelJob;
@@ -49,7 +58,7 @@ int main(void){
 	log_info(logger,"Se conectó a MaRTA. IP: %s, Puerto: %d",config_get_string_value(configurador,"IP_MARTA"),config_get_int_value(configurador,"PUERTO_MARTA")); //se agrega al log en modo de informacion la conexión con MaRTA
 
 	/*Creo un char[] que tenga los nombres de los archivos a trabajar separados con "," (una "," tambien al principio)
-	 * De esta forma, del lado de marta voy a recibir el mensaje todo seguido y lo voy a separar con un string_split (commons)
+	 * De esta forma, del lado de marta voy a recibir el mensaje tod o seguido y lo voy a separar con un string_split (commons)
 	*/
 
 	archivosDelJob=config_get_array_value(configurador,"ARCHIVOS"); //devuelve un array con todos los archivos, y ultimo un NULL
@@ -84,6 +93,10 @@ int main(void){
 
 	t_mapper* punteroMapper;
 	punteroMapper=malloc(sizeof(t_mapper));
+	memset(punteroMapper->nombreArchivoTemporal,'\0',100);
+	memset(punteroMapper->ip_nodo,'\0',20);
+//	string_append(&(punteroMapper->nombreArchivoTemporal),datosMapper.nombreArchivoTemporal);
+//	string_append(&(punteroMapper->ip_nodo),datosMapper.ip_nodo);
 	strcpy(punteroMapper->ip_nodo,datosMapper.ip_nodo);
 	punteroMapper->bloque=datosMapper.bloque;
 	punteroMapper->puerto_nodo=datosMapper.puerto_nodo;
