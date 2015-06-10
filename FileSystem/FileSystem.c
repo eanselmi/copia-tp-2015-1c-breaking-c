@@ -93,11 +93,9 @@ int main(int argc, char *argv[]) {
 	// enlazar
 	filesystem.sin_family = AF_INET;
 	filesystem.sin_addr.s_addr = INADDR_ANY;
-	filesystem.sin_port = htons(
-			config_get_int_value(configurador, "PUERTO_LISTEN"));
+	filesystem.sin_port = htons(config_get_int_value(configurador, "PUERTO_LISTEN"));
 	memset(&(filesystem.sin_zero), '\0', 8);
-	if (bind(listener, (struct sockaddr *) &filesystem, sizeof(filesystem))
-			== -1) {
+	if (bind(listener, (struct sockaddr *) &filesystem, sizeof(filesystem))	== -1) {
 		perror("bind");
 		log_error(logger, "FALLO el Bind");
 		exit(-1);
@@ -117,10 +115,8 @@ int main(int argc, char *argv[]) {
 	nodos = list_create(); //Crea la lista de que va a manejar la lista de nodos
 	printf("Esperando las conexiones de los nodos iniciales\n");
 	log_info(logger, "Esperando las conexiones de los nodos iniciales");
-	while (cantidad_nodos
-			!= config_get_int_value(configurador, "CANTIDAD_NODOS")) {
-		if ((newfd = accept(listener, (struct sockaddr*) &remote_client,
-				(socklen_t*) &addrlen)) == -1) {
+	while (cantidad_nodos!= config_get_int_value(configurador, "CANTIDAD_NODOS")) {
+		if ((newfd = accept(listener, (struct sockaddr*) &remote_client,(socklen_t*) &addrlen)) == -1) {
 			perror("accept");
 			log_error(logger, "FALLO el ACCEPT");
 			exit(-1);
@@ -133,15 +129,13 @@ int main(int argc, char *argv[]) {
 		if (read_size > 0 && strncmp(identificacion, "nuevo", 5) == 0) {
 			bloquesTotales = malloc(sizeof(int));
 			//Segundo recv, aca espero recibir la capacidad del nodo
-			if ((read_size = recv(newfd, bloquesTotales, sizeof(int), 0))
-					== -1) {
+			if ((read_size = recv(newfd, bloquesTotales, sizeof(int), 0))== -1) {
 				perror("recv");
 				log_error(logger, "FALLO el RECV");
 				exit(-1);
 			}
 			puerto_escucha_nodo = malloc(sizeof(int));
-			if ((read_size = recv(newfd, puerto_escucha_nodo, sizeof(int), 0))
-					== -1) {
+			if ((read_size = recv(newfd, puerto_escucha_nodo, sizeof(int), 0))== -1) {
 				perror("recv");
 				log_error(logger, "FALLO el RECV");
 				exit(-1);
@@ -159,21 +153,11 @@ int main(int argc, char *argv[]) {
 					if (newfd > fdmax) { // actualizar el máximo
 						fdmax = newfd;
 					}
-					list_add(nodos,
-							agregar_nodo_a_lista(nodo_id, newfd, 0, 1,
-									inet_ntoa(remote_client.sin_addr),
-									remote_client.sin_port,
-									*puerto_escucha_nodo, *bloquesTotales,
-									*bloquesTotales));
-					printf(
-							"Se conectó un nuevo nodo: %s con %d bloques totales\n",
-							inet_ntoa(remote_client.sin_addr), *bloquesTotales);
-					log_info(logger,
-							"Se conectó un nuevo nodo: %s con %d bloques totales",
-							inet_ntoa(remote_client.sin_addr), *bloquesTotales);
+					list_add(nodos,agregar_nodo_a_lista(nodo_id, newfd, 0, 1,inet_ntoa(remote_client.sin_addr),remote_client.sin_port,*puerto_escucha_nodo, *bloquesTotales,*bloquesTotales));
+					printf("Se conectó un nuevo nodo: %s con %d bloques totales\n",inet_ntoa(remote_client.sin_addr), *bloquesTotales);
+					log_info(logger,"Se conectó un nuevo nodo: %s con %d bloques totales",inet_ntoa(remote_client.sin_addr), *bloquesTotales);
 				} else {
-					printf(
-							"Ya existe un nodo con el mismo id o direccion ip\n");
+					printf("Ya existe un nodo con el mismo id o direccion ip\n");
 					close(newfd);
 				}
 			}
@@ -187,8 +171,7 @@ int main(int argc, char *argv[]) {
 	//Este hilo va a manejar las conexiones con los nodos de forma paralela a la ejecucion del proceso
 	if (pthread_create(&escucha, NULL, connection_handler_escucha, NULL) < 0) {
 		perror("could not create thread");
-		log_error(logger,
-				"Falló la creación del hilo que maneja las conexiones");
+		log_error(logger,"Falló la creación del hilo que maneja las conexiones");
 		return 1;
 	}
 
@@ -275,15 +258,12 @@ int Menu(void) {
 			EliminarNodo();	break;
 			//case 17: printf("Eligió Salir\n"); break;
 		case 17: listar_nodos_conectados(nodos); break;
-		default:
-			printf("Opción incorrecta. Por favor ingrese una opción del 1 al 17\n"); break;
+		default: printf("Opción incorrecta. Por favor ingrese una opción del 1 al 17\n"); break;
 		}
 	}
 	return 0;
 }
-static t_nodo *agregar_nodo_a_lista(char nodo_id[6], int socket, int est,
-		int est_red, char *ip, int port, int puerto_escucha, int bloques_lib,
-		int bloques_tot) {
+static t_nodo *agregar_nodo_a_lista(char nodo_id[6], int socket, int est, int est_red, char *ip, int port, int puerto_escucha, int bloques_lib,int bloques_tot) {
 	t_nodo *nodo_temporal = malloc(sizeof(t_nodo));
 
 	//===========================================================================
@@ -316,8 +296,7 @@ static t_nodo *agregar_nodo_a_lista(char nodo_id[6], int socket, int est,
 	for (i = 8; i < bloques_tot; i += 8)
 		;
 	nodo_temporal->bloques_bitarray = malloc(i / 8);
-	nodo_temporal->bloques_del_nodo = bitarray_create(
-			nodo_temporal->bloques_bitarray, i / 8);
+	nodo_temporal->bloques_del_nodo = bitarray_create(nodo_temporal->bloques_bitarray, i / 8);
 	for (i = 0; i < nodo_temporal->bloques_totales; i++)
 		bitarray_clean_bit(nodo_temporal->bloques_del_nodo, i);
 	char *tmp_socket = malloc(sizeof(int));
@@ -331,11 +310,8 @@ static t_nodo *agregar_nodo_a_lista(char nodo_id[6], int socket, int est,
 	sprintf(tmp_bl_lib, "%d", bloques_lib);
 	sprintf(tmp_bl_tot, "%d", bloques_tot);
 	//Persistencia del nodo agregado a la base de mongo
-	doc = BCON_NEW("Socket", tmp_socket, "Nodo_ID", nodo_id, "Estado",
-			tmp_estado, "IP", ip, "Puerto", tmp_puerto, "Bloques_Libres",
-			tmp_bl_lib, "Bloques_Totales", tmp_bl_tot);
-	if (!mongoc_collection_insert(collection, MONGOC_INSERT_NONE, doc, NULL,
-			&error)) {
+	doc = BCON_NEW("Socket", tmp_socket, "Nodo_ID", nodo_id, "Estado",tmp_estado, "IP", ip, "Puerto", tmp_puerto, "Bloques_Libres",tmp_bl_lib, "Bloques_Totales", tmp_bl_tot);
+	if (!mongoc_collection_insert(collection, MONGOC_INSERT_NONE, doc, NULL,&error)) {
 		printf("%s\n", error.message);
 	}
 
@@ -424,12 +400,7 @@ void listar_nodos_conectados(t_list *nodos) {
 	for (i = 0; i <= cantidad_nodos; i++) {
 		elemento = list_get(nodos, i);
 		printf("\n\n");
-		printf(
-				"Nodo_ID: %s\nSocket: %d\nEstado: %d\nEstado de Conexion: %d\nIP: %s\nPuerto_Origen: %d\nPuerto_Escucha_Nodo: %d\nBloques_Libres: %d\nBloques_Totales: %d",
-				elemento->nodo_id, elemento->socket, elemento->estado,
-				elemento->estado_red, elemento->ip, elemento->puerto,
-				elemento->puerto_escucha_nodo, elemento->bloques_libres,
-				elemento->bloques_totales);
+		printf("Nodo_ID: %s\nSocket: %d\nEstado: %d\nEstado de Conexion: %d\nIP: %s\nPuerto_Origen: %d\nPuerto_Escucha_Nodo: %d\nBloques_Libres: %d\nBloques_Totales: %d",elemento->nodo_id, elemento->socket, elemento->estado,elemento->estado_red, elemento->ip, elemento->puerto,elemento->puerto_escucha_nodo, elemento->bloques_libres,elemento->bloques_totales);
 		printf("\n");
 		for (j = 0; j < elemento->bloques_totales; j++)
 			printf("%d", bitarray_test_bit(elemento->bloques_del_nodo, j));
@@ -450,15 +421,12 @@ void *connection_handler_escucha(void) {
 				if (i == listener) {
 					// gestionar nuevas conexiones, primero hay que aceptarlas
 					addrlen = sizeof(struct sockaddr_in);
-					if ((newfd = accept(listener,
-							(struct sockaddr*) &remote_client,
-							(socklen_t*) &addrlen)) == -1) {
+					if ((newfd = accept(listener,(struct sockaddr*) &remote_client,(socklen_t*) &addrlen)) == -1) {
 						perror("accept");
 						log_error(logger, "FALLO el ACCEPT");
 						exit(-1);
 					} else { //llego una nueva conexion, se acepto y ahora tengo que tratarla
-						if ((read_size = recv(newfd, identificacion,
-								sizeof(identificacion), 0)) <= 0) { //si entra aca es porque hubo un error, no considero desconexion porque es nuevo
+						if ((read_size = recv(newfd, identificacion,sizeof(identificacion), 0)) <= 0) { //si entra aca es porque hubo un error, no considero desconexion porque es nuevo
 							perror("recv");
 							log_error(logger, "FALLO el Recv");
 							exit(-1);
@@ -466,9 +434,7 @@ void *connection_handler_escucha(void) {
 							// el nuevo conectado me manda algo, se identifica como nodo nuevo o nodo reconectado
 							// luego de que se identifique lo agregare a la lista de nodos si es nodo nuevo
 							// si es nodo reconectado hay que cambiarle el estado
-							if (read_size > 0
-									&& strncmp(identificacion, "marta", 5)
-											== 0) {
+							if (read_size > 0 && strncmp(identificacion, "marta", 5) == 0) {
 								// Se conecto el proceso Marta, le asigno un descriptor especial y lo agrego al select
 								if (marta_presente == 0) {
 									marta_presente = 1;
@@ -478,48 +444,34 @@ void *connection_handler_escucha(void) {
 										fdmax = newfd;
 									}
 									strcpy(identificacion, "ok");
-									if ((send(marta_sock, identificacion,
-											sizeof(identificacion), 0)) == -1) {
+									if ((send(marta_sock, identificacion,sizeof(identificacion), 0)) == -1) {
 										perror("send");
-										log_error(logger,
-												"FALLO el envio del ok a Marta");
+										log_error(logger, "FALLO el envio del ok a Marta");
 										exit(-1);
 									}
-									printf(
-											"Se conectó el proceso Marta desde la ip %s\n",
-											inet_ntoa(remote_client.sin_addr));
-									log_info(logger,
-											"Se conectó el proceso Marta desde la ip %s",
-											inet_ntoa(remote_client.sin_addr));
+									printf("Se conectó el proceso Marta desde la ip %s\n",inet_ntoa(remote_client.sin_addr));
+										log_info(logger,"Se conectó el proceso Marta desde la ip %s",inet_ntoa(remote_client.sin_addr));
 								} else {
-									printf(
-											"Ya existe un proceso marta conectado, no puede haber más de 1\n");
-									log_warning(logger,
-											"Ya existe un proceso marta conectado, no puede haber más de 1");
+									printf("Ya existe un proceso marta conectado, no puede haber más de 1\n");
+									log_warning(logger,"Ya existe un proceso marta conectado, no puede haber más de 1");
 									close(newfd);
 								}
 
 							}
-							if (read_size > 0
-									&& strncmp(identificacion, "nuevo", 5)
-											== 0) {
+							if (read_size > 0 && strncmp(identificacion, "nuevo", 5) == 0) {
 								bloquesTotales = malloc(sizeof(int));
-								if ((read_size = recv(newfd, bloquesTotales,
-										sizeof(int), 0)) == -1) {
+								if ((read_size = recv(newfd, bloquesTotales,sizeof(int), 0)) == -1) {
 									perror("recv");
 									log_error(logger, "FALLO el RECV");
 									exit(-1);
 								}
 								puerto_escucha_nodo = malloc(sizeof(int));
-								if ((read_size = recv(newfd,
-										puerto_escucha_nodo, sizeof(int), 0))
-										== -1) {
+								if ((read_size = recv(newfd,puerto_escucha_nodo, sizeof(int), 0)) == -1) {
 									perror("recv");
 									log_error(logger, "FALLO el RECV");
 									exit(-1);
 								}
-								if ((read_size = recv(newfd, nodo_id,
-										sizeof(nodo_id), 0)) == -1) {
+								if ((read_size = recv(newfd, nodo_id,sizeof(nodo_id), 0)) == -1) {
 									perror("recv");
 									log_error(logger, "FALLO el RECV");
 									exit(-1);
@@ -527,43 +479,22 @@ void *connection_handler_escucha(void) {
 								if (read_size > 0) {
 									if (validar_nodo_nuevo(nodo_id) == 0) {
 										cantidad_nodos++;
-										cantidad_nodos_historico =
-												cantidad_nodos;
+										cantidad_nodos_historico = cantidad_nodos;
 										FD_SET(newfd, &master); // añadir al conjunto maestro
 										if (newfd > fdmax) { // actualizar el máximo
 											fdmax = newfd;
 										}
-										list_add(nodos,
-												agregar_nodo_a_lista(nodo_id,
-														newfd, 0, 1,
-														inet_ntoa(
-																remote_client.sin_addr),
-														remote_client.sin_port,
-														*puerto_escucha_nodo,
-														*bloquesTotales,
-														*bloquesTotales));
-										printf(
-												"Se conectó un nuevo nodo: %s con %d bloques totales\n",
-												inet_ntoa(
-														remote_client.sin_addr),
-												*bloquesTotales);
-										log_info(logger,
-												"Se conectó un nuevo nodo: %s con %d bloques totales",
-												inet_ntoa(
-														remote_client.sin_addr),
-												*bloquesTotales);
+										list_add(nodos,agregar_nodo_a_lista(nodo_id,newfd, 0, 1,inet_ntoa(remote_client.sin_addr),remote_client.sin_port,*puerto_escucha_nodo,*bloquesTotales,*bloquesTotales));
+										printf("Se conectó un nuevo nodo: %s con %d bloques totales\n",inet_ntoa(remote_client.sin_addr),*bloquesTotales);
+										log_info(logger,"Se conectó un nuevo nodo: %s con %d bloques totales",inet_ntoa(remote_client.sin_addr),*bloquesTotales);
 									} else {
-										printf(
-												"Ya existe un nodo con el mismo id o direccion ip\n");
+										printf("Ya existe un nodo con el mismo id o direccion ip\n");
 										close(newfd);
 									}
 								}
 							}
-							if (read_size > 0
-									&& strncmp(identificacion, "reconectado",
-											11) == 0) {
-								if ((read_size = recv(newfd, nodo_id,
-										sizeof(nodo_id), 0)) == -1) {
+							if (read_size > 0 && strncmp(identificacion, "reconectado",11) == 0) {
+								if ((read_size = recv(newfd, nodo_id,sizeof(nodo_id), 0)) == -1) {
 									perror("recv");
 									log_error(logger, "FALLO el RECV");
 									exit(-1);
@@ -574,15 +505,11 @@ void *connection_handler_escucha(void) {
 									if (newfd > fdmax) { // actualizar el máximo
 										fdmax = newfd;
 									}
-									modificar_estado_nodo(nodo_id, newfd,
-											remote_client.sin_port, 0, 1); //cambio su estado de la lista a 1 que es activo
-									printf("Se reconectó el nodo %s\n",
-											inet_ntoa(remote_client.sin_addr));
-									log_info(logger, "Se reconectó el nodo %s",
-											inet_ntoa(remote_client.sin_addr));
+									modificar_estado_nodo(nodo_id, newfd,remote_client.sin_port, 0, 1); //cambio su estado de la lista a 1 que es activo
+									printf("Se reconectó el nodo %s\n",inet_ntoa(remote_client.sin_addr));
+									log_info(logger, "Se reconectó el nodo %s",inet_ntoa(remote_client.sin_addr));
 								} else {
-									printf(
-											"Se reconecto un nodo con datos alterados, se lo desconecta\n");
+									printf("Se reconecto un nodo con datos alterados, se lo desconecta\n");
 									close(newfd);
 								}
 
@@ -607,24 +534,17 @@ void *connection_handler_escucha(void) {
 								printf("Marta se desconecto\n");
 							} else {
 								addrlen = sizeof(struct sockaddr_in);
-								if ((getpeername(i,
-										(struct sockaddr*) &remote_client,
-										(socklen_t*) &addrlen)) == -1) {
+								if ((getpeername(i,(struct sockaddr*) &remote_client,(socklen_t*) &addrlen)) == -1) {
 									perror("getpeername");
 									log_error(logger, "Fallo el getpeername");
 									exit(-1);
 								}
 								char *id_temporal;
-								id_temporal = buscar_nodo_id(
-										inet_ntoa(remote_client.sin_addr),
-										remote_client.sin_port);
+								id_temporal = buscar_nodo_id(inet_ntoa(remote_client.sin_addr),remote_client.sin_port);
 								if (id_temporal != NULL) {
 									strcpy(id_nodo, id_temporal);
-									modificar_estado_nodo(id_nodo, i,
-											remote_client.sin_port, 0, 0);
-									printf("Se desconecto el nodo %s, %d\n",
-											inet_ntoa(remote_client.sin_addr),
-											remote_client.sin_port);
+									modificar_estado_nodo(id_nodo, i,remote_client.sin_port, 0, 0);
+									printf("Se desconecto el nodo %s, %d\n",inet_ntoa(remote_client.sin_addr),remote_client.sin_port);
 									close(i); // ¡Hasta luego!
 									FD_CLR(i, &master); // eliminar del conjunto maestro
 								} else {
@@ -660,8 +580,7 @@ uint32_t BuscarPadre(char* path) {
 		for (i = 0; i < tamanio; i++) { //recorro lista de directorios
 			dir = list_get(directorios, i); //agarro primer directorio de la lista de directorios
 			//comparo si el nombre es igual al string del array del path y el padre es igual al padre anterior
-			if (((strcmp(dir->nombre, directorio[contadorDirectorio])) == 0)
-					&& (dir->padre == directorioPadre)) {
+			if (((strcmp(dir->nombre, directorio[contadorDirectorio])) == 0) && (dir->padre == directorioPadre)) {
 				directorioPadre = dir->id;
 				contadorDirectorio++;
 				break;
@@ -693,8 +612,7 @@ uint32_t BuscarArchivoPorNombre(const char *path, uint32_t idPadre) {
 	}
 	for (posArchivo = 0; posArchivo < tam; posArchivo++) {
 		unArchivo = list_get(archivos, posArchivo);
-		if ((strcmp(unArchivo->nombre, nombreArchivo) == 0)
-				&& (unArchivo->padre == idPadre)) {
+		if ((strcmp(unArchivo->nombre, nombreArchivo) == 0) && (unArchivo->padre == idPadre)) {
 			posicionArchivo = posArchivo;
 			break;
 		} else {
@@ -722,8 +640,7 @@ int BuscarMenorIndiceLibre(char indiceDirectorios[]) {
 	}
 }
 
-void modificar_estado_nodo(char nodo_id[6], int socket, int port, int estado,
-		int estado_red) {
+void modificar_estado_nodo(char nodo_id[6], int socket, int port, int estado, int estado_red) {
 	int i;
 	t_nodo *tmp;
 	for (i = 0; i < list_size(nodos); i++) {
@@ -782,15 +699,13 @@ void EliminarArchivo() {
 	for (i = 0; i < list_size(unArchivo->bloques); i++) {
 		unBloque = list_get(unArchivo->bloques, i);
 		for (j = 0; i < list_size(unBloque->copias); j++) {
-			list_destroy_and_destroy_elements(unBloque->copias,
-					(void*) eliminar_bloques);
+			list_destroy_and_destroy_elements(unBloque->copias,(void*) eliminar_bloques);
 		}
 	}
 
 	//Elimnar nodo del archivo t_arhivo
 	//list_remove_and_destroy_element(t_list *, int index, void(*element_destroyer)(void*));
-	list_remove_and_destroy_element(archivos, posArchivo,
-			(void*) archivo_destroy);
+	list_remove_and_destroy_element(archivos, posArchivo,(void*) archivo_destroy);
 }
 
 void RenombrarArchivo() {
@@ -823,8 +738,7 @@ void MoverArchivo() {
 	unArchivo->padre = idPadreNuevo;
 }
 
-long ExisteEnLaLista(t_list* listaDirectorios, char* nombreDirectorioABuscar,
-		uint32_t idPadre) {
+long ExisteEnLaLista(t_list* listaDirectorios, char* nombreDirectorioABuscar,uint32_t idPadre) {
 	t_dir* elementoDeMiLista;
 	elementoDeMiLista = malloc(sizeof(t_dir));
 	long encontrado = -1; //trae -1 si no lo encuentra, sino trae el id del elemento
@@ -867,24 +781,20 @@ void CrearDirectorio() {
 				directorioNuevo[indiceVectorDirNuevo], idPadre);
 		if (idAValidar != -1) {  //quiere decir que existe
 			if (directorioNuevo[indiceVectorDirNuevo + 1] == NULL) {
-				printf(
-						"El directorio ingresado ya existe. No se realizara ninguna accion \n");
+				printf("El directorio ingresado ya existe. No se realizara ninguna accion \n");
 			} else {
 				idPadre = (uint32_t) idAValidar; //actualizo valor del padre con el que existe y avanzo en split para ver el siguiente directorio
 			}
 			indiceVectorDirNuevo++;
 		} else { //hay que crear directorio
 			int indiceDirectoriosNuevos;
-			for (indiceDirectoriosNuevos = indiceVectorDirNuevo;
-					directorioNuevo[indiceDirectoriosNuevos] != NULL;
-					indiceDirectoriosNuevos++) {
+			for (indiceDirectoriosNuevos = indiceVectorDirNuevo;directorioNuevo[indiceDirectoriosNuevos] != NULL;indiceDirectoriosNuevos++) {
 				cantDirACrear++;
 			}
 			if (cantDirACrear <= directoriosDisponibles) { //controlo que no supere la cantidad maxima que es 1024
 				while (directorioNuevo[indiceVectorDirNuevo] != NULL) {
 					directorioACrear = malloc(sizeof(t_dir));
-					directorioACrear->nombre =
-							directorioNuevo[indiceVectorDirNuevo];
+					directorioACrear->nombre = directorioNuevo[indiceVectorDirNuevo];
 					directorioACrear->padre = idPadre;
 					//persistir en la db: pendiente
 					int id = BuscarMenorIndiceLibre(indiceDirectorios); //el nuevo id será el menor libre del vector de indices de directorios, siempre menor a 1024
@@ -898,9 +808,7 @@ void CrearDirectorio() {
 				}
 				printf("El directorio se ha creado satisfactoriamente \n");
 			} else {
-				printf(
-						"No se puede crear el directorio ya que sobrepasaría el límite máximo de directorios permitidos: %d\n",
-						MAX_DIRECTORIOS);
+				printf("No se puede crear el directorio ya que sobrepasaría el límite máximo de directorios permitidos: %d\n",MAX_DIRECTORIOS);
 				//No puede pasarse de 1024 directorios
 			}
 		}
@@ -935,8 +843,7 @@ void EliminarDirectorio() {
 		if (i == 0) {
 			idEncontrado = 0; //el primero que cuelga de raiz
 		}
-		idEncontrado = ExisteEnLaLista(directorios, vectorpathAEliminar[i],
-				idEncontrado);
+		idEncontrado = ExisteEnLaLista(directorios, vectorpathAEliminar[i],idEncontrado);
 		i++;
 	}
 	if (idEncontrado == -1) {
@@ -965,8 +872,7 @@ void EliminarDirectorio() {
 				i++;
 			}
 			if (tieneDirOArch == 1) {
-				printf(
-						"El directorio que desea eliminar no puede ser eliminado ya que posee archivos \n");
+				printf("El directorio que desea eliminar no puede ser eliminado ya que posee archivos \n");
 			} else {
 				i = 0;
 				encontrePos = 0; //no lo encontre
@@ -979,8 +885,7 @@ void EliminarDirectorio() {
 				}
 				posicionElementoAEliminar = i - 1;
 				//list_remove_and_destroy_element(t_list *, int index, void(*element_destroyer)(void*));
-				list_remove_and_destroy_element(directorios,
-						posicionElementoAEliminar, (void*) directorio_destroy);
+				list_remove_and_destroy_element(directorios,posicionElementoAEliminar, (void*) directorio_destroy);
 				indiceDirectorios[idAEliminar] = 0; //Desocupo el indice en vector de indices disponibles para poder usar ese id en el futuro
 				directoriosDisponibles++; //Incremento la cantidad de directorios libres
 				printf("El directorio se ha eliminado correctamente. \n");
@@ -1011,8 +916,7 @@ void RenombrarDirectorio() {
 		if (i == 0) {
 			idEncontrado = 0; //el primero que cuelga de raiz
 		}
-		idEncontrado = ExisteEnLaLista(directorios, vectorPathOriginal[i],
-				idEncontrado);
+		idEncontrado = ExisteEnLaLista(directorios, vectorPathOriginal[i],idEncontrado);
 		i++;
 	}
 	if (idEncontrado == -1) {
@@ -1050,8 +954,7 @@ void MoverDirectorio() {
 	char encontrado; //0 si no lo encontro, 1 si lo encontro
 	printf("Ingrese el path original desde raíz ejemplo /home/utnso \n");
 	scanf("%s", pathOriginal);
-	printf(
-			"Ingrese el path del directorio al que desea moverlo desde raíz ejemplo /home/tp \n");
+	printf("Ingrese el path del directorio al que desea moverlo desde raíz ejemplo /home/tp \n");
 	scanf("%s", pathNuevo);
 	vectorPathOriginal = string_split((char*) pathOriginal, "/");
 	vectorPathNuevo = string_split((char*) pathNuevo, "/");
@@ -1059,8 +962,7 @@ void MoverDirectorio() {
 		if (i == 0) {
 			idEncontrado = 0; //el primero que cuelga de raiz
 		}
-		idEncontrado = ExisteEnLaLista(directorios, vectorPathOriginal[i],
-				idEncontrado);
+		idEncontrado = ExisteEnLaLista(directorios, vectorPathOriginal[i],idEncontrado);
 		i++;
 	}
 	if (idEncontrado == -1) {
@@ -1074,16 +976,14 @@ void MoverDirectorio() {
 			if (i == 0) {
 				idEncontrado = 0; //el primero que cuelga de raiz
 			}
-			idEncontrado = ExisteEnLaLista(directorios, vectorPathNuevo[i],
-					idEncontrado);
+			idEncontrado = ExisteEnLaLista(directorios, vectorPathNuevo[i],idEncontrado);
 			i++;
 		}
 		if (idEncontrado == -1) {
 			printf("No existe el path al que desea moverlo \n");
 		} else {
 			idNuevoPadre = idEncontrado;
-			if (ExisteEnLaLista(directorios, nombreDirAMover, idNuevoPadre)
-					== -1) { //ver si el padre no tiene hijos que se llamen igual que el directorio a mover
+			if (ExisteEnLaLista(directorios, nombreDirAMover, idNuevoPadre)	== -1) { //ver si el padre no tiene hijos que se llamen igual que el directorio a mover
 				i = 0;
 				encontrado = 0;
 				while (encontrado == 0 && i < tamanioLista) {
@@ -1154,15 +1054,13 @@ int CopiarArchivoAMDFS() {
 				//Buscar Directorio. Si no existe se muestra mensaje de error y se debe volver al menú para crearlo
 				uint32_t idPadre = BuscarPadre(pathMDFS);
 				if (idPadre == -1) {
-					printf(
-							"El directorio no existe. Se debe crear el directorio desde el menú. \n");
+					printf("El directorio no existe. Se debe crear el directorio desde el menú. \n");
 					exit(-1);
 				}
 				//Buscar Archivo. Si no existe se muestra mensaje de error y se debe volver al menú para crearlo
 				uint32_t posArchivo = BuscarArchivoPorNombre(pathMDFS, idPadre);
 				if (posArchivo == -1) {
-					printf(
-							"El archivo no existe. Se debe crear el archivo desde el menú. \n");
+					printf("El archivo no existe. Se debe crear el archivo desde el menú. \n");
 					exit(-1);
 				}
 				unArchivo = list_get(archivos, posArchivo);
@@ -1231,13 +1129,7 @@ void AgregarNodo() {
 	for (i = 0; i < cantNodos; i++) {
 		nodoAEvaluar = list_get(nodos, i);
 		if (nodoAEvaluar->estado_red == 1 && nodoAEvaluar->estado == 0) {
-			printf(
-					"Nodo ID: %s\n Socket: %d\nEstado: %d\nIP: %s\nPuerto_Origen: %d\nPuerto_Escucha_Nodo: %d\nBloques_Libres: %d\nBloques_Totales: %d",
-					nodoAEvaluar->nodo_id, nodoAEvaluar->socket,
-					nodoAEvaluar->estado, nodoAEvaluar->ip,
-					nodoAEvaluar->puerto, nodoAEvaluar->puerto_escucha_nodo,
-					nodoAEvaluar->bloques_libres,
-					nodoAEvaluar->bloques_totales);
+			printf("Nodo ID: %s\n Socket: %d\nEstado: %d\nIP: %s\nPuerto_Origen: %d\nPuerto_Escucha_Nodo: %d\nBloques_Libres: %d\nBloques_Totales: %d",nodoAEvaluar->nodo_id, nodoAEvaluar->socket,nodoAEvaluar->estado, nodoAEvaluar->ip,nodoAEvaluar->puerto, nodoAEvaluar->puerto_escucha_nodo,nodoAEvaluar->bloques_libres,nodoAEvaluar->bloques_totales);
 			printf("\n");
 		}
 	}
@@ -1251,8 +1143,7 @@ void AgregarNodo() {
 		}
 		i++;
 	}
-	modificar_estado_nodo(nodoAEvaluar->socket, nodoAEvaluar->ip,
-			nodoAEvaluar->puerto, 1, 99); //cambio su estado de la lista a 1 que es activo
+	modificar_estado_nodo(nodoAEvaluar->socket, nodoAEvaluar->ip,nodoAEvaluar->puerto, 1, 99); //cambio su estado de la lista a 1 que es activo
 	printf("Se ha agregado el nodo correctamente\n");
 }
 
@@ -1266,13 +1157,7 @@ void EliminarNodo() {
 	for (i = 0; i < cantNodos; i++) {
 		nodoAEvaluar = list_get(nodos, i);
 		if (nodoAEvaluar->estado_red == 1 && nodoAEvaluar->estado == 1) {
-			printf(
-					"Nodo ID: %s\n Socket: %d\nEstado: %d\nIP: %s\nPuerto_Origen: %d\nPuerto_Escucha_Nodo: %d\nBloques_Libres: %d\nBloques_Totales: %d",
-					nodoAEvaluar->nodo_id, nodoAEvaluar->socket,
-					nodoAEvaluar->estado, nodoAEvaluar->ip,
-					nodoAEvaluar->puerto, nodoAEvaluar->puerto_escucha_nodo,
-					nodoAEvaluar->bloques_libres,
-					nodoAEvaluar->bloques_totales);
+			printf("Nodo ID: %s\n Socket: %d\nEstado: %d\nIP: %s\nPuerto_Origen: %d\nPuerto_Escucha_Nodo: %d\nBloques_Libres: %d\nBloques_Totales: %d",nodoAEvaluar->nodo_id, nodoAEvaluar->socket,nodoAEvaluar->estado, nodoAEvaluar->ip,nodoAEvaluar->puerto, nodoAEvaluar->puerto_escucha_nodo,nodoAEvaluar->bloques_libres,nodoAEvaluar->bloques_totales);
 		}
 	}
 	printf("Ingrese el ID del nodo que desea eliminar\n");
@@ -1285,8 +1170,7 @@ void EliminarNodo() {
 		}
 		i++;
 	}
-	modificar_estado_nodo(nodoAEvaluar->socket, nodoAEvaluar->ip,
-			nodoAEvaluar->puerto, 0, 99); //cambio su estado de la lista a 0 que es inactivo
+	modificar_estado_nodo(nodoAEvaluar->socket, nodoAEvaluar->ip,nodoAEvaluar->puerto, 0, 99); //cambio su estado de la lista a 0 que es inactivo
 	printf("Se ha eliminado el nodo correctamente\n");
 }
 
