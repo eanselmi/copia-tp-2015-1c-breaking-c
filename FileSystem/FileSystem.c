@@ -1086,22 +1086,29 @@ void AgregarNodo(){
 	for (i=0;i<cantNodos;i++){
 		nodoAEvaluar = list_get(nodos,i);
 		if (nodoAEvaluar->estado_red == 1 && nodoAEvaluar->estado == 0){
-			printf ("Nodo ID: %s\n Socket: %d\nEstado: %d\nIP: %s\nPuerto_Origen: %d\nPuerto_Escucha_Nodo: %d\nBloques_Libres: %d\nBloques_Totales: %d", nodoAEvaluar->nodo_id, nodoAEvaluar->socket,nodoAEvaluar->estado,nodoAEvaluar->ip,nodoAEvaluar->puerto,nodoAEvaluar->puerto_escucha_nodo,nodoAEvaluar->bloques_libres,nodoAEvaluar->bloques_totales);
-			printf("\n");
+			printf ("\n\n");
+			printf ("Nodo_ID: %s\nSocket: %d\nIP: %s\nPuerto_Origen: %d\nPuerto_Escucha_Nodo: %d\nBloques_Libres: %d\nBloques_Totales: %d", nodoAEvaluar->nodo_id, nodoAEvaluar->socket,nodoAEvaluar->ip,nodoAEvaluar->puerto,nodoAEvaluar->puerto_escucha_nodo,nodoAEvaluar->bloques_libres,nodoAEvaluar->bloques_totales);
+			printf ("\n");
 		}
 	}
-	printf("Ingrese el ID del nodo que desea agregar\n");
+	printf("Ingrese el ID del nodo que desea agregar:\n");
 	scanf("%s", nodoID);
 	i = 0;
 	while (i < cantNodos && nodoEncontrado == 0){
 		nodoAEvaluar = list_get(nodos,i);
-		if (nodoAEvaluar->nodo_id == nodoID) {
+		if (strcmp(nodoAEvaluar->nodo_id, nodoID)==0 && nodoAEvaluar->estado == 0) {
 			nodoEncontrado = 1;
 		}
 		i++;
 	}
-	modificar_estado_nodo(nodoAEvaluar->socket ,nodoAEvaluar->ip,nodoAEvaluar->puerto,1,99); //cambio su estado de la lista a 1 que es activo
-	printf("Se ha agregado el nodo correctamente\n");
+	if (nodoEncontrado == 1){
+		modificar_estado_nodo(nodoAEvaluar->nodo_id, nodoAEvaluar->socket, nodoAEvaluar->puerto, 1, 99); //cambio su estado de la lista a 1 que es activo, invoco con 99 para solo cambiar estado
+		printf("Se ha agregado el nodo %s correctamente\n",nodoID);
+	}
+	else{
+		printf("El nodo ingresado no se puede agregar\n");
+	}
+
 }
 
 void EliminarNodo(){
@@ -1114,19 +1121,27 @@ void EliminarNodo(){
 	for (i=0;i<cantNodos;i++){
 		nodoAEvaluar = list_get(nodos,i);
 		if (nodoAEvaluar->estado_red == 1 && nodoAEvaluar->estado == 1){
-			printf ("Nodo ID: %s\n Socket: %d\nEstado: %d\nIP: %s\nPuerto_Origen: %d\nPuerto_Escucha_Nodo: %d\nBloques_Libres: %d\nBloques_Totales: %d", nodoAEvaluar->nodo_id, nodoAEvaluar->socket,nodoAEvaluar->estado,nodoAEvaluar->ip,nodoAEvaluar->puerto,nodoAEvaluar->puerto_escucha_nodo,nodoAEvaluar->bloques_libres,nodoAEvaluar->bloques_totales);
+			printf ("\n\n");
+			printf ("Nodo_ID: %s\nSocket: %d\nIP: %s\nPuerto_Origen: %d\nPuerto_Escucha_Nodo: %d\nBloques_Libres: %d\nBloques_Totales: %d", nodoAEvaluar->nodo_id, nodoAEvaluar->socket,nodoAEvaluar->ip,nodoAEvaluar->puerto,nodoAEvaluar->puerto_escucha_nodo,nodoAEvaluar->bloques_libres,nodoAEvaluar->bloques_totales);
+			printf ("\n");
 		}
 	}
-	printf("Ingrese el ID del nodo que desea eliminar\n");
+	printf("Ingrese el ID del nodo que desea eliminar:\n");
 	scanf("%s", nodoID);
 	i = 0;
 	while (i < cantNodos && nodoEncontrado == 0){
 		nodoAEvaluar = list_get(nodos,i);
-		if (nodoAEvaluar->nodo_id == nodoID) {
+		if (strcmp(nodoAEvaluar->nodo_id, nodoID)==0 && nodoAEvaluar->estado == 1) {
 		nodoEncontrado = 1;
 	}
 		i++;
 	}
-	modificar_estado_nodo(nodoAEvaluar->socket ,nodoAEvaluar->ip,nodoAEvaluar->puerto,0,99); //cambio su estado de la lista a 0 que es inactivo
-	printf("Se ha eliminado el nodo correctamente\n");
+	if (nodoEncontrado == 1){
+		modificar_estado_nodo(nodoAEvaluar->nodo_id, nodoAEvaluar->socket, nodoAEvaluar->puerto, 0, 99); //cambio su estado de la lista a 0 que es inactivo, invoco con 99 para solo cambiar estado
+		printf("Se ha eliminado el nodo %s correctamente\n",nodoID);
+	}
+	else{
+		printf("El nodo ingresado no se puede eliminar\n");
+	}
+
 }
