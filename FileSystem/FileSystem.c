@@ -200,6 +200,7 @@ int main(int argc, char *argv[]) {
 	indiceDirectorios[0] = 1; //raiz queda reservado como ocupado
 	directoriosDisponibles = (MAX_DIRECTORIOS - 1);
 
+	listarDirectorios();
 	Menu();
 	log_destroy(logger);
 
@@ -926,6 +927,7 @@ void CrearDirectorio() {
 			}
 		}
 	}
+	listarDirectorios();
 }
 
 static void directorio_destroy(t_dir* self) {
@@ -1309,4 +1311,20 @@ void EliminarNodo() {
 	modificar_estado_nodo(nodoAEvaluar->socket, nodoAEvaluar->ip,
 			nodoAEvaluar->puerto, 0, 99); //cambio su estado de la lista a 0 que es inactivo
 	printf("Se ha eliminado el nodo correctamente\n");
+}
+
+
+void listarDirectorios(){
+	int tam = list_size(directorios);
+	int i;
+	t_dir* dir;
+	if(tam==0){
+		printf("No hay directorios");
+	}
+	for(i=0;i<tam;i++){
+		dir=list_get(directorios,i);
+		printf("\nID directorio:%d\n",dir->id);
+		printf("Nombre directorio:%s\n",dir->nombre);
+		printf("Padre del directorio:%d\n",dir->padre);
+	}
 }
