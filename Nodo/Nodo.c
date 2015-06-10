@@ -333,14 +333,14 @@ void *manejador_de_escuchas(){
 						//Generar un nombre para este script Map
 						char *nombreNuevoMap=string_new(); //será el nombre del nuevo map
 						string_append(&nombreNuevoMap,"mapJob");
-//						char** arrayTiempo=string_split(temporal_get_string_time(),":"); //creo array con hora minutos segundos y milisegundos separados
-//						char *tiempo=string_new(); //string que tendrá la hora
-//						string_append(&tiempo,arrayTiempo[0]);//Agrego horas
-//						string_append(&tiempo,arrayTiempo[1]);//Agrego minutos
-//						string_append(&tiempo,arrayTiempo[2]);//Agrego segundos
-//						string_append(&tiempo,arrayTiempo[3]);//Agrego milisegundos
-//						string_append(&nombreNuevoMap,tiempo); //Concateno la fecha en formato hhmmssmmmm al nombre map
-//						string_append(&nombreNuevoMap,".sh"); //agrego la extensión
+						char** arrayTiempo=string_split(temporal_get_string_time(),":"); //creo array con hora minutos segundos y milisegundos separados
+						char *tiempo=string_new(); //string que tendrá la hora
+						string_append(&tiempo,arrayTiempo[0]);//Agrego horas
+						string_append(&tiempo,arrayTiempo[1]);//Agrego minutos
+						string_append(&tiempo,arrayTiempo[2]);//Agrego segundos
+						string_append(&tiempo,arrayTiempo[3]);//Agrego milisegundos
+						string_append(&nombreNuevoMap,tiempo); //Concateno la fecha en formato hhmmssmmmm al nombre map
+						string_append(&nombreNuevoMap,".sh"); //agrego la extensión
 						char *pathNuevoMap=string_new();//El path completo del nuevo Map
 						string_append(&pathNuevoMap,PATHMAPPERS);
 						string_append(&pathNuevoMap,nombreNuevoMap);
@@ -362,14 +362,15 @@ void *manejador_de_escuchas(){
 
 						//Genero nombre para el resultado temporal (luego a este se debera aplicar sort)
 						char *resultadoTemporal=string_new();
-						string_append(&resultadoTemporal,"/tmp/map.result.tmp");
-//						string_append(&resultadoTemporal,tiempo);
-//						string_append(&resultadoTemporal,".tmp");
+						string_append(&resultadoTemporal,"/tmp/map.result.");
+						string_append(&resultadoTemporal,tiempo);
+						string_append(&resultadoTemporal,".tmp");
 						/*
 						 * Envío por STDIN el "bloque" al script "nombreNuevoMap" , se guarda el resultado
 						 * en "resultado": void ejecutarMapper(char *path,char *bloque,char *resultado);
 						*/
 						ejecutarMapper(nombreNuevoMap,*mensaje,resultadoTemporal);
+
 						ordenarMapper(resultadoTemporal,nomArchTemp);
 					}
 				}
