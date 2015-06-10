@@ -72,7 +72,7 @@ int main(int argc, char**argv){
 		printf ("Conexion con FS cerrada, el proceso fs no esta listo o bien ya existe una instancia de marta conectada\n");
 		exit(-1);
 	}
-	if (nbytes > 0 && strncmp(identificacion,"ok",2)==0)	printf ("Conexion con el FS exitosa\n");
+	if (nbytes > 0 && strncmp(identificacion,"ok",2)==0)	log_info (logger,"Conexion con el FS exitosa");
 
 	jobs=list_create(); //creo la lista de jobs
 
@@ -195,9 +195,10 @@ void *connection_handler_jobs(){
 						if (nbytes == 0) {
 							// Un job o el fs se desconecto, lo identifico
 							if (i==socket_fs){ //se desconecto el FS
-								//haremos algo aca
 								close(i); // ¡Hasta luego!
 								FD_CLR(i, &master); // eliminar del conjunto maestro
+								log_info(logger,"Se desconectó el FileSystem.");
+								exit(1);
 							} else { //se desconecto un job
 								//haremos algo aca tambien
 								close(i); // ¡Hasta luego!

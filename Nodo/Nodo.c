@@ -264,6 +264,8 @@ void *manejador_de_escuchas(){
 					if(nbytes==0){ //se desconectó
 						close(conectorFS);
 						FD_CLR(conectorFS,&master);
+						log_info(logger,"Se desconectó el FileSystem.");
+						exit(1);
 					}
 					else{
 						/* -- el filesystem envío un mensaje a tratar -- */
