@@ -40,6 +40,7 @@ int* socketMapper; //para identificar los que son mappers conectados
 int* socketReducer; //para identificar los que son reducers conectados
 char rutinaMapper[MAPPER_SIZE]; //En este buffer se guardarán las rutinas mapper para luego pasarlas a un archivo local
 char nodo_id[6];
+char bufGetArchivo[BLOCK_SIZE]; //Buffer para la funcion getFileContent
 
 
 int main(int argc , char *argv[]){
@@ -361,7 +362,7 @@ void *manejador_de_escuchas(){
 						 * en "resultado": void ejecutarMapper(char *path,char *bloque,char *resultado);
 						*/
 						ejecutarMapper(nombreNuevoMap,*mensaje,resultadoTemporal);
-
+						//ordenarMapper(resultadoTemporal,nomArchTemp);
 					}
 				}
 
@@ -387,6 +388,48 @@ void *manejador_de_escuchas(){
 		}
 	}
 }
+
+void ordenarMapper(char* nombreMapperTemporal, char* nombreMapperOrdenado){
+	printf("Entro en la función ordenar mapper\n");
+	int outfd[2];
+	int bak,pid,archivo_resultado;
+	bak=0;
+	char *path;
+	pipe(outfd);
+	if((pid=fork())==-1){
+		perror("fork");
+	}
+	else if(pid==0)
+	{
+		archivo_resultado=open(nombreMapperOrdenado,O_RDWR|O_CREAT,S_IRWXU|S_IRWXG); //abro file resultado, si no esta lo crea, asigno permisos
+		fflush(stdout);
+		bak=dup(STDOUT_FILENO);
+		dup2(archivo_resultado,STDOUT_FILENO); //STDOUT de este proceso se grabara en el file resultado
+		close(archivo_resultado);
+		close(STDIN_FILENO);
+		dup2(outfd[0], STDIN_FILENO); //STDIN de este proceso será STDOUT del proceso padre
+		close(outfd[0]); /* innecesarios para el hijo */
+		close(outfd[1]);
+	    char *name[] = {
+	        "/bin/sh",
+			"-c",
+	        "sort",
+			//nombreMapperTemporal,
+	        NULL
+	    };
+	    execvp(name[0], name);
+	}
+	else
+	{
+		close(outfd[0]); /* Estan siendo usados por el hijo */
+		char *file;
+		strcpy(file,"Date;WBAN;DryBulbCelsius;Time\n20130101;03011;M;0000\n20130101;03011;M;0015\n");
+		write(outfd[1],file,strlen(file));/* Escribe en el stdin del hijo el contenido del bloque*/
+		close(outfd[1]);
+		dup2(bak,STDOUT_FILENO);
+	}
+}
+
 
 void ejecutarMapper(char *script,int bloque,char *resultado){
 	int outfd[2];
@@ -497,35 +540,26 @@ char* getBloque(int numBloque){
 }
 
 char* getFileContent(char* nombreFile){
-	char* path;
-	char* fileMapeado;
-	int fileDescriptor;
-	struct stat estadoDelFile; //declaro una estructura que guarda el estado de un archivo
-	path=strdup("");
-	strcpy(path,config_get_string_value(configurador,"DIR_TEMP"));
+	printf("Eligió Copiar un archivo local al MDFS\n");
+	FILE * archivoLocal;
+	char* path = strdup("");
+	strcat(path,config_get_string_value(configurador,"DIR_TEMP"));
 	strcat(path,"/");
 	strcat(path,nombreFile);
-	fileDescriptor = open(path,O_RDWR);
-		/*Chequeo de apertura del file exitosa*/
-			if (fileDescriptor==-1){
-				perror("open");
-				log_error(logger,"Fallo la apertura del file de datos");
-				exit(-1);
-			}
-	if(fstat(fileDescriptor,&estadoDelFile)==-1){//guardo el estado del archivo de datos en la estructura
-			perror("fstat");
-			log_error(logger,"Falló el fstat");
+	int i=0;
+	char car;
+	memset(bufGetArchivo,'\0',BLOCK_SIZE);
+	archivoLocal = fopen(path,"r");
+	fseek(archivoLocal,0,SEEK_SET);
+	while (!feof(archivoLocal)){
+		car = (char) fgetc(archivoLocal);
+		if(car!=EOF){
+			bufGetArchivo[i]=car;
 		}
-	fileMapeado=mmap(0,estadoDelFile.st_size,(PROT_WRITE|PROT_READ|PROT_EXEC),MAP_SHARED,fileDescriptor,0);
-	/*Chequeo de mmap exitoso*/
-		if (fileMapeado==MAP_FAILED){
-			perror("mmap");
-			log_error(logger,"Falló el mmap, no se pudo asignar la direccion de memoria para el archivo solicitado");
-			exit(-1);
-		}
-	close(fileDescriptor); //Cierro el archivo
-	log_info(logger_archivo,"Fue leído el archivo /tmp/%s",nombreFile);
-	return fileMapeado;
+		i++;
+	}
+	fclose(archivoLocal);
+	return bufGetArchivo;
 }
 
 char* mapearFileDeDatos(){

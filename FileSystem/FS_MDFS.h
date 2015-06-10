@@ -3,7 +3,6 @@
 #define MENSAJE_SIZE 4096
 #define MAX_DIRECTORIOS 1024
 
-
 //se creara una lista de archivos, que contendra elementos del tipo "t_archivo"
 typedef struct estructura_filesystem {
 	char* nombre;

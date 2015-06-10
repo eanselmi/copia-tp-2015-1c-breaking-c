@@ -18,7 +18,6 @@
 #include <commons/bitarray.h>
 
 
-
 //Includes para mongo
 #include <bson.h>
 #include <mongoc.h>

@@ -7,10 +7,11 @@
 char* mapearFileDeDatos();
 void setBloque(int bloque,char* datos);
 char* getBloque(int bloque);
-char* getFileContent(char* nombre);
+char* getFileContent(char* nombre); //Devuelve el file sin el EOF
 void* manejador_de_escuchas(); //Hilo que va a manejar las conexiones
 int estaEnListaNodos(int socket);
 int estaEnListaMappers(int socket);
 int estaEnListaReducers(int socket);
 void ejecutarMapper(char *script,int bloque,char *resultado);
+void ordenarMapper(char *nombreMapperTemporal, char* nombreMapperOrdenado);
 
