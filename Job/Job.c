@@ -22,6 +22,7 @@
 //Declaración de variables
 t_config* configurador;
 t_log* logger;
+char bufGetArchivo[MAPPER_SIZE];
 
 int main(void){
 	configurador= config_create("resources/jobConfig.conf"); //se asigna el archivo de configuración especificado en la ruta
@@ -102,7 +103,7 @@ int main(void){
 	punteroMapper->puerto_nodo=datosMapper.puerto_nodo;
 	strcpy(punteroMapper->nombreArchivoTemporal,datosMapper.nombreArchivoTemporal);
 
-	if(pthread_create(&mapperThread,NULL,hilo_mapper,punteroMapper)!=0){
+	if(pthread_create(&mapperThread,NULL,(void*)hilo_mapper,punteroMapper)!=0){
 		perror("pthread_create");
 		log_error(logger,"Fallo la creación del hilo rutina mapper");
 		return 1;
@@ -125,6 +126,7 @@ void* hilo_mapper(t_mapper* mapperStruct){
 	struct sockaddr_in nodo_addr;
 	int nodo_sock;
 	char identificacion[BUF_SIZE];
+	char accion[BUF_SIZE];
 
 
 	if((nodo_sock=socket(AF_INET,SOCK_STREAM,0))==-1){ //si función socket devuelve -1 es error
@@ -151,12 +153,21 @@ void* hilo_mapper(t_mapper* mapperStruct){
 	/*Conexión mapper-nodo establecida*/
 	log_info(logger,"Hilo mapper conectado al Nodo con IP: %s,en el Puerto: %d",mapperStruct->ip_nodo,mapperStruct->puerto_nodo);
 
+	//Envio al Nodo que tendrá que ejecutar una rutina map
+	strcpy(accion,"Ejecuta rutina map");
+	if(send(nodo_sock,accion,sizeof(accion),0)==-1){
+		perror("send");
+		log_error(logger,"Fallo el envío de la accion mapper-nodo");
+	}
+
+	//Envio al nodo el bloque donde deberá ejecutar el map
 	if(send(nodo_sock,&(mapperStruct->bloque),sizeof(int),0)==-1){
 		perror("send");
 		log_error(logger,"Fallo el envio del bloque a mapear hacia el Nodo");
 		exit(-1);
 	}
 
+	//Envio al nodo donde debera guardar la rutina Map
 	if(send(nodo_sock,&(mapperStruct->nombreArchivoTemporal),100,0)==-1){
 		perror("send");
 		log_error(logger,"Fallo el envio del nombre del archivo temporal a guardar el Map");
@@ -175,29 +186,19 @@ void* hilo_mapper(t_mapper* mapperStruct){
 }
 
 char* getFileContent(char* path){
-	char* fileMapeado;
-	int fileDescriptor;
-	struct stat estadoDelFile; //declaro una estructura que guarda el estado de un archivo
-	fileDescriptor = open(path,O_RDWR);
-		/*Chequeo de apertura del file exitosa*/
-			if (fileDescriptor==-1){
-				perror("open");
-				log_error(logger,"Fallo la apertura del file de datos");
-				exit(-1);
-			}
-	if(fstat(fileDescriptor,&estadoDelFile)==-1){//guardo el estado del archivo de datos en la estructura
-			perror("fstat");
-			log_error(logger,"Falló el fstat");
-			exit(-1);
+	FILE * archivoLocal;
+	int i=0;
+	char car;
+	memset(bufGetArchivo,'\0',MAPPER_SIZE);
+	archivoLocal = fopen(path,"r");
+	fseek(archivoLocal,0,SEEK_SET);
+	while (!feof(archivoLocal)){
+		car = (char) fgetc(archivoLocal);
+		if(car!=EOF){
+			bufGetArchivo[i]=car;
 		}
-	fileMapeado=mmap(0,estadoDelFile.st_size,(PROT_WRITE|PROT_READ|PROT_EXEC),MAP_SHARED,fileDescriptor,0);
-	/*Chequeo de mmap exitoso*/
-		if (fileMapeado==MAP_FAILED){
-			perror("mmap");
-			log_error(logger,"Falló el mmap, no se pudo asignar la direccion de memoria para el archivo solicitado");
-			exit(-1);
-		}
-	close(fileDescriptor); //Cierro el archivo
-//	log_info(logger,"Fue leído el archivo /home/utnso/%s",nombreFile);
-	return fileMapeado;
+		i++;
+	}
+	fclose(archivoLocal);
+	return bufGetArchivo;
 }

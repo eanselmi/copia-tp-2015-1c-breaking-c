@@ -38,7 +38,6 @@ t_list* listaReducersConectados; //lista con los reducers conectados
 int* socketNodo; //para identificar los que son nodos conectados
 int* socketMapper; //para identificar los que son mappers conectados
 int* socketReducer; //para identificar los que son reducers conectados
-char rutinaMapper[MAPPER_SIZE]; //En este buffer se guardarán las rutinas mapper para luego pasarlas a un archivo local
 char nodo_id[6];
 char bufGetArchivo[BLOCK_SIZE]; //Buffer para la funcion getFileContent
 
@@ -188,6 +187,13 @@ int main(int argc , char *argv[]){
 
 void *manejador_de_escuchas(){
 	int socketModificado,nbytes,newfd,addrlen;
+	char nomArchTemp[100];
+	memset(nomArchTemp,'\0',100);
+	FILE* scriptMap;
+	int* bloque;
+	bloque=malloc(sizeof(int));
+	char rutinaMapper[MAPPER_SIZE]; //En este buffer se guardarán las rutinas mapper para luego pasarlas a un archivo local
+	memset(rutinaMapper,'\0',MAPPER_SIZE);
 	printf("Nodo en la espera de conexiones/solicitudes del FS\n");
 	while(1) {
 		read_fds = master;
@@ -294,9 +300,6 @@ void *manejador_de_escuchas(){
 				//-- Conexión con hilo mapper --//
 
 				if(estaEnListaMappers(socketModificado)==0){
-					char nomArchTemp[100];
-					memset(nomArchTemp,'\0',100);
-					FILE* scriptMap;
 					if ((nbytes=recv(socketModificado,mensaje,sizeof(mensaje),0))==-1){ //da error
 						perror("recv");
 						log_error(logger,"Falló el receive");
@@ -308,70 +311,77 @@ void *manejador_de_escuchas(){
 					}
 					else{
 						/* -- el mapper envío un mensaje a tratar -- */
+						if(strncmp(mensaje,"Ejecuta rutina map",18)==0){
 
-						/*En el mensaje recibio el bloque a donde aplicar mapper*/
-						printf("Se aplicará la rutina mapper en el bloque %d\n",*mensaje);
+							if(recv(socketModificado,bloque,sizeof(bloque),0)==-1){
+								perror("recv");
+								log_error(logger,"Fallo al recibir el bloque para el map");
+							}
 
-						/*Recibe el nombre del archivo temporal a donde guardar el mapper*/
-						if(recv(socketModificado,nomArchTemp,sizeof(nomArchTemp),0)==-1){
-							perror("recv");
-							log_error(logger,"Fallo al recibir el nombre del archivo temporal donde guardar el Map");
-							exit(-1);
+							/*En el mensaje recibio el bloque a donde aplicar mapper*/
+							printf("Se aplicará la rutina mapper en el bloque %d\n",*bloque);
+
+							/*Recibe el nombre del archivo temporal a donde guardar el mapper*/
+							if(recv(socketModificado,nomArchTemp,sizeof(nomArchTemp),0)==-1){
+								perror("recv");
+								log_error(logger,"Fallo al recibir el nombre del archivo temporal donde guardar el Map");
+								exit(-1);
+							}
+							printf("Se guardará el resultado del mapper en el archivo temporal %s\n",nomArchTemp);
+
+							//Recibirá la rutina mapper
+
+							if(recv(socketModificado,rutinaMapper,MAPPER_SIZE,0)==-1){
+								perror("recv");
+								log_error(logger,"Fallo al recibir la rutina mapper");
+								exit(1);
+							}
+							printf("se recibió la rutina mapper:%s",rutinaMapper);
+
+//							//Creo el archivo que guarda la rutina de map enviada por el Job
+//							//Generar un nombre para este script Map
+//							char *nombreNuevoMap=string_new(); //será el nombre del nuevo map
+//							string_append(&nombreNuevoMap,"mapJob");
+//							char** arrayTiempo=string_split(temporal_get_string_time(),":"); //creo array con hora minutos segundos y milisegundos separados
+//							char *tiempo=string_new(); //string que tendrá la hora
+//							string_append(&tiempo,arrayTiempo[0]);//Agrego horas
+//							string_append(&tiempo,arrayTiempo[1]);//Agrego minutos
+//							string_append(&tiempo,arrayTiempo[2]);//Agrego segundos
+//							string_append(&tiempo,arrayTiempo[3]);//Agrego milisegundos
+//							string_append(&nombreNuevoMap,tiempo); //Concateno la fecha en formato hhmmssmmmm al nombre map
+//							string_append(&nombreNuevoMap,".sh"); //agrego la extensión
+//							char *pathNuevoMap=string_new();//El path completo del nuevo Map
+//							string_append(&pathNuevoMap,PATHMAPPERS);
+//							string_append(&pathNuevoMap,nombreNuevoMap);
+//
+//							if((scriptMap=fopen(pathNuevoMap,"w+"))==NULL){ //path donde guardara el script
+//								perror("fopen");
+//								log_error(logger,"Fallo al crear el script del mapper");
+//								exit(1);
+//							}
+//							fputs(rutinaMapper,scriptMap);
+//
+//							// agrego permisos de ejecucion
+//							if(chmod(pathNuevoMap,S_IRWXU|S_IRWXG|S_IROTH|S_IXOTH)==-1){
+//								perror("chmod");
+//								log_error(logger,"Fallo el cambio de permisos para el script de map");
+//								exit(1);
+//							}
+//							fclose(scriptMap); //cierro el file
+//
+//							//Genero nombre para el resultado temporal (luego a este se debera aplicar sort)
+//							char *resultadoTemporal=string_new();
+//							string_append(&resultadoTemporal,"/tmp/map.result.");
+//							string_append(&resultadoTemporal,tiempo);
+//							string_append(&resultadoTemporal,".tmp");
+//							/*
+//							 * Envío por STDIN el "bloque" al script "nombreNuevoMap" , se guarda el resultado
+//							 * en "resultado": void ejecutarMapper(char *path,char *bloque,char *resultado);
+//							*/
+//							ejecutarMapper(nombreNuevoMap,*mensaje,resultadoTemporal);
+//
+//							ordenarMapper(resultadoTemporal,nomArchTemp);
 						}
-						printf("Se guardará el resultado del mapper en el archivo temporal %s\n",nomArchTemp);
-
-						//Recibirá la rutina mapper
-
-						if(recv(socketModificado,rutinaMapper,MAPPER_SIZE,0)==-1){
-							perror("recv");
-							log_error(logger,"Fallo al recibir la rutina mapper");
-							exit(1);
-						}
-						printf("se recibió la rutina mapper:%s",rutinaMapper);
-
-						//Creo el archivo que guarda la rutina de map enviada por el Job
-						//Generar un nombre para este script Map
-						char *nombreNuevoMap=string_new(); //será el nombre del nuevo map
-						string_append(&nombreNuevoMap,"mapJob");
-						char** arrayTiempo=string_split(temporal_get_string_time(),":"); //creo array con hora minutos segundos y milisegundos separados
-						char *tiempo=string_new(); //string que tendrá la hora
-						string_append(&tiempo,arrayTiempo[0]);//Agrego horas
-						string_append(&tiempo,arrayTiempo[1]);//Agrego minutos
-						string_append(&tiempo,arrayTiempo[2]);//Agrego segundos
-						string_append(&tiempo,arrayTiempo[3]);//Agrego milisegundos
-						string_append(&nombreNuevoMap,tiempo); //Concateno la fecha en formato hhmmssmmmm al nombre map
-						string_append(&nombreNuevoMap,".sh"); //agrego la extensión
-						char *pathNuevoMap=string_new();//El path completo del nuevo Map
-						string_append(&pathNuevoMap,PATHMAPPERS);
-						string_append(&pathNuevoMap,nombreNuevoMap);
-
-						if((scriptMap=fopen(pathNuevoMap,"w+"))==NULL){ //path donde guardara el script
-							perror("fopen");
-							log_error(logger,"Fallo al crear el script del mapper");
-							exit(1);
-						}
-						fputs(rutinaMapper,scriptMap);
-
-						// agrego permisos de ejecucion
-						if(chmod(pathNuevoMap,S_IRWXU|S_IRWXG|S_IROTH|S_IXOTH)==-1){
-							perror("chmod");
-							log_error(logger,"Fallo el cambio de permisos para el script de map");
-							exit(1);
-						}
-						fclose(scriptMap); //cierro el file
-
-						//Genero nombre para el resultado temporal (luego a este se debera aplicar sort)
-						char *resultadoTemporal=string_new();
-						string_append(&resultadoTemporal,"/tmp/map.result.");
-						string_append(&resultadoTemporal,tiempo);
-						string_append(&resultadoTemporal,".tmp");
-						/*
-						 * Envío por STDIN el "bloque" al script "nombreNuevoMap" , se guarda el resultado
-						 * en "resultado": void ejecutarMapper(char *path,char *bloque,char *resultado);
-						*/
-						ejecutarMapper(nombreNuevoMap,*mensaje,resultadoTemporal);
-
-						ordenarMapper(resultadoTemporal,nomArchTemp);
 					}
 				}
 
@@ -549,7 +559,6 @@ char* getBloque(int numBloque){
 }
 
 char* getFileContent(char* nombreFile){
-	printf("Eligió Copiar un archivo local al MDFS\n");
 	FILE * archivoLocal;
 	char* path = strdup("");
 	strcat(path,config_get_string_value(configurador,"DIR_TEMP"));
