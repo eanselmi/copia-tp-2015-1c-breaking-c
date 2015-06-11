@@ -298,7 +298,7 @@ static t_nodo *agregar_nodo_a_lista(char nodo_id[6], int socket, int est, int es
 	nodo_temporal->bloques_bitarray = malloc(i / 8);
 	nodo_temporal->bloques_del_nodo = bitarray_create(nodo_temporal->bloques_bitarray, i / 8);
 	for (i = 0; i < nodo_temporal->bloques_totales; i++)
-		bitarray_set_bit(nodo_temporal->bloques_del_nodo, i);
+		bitarray_clean_bit(nodo_temporal->bloques_del_nodo, i);
 	char *tmp_socket = malloc(sizeof(int));
 	char *tmp_estado = malloc(sizeof(int));
 	char *tmp_puerto = malloc(sizeof(int));
