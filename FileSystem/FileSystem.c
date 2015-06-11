@@ -52,7 +52,6 @@ int directoriosDisponibles; //reservo raiz
 int j; //variable para recorrer el vector de indices
 int *puerto_escucha_nodo;
 char nodo_id[6];
-char id_nodo[6];
 t_nodo *nodosMasLibres[3];
 char bufBloque[BLOCK_SIZE];
 //Variables para la persistencia con mongo
@@ -543,8 +542,8 @@ void *connection_handler_escucha(void) {
 								char *id_temporal;
 								id_temporal = buscar_nodo_id(inet_ntoa(remote_client.sin_addr),remote_client.sin_port);
 								if (id_temporal != NULL) {
-									strcpy(id_nodo, id_temporal);
-									modificar_estado_nodo(id_nodo, i,remote_client.sin_port, 0, 0);
+									strcpy(nodo_id, id_temporal);
+									modificar_estado_nodo(nodo_id, i,remote_client.sin_port, 0, 0);
 									printf("Se desconecto el nodo %s, %d\n",inet_ntoa(remote_client.sin_addr),remote_client.sin_port);
 									close(i); // ¡Hasta luego!
 									FD_CLR(i, &master); // eliminar del conjunto maestro
@@ -1016,6 +1015,8 @@ int CopiarArchivoAMDFS(){
 	pathMDFS = string_new();
 	int cantBytes=0;
 	int pos=0;
+	int k=0;
+	int n=0;
 	char car;
     memset(bufBloque,'\0',BLOCK_SIZE); //inicializo el buffer
 	int j;
@@ -1042,29 +1043,32 @@ int CopiarArchivoAMDFS(){
      Menu();
     }
     //Se debe crear un nuevo archivo con el nombre ingresado, cuyo padre sea "idPadre"
-    while (!feof(archivoLocal)){
-		car = fgetc (archivoLocal);
+    while ((car = fgetc(archivoLocal)) != EOF){
 		cantBytes++;
-		strcat(bufBloque,car); //CAR NO ES UNA CADENA, NO PODES APLICAR STRCAT
-		if(car == '\n'){  //SON TIPOS DE DATOS DIFERENTES
+		k++;
+		bufBloque[cantBytes-1]=car;
+		if(car == '\n'){
 			pos = cantBytes -1;
+			n=k;
 		}
-		if(bufBloque == BLOCK_SIZE){ //BUF ES UN VECTOR, NO PODES PREGUNTAR CON ==
-			if(car == '\n'){ //Caso Feliz  ---------- SON TIPOS DE DATOS DIFERENTES
+		if(strlen(bufBloque) == BLOCK_SIZE){
+			if(car == '\n'){ //Caso Feliz
 
 			    //Ordenar los bloques del archivo según el espacio disponible
 			    //Copiar el contenido del Buffer en los bloques mas vacios por triplicado
-			    //Vaciar el Buffer
-			    // pos = 0;
+			    pos = 0; // pos = 0;
+				cantBytes=0;
+				memset(bufBloque,'\0',BLOCK_SIZE); //Vaciar el Buffer
 			}else{ //Caso en que el bloque no termina en "\n"
 				//fseek(pos,archivo); //Retroceder hasta el "\n" anterior
-				for(j=pos+1;j<BLOCK_SIZE;j++){
-					strcat(bufBloque[j],"\0"); //Completar el buffer con "\0"   //CAR NO ES UNA CADENA, NO PODES APLICAR STRCAT
-				}
+				for(j=pos+1;j<BLOCK_SIZE;j++) bufBloque[j]='\0';
 				//Ordenar los bloques del archivo según el espacio disponible
 				//Copiar el contenido del Buffer en los bloques mas vacios por triplicado
-				//Vaciar el Buffer
-				//pos = 0;
+				pos = 0; //pos = 0;
+				cantBytes=0;
+				fseek(archivoLocal,n,SEEK_SET);
+				k=n;
+				memset(bufBloque,'\0',BLOCK_SIZE); //Vaciar el Buffer
 			}
 		}
 	}
