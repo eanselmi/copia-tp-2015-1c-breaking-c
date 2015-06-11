@@ -395,6 +395,9 @@ char *obtener_md5(char *bloque) {
 void listar_nodos_conectados(t_list *nodos) {
 	int i, j, cantidad_nodos;
 	t_nodo *elemento;
+
+	obtenerNodosMasLibres();
+
 	cantidad_nodos = list_size(nodos);
 	for (i = 0; i < cantidad_nodos; i++) {
 		elemento = list_get(nodos, i);
@@ -1054,16 +1057,15 @@ int CopiarArchivoAMDFS(){
 		if(strlen(bufBloque) == BLOCK_SIZE){
 			if(car == '\n'){ //Caso Feliz
 
-			    //Ordenar los bloques del archivo según el espacio disponible
-			    //Copiar el contenido del Buffer en los bloques mas vacios por triplicado
+				obtenerNodosMasLibres();
+			    //Copiar el contenido del Buffer en los nodos mas vacios por triplicado
 			    pos = 0; // pos = 0;
 				cantBytes=0;
 				memset(bufBloque,'\0',BLOCK_SIZE); //Vaciar el Buffer
 			}else{ //Caso en que el bloque no termina en "\n"
-				//fseek(pos,archivo); //Retroceder hasta el "\n" anterior
 				for(j=pos+1;j<BLOCK_SIZE;j++) bufBloque[j]='\0';
-				//Ordenar los bloques del archivo según el espacio disponible
-				//Copiar el contenido del Buffer en los bloques mas vacios por triplicado
+				obtenerNodosMasLibres();
+				//Copiar el contenido del Buffer en los nodos mas vacios por triplicado
 				pos = 0; //pos = 0;
 				cantBytes=0;
 				fseek(archivoLocal,n,SEEK_SET);
@@ -1087,13 +1089,12 @@ void obtenerNodosMasLibres() {
 	list_sort(nodos, (void*) nodos_mas_libres);
 	for (i = 0; i < 3; i++) {
 		nodoAEvaluar = list_get(nodos, i);
-		if (nodoAEvaluar->estado_red == 1 && nodoAEvaluar->estado == 1
-				&& nodoAEvaluar->bloques_libres > 0) {
+		if (nodoAEvaluar->estado_red == 1 && nodoAEvaluar->estado == 1 && nodoAEvaluar->bloques_libres > 0) {
 			nodosMasLibres[i] = nodoAEvaluar;
 			j++;
 		}
 	}
-	if (j <= 3) {
+	if (j < 3) {
 		printf("No hay 3 nodos disponibles\n");
 		exit(-1);
 	}
