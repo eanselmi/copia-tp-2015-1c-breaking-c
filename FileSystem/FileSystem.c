@@ -319,25 +319,26 @@ static t_nodo *agregar_nodo_a_lista(char nodo_id[6], int socket, int est, int es
 	return nodo_temporal;
 }
 
-int validar_nodo_nuevo(char nodo_id[6]) {
-	int i;
+
+int validar_nodo_nuevo (char nodo_id[6],char *ip){
+	/*int i;
 	t_nodo *tmp;
-	for (i = 0; i < list_size(nodos); i++) {
-		tmp = list_get(nodos, i);
-		if (strcmp(tmp->nodo_id, nodo_id) == 0)
-			return 1;
-	}
+	for (i=0;i<list_size(nodos);i++){
+		tmp = list_get(nodos,i);
+		if ((strcmp(tmp->nodo_id,nodo_id)==0) || (strcmp(tmp->ip,ip)==0))	return 1;
+
+	}*/
 	return 0;
 }
-int validar_nodo_reconectado(char nodo_id[6]) {
-	int i;
+int validar_nodo_reconectado (char nodo_id[6],char *ip){
+	/*int i;
 	t_nodo *tmp;
-	for (i = 0; i < list_size(nodos); i++) {
-		tmp = list_get(nodos, i);
-		if (strcmp(tmp->nodo_id, nodo_id) == 0)
-			return 0;
+	for (i=0;i<list_size(nodos);i++){
+		tmp = list_get(nodos,i);
+		if ((strcmp(tmp->nodo_id,nodo_id)==0) && (strcmp(tmp->ip,ip)==0))	return 0;
 	}
-	return 1;
+
+	return 1;*/return 0;
 }
 char *buscar_nodo_id(char *ip, int port) {
 	int i;
