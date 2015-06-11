@@ -79,3 +79,7 @@ long ExisteEnLaLista(t_list* listaDirectorios, char* nombreDirectorioABuscar, ui
 int BuscarMenorIndiceLibre (char indiceDirectorios[]);
 static void directorio_destroy(t_dir* self);
 static void archivo_destroy(t_archivo* self);
+int obtener_socket_de_nodo_con_id(char*id);
+void verBloque();
+void enviarNumeroDeBloqueANodo(int socket_nodo, int bloque);
+char *recibirBloque(int socket_nodo);

@@ -1209,3 +1209,69 @@ void EliminarNodo(){
 		printf("El nodo ingresado no se puede eliminar\n");
 	}
 }
+
+int obtener_socket_de_nodo_con_id(char *id) {
+	int i, cantidad_nodos;
+	t_nodo *elemento;
+	cantidad_nodos = list_size(nodos);
+	for (i = 0; i <= cantidad_nodos; i++) {
+		elemento = list_get(nodos, i);
+		if (strcmp(elemento->nodo_id, id) == 0 && elemento->estado == 1
+				&& elemento->estado_red == 1)
+			return elemento->socket;
+	}
+	return -1;
+}
+
+void verBloque() {
+	FILE* archivoParaVerPath;
+	char * bloqueParaVer;
+	int nroBloque;
+	bloqueParaVer = malloc(BLOCK_SIZE);
+	printf("Ingrese id de Nodo ");
+	scanf("%s", nodo_id);
+	printf("numero de Bloque que desea ver");
+	scanf("%d", nroBloque);
+	enviarNumeroDeBloqueANodo(obtener_socket_de_nodo_con_id(nodo_id), nroBloque);
+	bloqueParaVer = recibirBloque(obtener_socket_de_nodo_con_id(nodo_id));
+	archivoParaVerPath = fopen("./archBloqueParaVer.txt", "w");
+	fprintf(archivoParaVerPath, "%s", bloqueParaVer);
+	printf("Se muestra path del archivo: ./archBloqueParaVer.txt");
+
+}
+
+void enviarNumeroDeBloqueANodo( int socket_nodo, int bloque) {
+	strcpy(identificacion, "obtener bloque");
+	if (send(socket_nodo, identificacion, sizeof(identificacion), 0) == -1) {
+		perror("send");
+		log_error(logger, "FALLO el envio del aviso de obtener bloque ");
+		exit(-1);
+	}
+	if (send(socket_nodo, &bloque, sizeof(int), 0) == -1) {
+		perror("send");
+		log_error(logger, "FALLO el envio del numero de bloque");
+		exit(-1);
+
+	}
+}
+
+char *recibirBloque( socket_nodo) {
+	char* bloqueAObtener;
+	if ((read_size = recv(socket_nodo, identificacion, sizeof(identificacion),
+			0)) <= 0) {
+		perror("recv");
+		log_error(logger, "FALLO el Recv");
+		exit(-1);
+	}
+	if (strncmp(identificacion, "obtener bloque", 14) == 0) {
+		bloqueAObtener = malloc(sizeof(BLOCK_SIZE));
+		if (recv(socket_nodo, bloqueAObtener, sizeof(bloqueAObtener), 0) == -1) {
+			perror("recv");
+			log_error(logger, "FALLO el Recv");
+			exit(-1);
+		}
+	}
+
+	return bloqueAObtener;
+}
+
