@@ -571,7 +571,7 @@ void *connection_handler_escucha(void) {
 uint32_t BuscarPadre(char* path) {
 	t_dir* dir;
 	int directorioPadre = 0,tamanio; //seteo a raíz
-	if (( tamanio = list_size(directorios))==0 | string_is_empty(path) | strncmp(path,"/",1)==0){ //No hay directorios
+	if (( tamanio = list_size(directorios))==0 || string_is_empty(path) || strncmp(path,"/",1)==0){ //No hay directorios
 		//printf("No se encontró el directorio\n");
 		directorioPadre = -1;
 		return directorioPadre;
@@ -1233,7 +1233,7 @@ void VerBloque() {
 	printf("Ingrese id de Nodo ");
 	scanf("%s", nodo_id);
 	printf("numero de Bloque que desea ver");
-	scanf("%d", nroBloque);
+	scanf("%d", &nroBloque);
 	enviarNumeroDeBloqueANodo(obtener_socket_de_nodo_con_id(nodo_id), nroBloque);
 	bloqueParaVer = recibirBloque(obtener_socket_de_nodo_con_id(nodo_id));
 	archivoParaVerPath = fopen("./archBloqueParaVer.txt", "w");
