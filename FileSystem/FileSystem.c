@@ -248,11 +248,11 @@ int Menu(void) {
 		case 11:
 			MD5DeArchivo();	break;
 		case 12:
-			VerBloques(); break;
+			VerBloque(); break;
 		case 13:
-			BorrarBloques(); break;
+			BorrarBloque(); break;
 		case 14:
-			CopiarBloques(); break;
+			CopiarBloque(); break;
 		case 15:
 			AgregarNodo(); break;
 		case 16:
@@ -1101,16 +1101,41 @@ void MD5DeArchivo() {
 	printf("Eligió Solicitar el MD5 de un archivo en MDFS\n");
 }
 
-void VerBloques() {
-	printf("Eligió Ver los bloques que componen un archivo\n");
+void VerBloque() {
+	printf("Eligió Ver un bloque que compone un archivo\n");
 }
 
-void BorrarBloques() {
-	printf("Eligió Borrar los bloques que componen un archivo\n");
+void BorrarBloque() {
+	//printf("Eligió Borrar un bloque que compone un archivo\n");
+	int i, cantNodos, bloque, nodoEncontrado;
+	nodoEncontrado = 0;
+	t_nodo* nodoBuscado;
+	cantNodos = list_size(nodos);
+	char* nodoId = malloc(1);
+	printf("Ingrese el ID del nodo del que desea borrar un bloque:\n");
+	scanf("%s", nodoId);
+	printf("Ingrese el número de bloque que desea borrar:\n");
+	scanf("%d", bloque);
+	i = 0;
+	while (i < cantNodos && nodoEncontrado == 0) {
+		nodoBuscado = list_get(nodos, i);
+		if (strcmp(nodoBuscado->nodo_id, nodoId)==0) {
+			nodoEncontrado = 1;
+		}
+		i++;
+	}
+	if (nodoEncontrado == 1){
+		nodoBuscado->bloques_libres++;
+		bitarray_clean_bit(nodoBuscado->bloques_del_nodo, bloque);
+		printf("Se ha borrado el bloque correctamente\n");
+	}
+	else{
+		printf("No se puede eliminar el bloque\n");
+		}
 }
 
-void CopiarBloques() {
-	printf("Eligió Copiar los bloques que componen un archivo\n");
+void CopiarBloque() {
+	printf("Eligió Copiar un bloque de un archivo\n");
 }
 
 void AgregarNodo(){
@@ -1145,7 +1170,6 @@ void AgregarNodo(){
 	else{
 		printf("El nodo ingresado no se puede agregar\n");
 	}
-
 }
 
 void EliminarNodo(){
@@ -1180,5 +1204,4 @@ void EliminarNodo(){
 	else{
 		printf("El nodo ingresado no se puede eliminar\n");
 	}
-
 }
