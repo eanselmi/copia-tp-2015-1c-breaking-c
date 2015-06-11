@@ -1104,9 +1104,6 @@ void MD5DeArchivo() {
 	printf("Eligió Solicitar el MD5 de un archivo en MDFS\n");
 }
 
-void VerBloque() {
-	printf("Eligió Ver un bloque que compone un archivo\n");
-}
 
 void BorrarBloque() {
 	//printf("Eligió Borrar un bloque que compone un archivo\n");
@@ -1223,7 +1220,7 @@ int obtener_socket_de_nodo_con_id(char *id) {
 	return -1;
 }
 
-void verBloque() {
+void VerBloque() {
 	FILE* archivoParaVerPath;
 	char * bloqueParaVer;
 	int nroBloque;

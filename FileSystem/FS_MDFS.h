@@ -67,7 +67,7 @@ void MoverDirectorio();				//DESARROLLADA, falta persistencia
 int CopiarArchivoAMDFS();			//Pame TODAVIA NO DESARROLLADA
 void CopiarArchivoDelMDFS();		//Pame TODAVIA NO DESARROLLADA
 void MD5DeArchivo();				//Pame TODAVIA NO DESARROLLADA
-void VerBloque();					//TODAVIA NO DESARROLLADA
+void VerBloque();					//DESARROLLADA
 void BorrarBloque();				//DESARROLLADA
 void CopiarBloque();				//TODAVIA NO DESARROLLADA
 void AgregarNodo();					//DESARROLLADA
@@ -80,6 +80,5 @@ int BuscarMenorIndiceLibre (char indiceDirectorios[]);
 static void directorio_destroy(t_dir* self);
 static void archivo_destroy(t_archivo* self);
 int obtener_socket_de_nodo_con_id(char*id);
-void verBloque();
 void enviarNumeroDeBloqueANodo(int socket_nodo, int bloque);
-char *recibirBloque(int socket_nodo);
+char *recibirBloque(int socket_nodo);//recibe un bloque de un nodo
