@@ -369,6 +369,7 @@ void *manejador_de_escuchas(){
 							printf("Nombre del nuevo map:%s\n",nombreNuevoMap);
 							printf("Path completo del nuevo map:%s\n",pathNuevoMap);
 							printf("Nombre del map temporal(antes del sort):%s\n",resultadoTemporal);
+							printf("Nombre del map ordenado(luego del sort):%s\n",nomArchTemp);
 
 							if((scriptMap=fopen(pathNuevoMap,"w+"))==NULL){ //path donde guardara el script
 								perror("fopen");
@@ -390,8 +391,7 @@ void *manejador_de_escuchas(){
 							 * en "resultado": void ejecutarMapper(char *path,char *bloque,char *resultado);
 							*/
 							ejecutarMapper(nombreNuevoMap,*bloque,resultadoTemporal);
-
-//							ordenarMapper(resultadoTemporal,nomArchTemp);
+							ordenarMapper(resultadoTemporal,nomArchTemp);
 						}
 					}
 				}
@@ -419,11 +419,16 @@ void *manejador_de_escuchas(){
 	}
 }
 
-void ordenarMapper(char* nombreMapperTemporal, char* nombreMapperOrdenado){
-	printf("Entro en la función ordenar mapper\n");
+void ordenarMapper(char* pathMapperTemporal, char* nombreMapperOrdenado){
 	int outfd[2];
 	int bak,pid,archivo_resultado;
 	bak=0;
+	char** pathMapperSeparado;
+	char* nombreMapperTemporal;
+	char* contenidoDelMapper;
+	nombreMapperTemporal=string_new();
+	pathMapperSeparado=string_split(pathMapperTemporal,"/");
+	string_append(&nombreMapperTemporal,pathMapperSeparado[1]);
 	pipe(outfd);
 	if((pid=fork())==-1){
 		perror("fork");
@@ -452,7 +457,9 @@ void ordenarMapper(char* nombreMapperTemporal, char* nombreMapperOrdenado){
 	{
 		close(outfd[0]); /* Estan siendo usados por el hijo */
 		//Se debe escribir el contenido de la rutina Map
-		write(outfd[1],"Date;WBAN;DryBulbCelsius;Time\n20130101;03011;M;0000\n20130101;03011;M;0015\n",74);/* Escribe en el stdin del hijo el contenido del bloque*/
+//		write(outfd[1],"Date;WBAN;DryBulbCelsius;Time\n20130101;03011;M;0000\n20130101;03011;M;0015\n",74);/* Escribe en el stdin del hijo el contenido del bloque*/
+		contenidoDelMapper=getFileContent(nombreMapperTemporal);
+		write(outfd[1],contenidoDelMapper,strlen(contenidoDelMapper));
 		close(outfd[1]);
 		dup2(bak,STDOUT_FILENO);
 	}
@@ -639,7 +646,10 @@ char* crearBloqueFalso(){
 	j=0;
 	char* bloqueRetorno;
 	bloqueRetorno=malloc(BLOCK_SIZE);
-	for(j=0;j<524288;j++){ // Mete 524288 veces 40 caracteres , 40 B --> 40*524288 = 20971520 = 20MB
+	for(j=0;j<262144;j++){ // Mete 262144 veces 80 caracteres , 80 B --> 80*262144 = 20971520 = 20MB
+		//metera lineas separadas de :
+		//Man,Hola,Prueba,H,H,H,H,H,H,H,H,H,Map,H\n
+		//Van,Esta,Antess,H,H,H,H,H,H,H,H,H,Sor,H\n
 		bufFalso[posi]='M';posi++;
 		bufFalso[posi]='a';posi++;
 		bufFalso[posi]='n';posi++;
@@ -680,47 +690,88 @@ char* crearBloqueFalso(){
 		bufFalso[posi]=',';posi++;
 		bufFalso[posi]='H';posi++;
 		bufFalso[posi]='\n';posi++;
+		bufFalso[posi]='V';posi++;
+		bufFalso[posi]='a';posi++;
+		bufFalso[posi]='n';posi++;
+		bufFalso[posi]=',';posi++;
+		bufFalso[posi]='E';posi++;
+		bufFalso[posi]='s';posi++;
+		bufFalso[posi]='t';posi++;
+		bufFalso[posi]='a';posi++;
+		bufFalso[posi]=',';posi++;
+		bufFalso[posi]='A';posi++;
+		bufFalso[posi]='n';posi++;
+		bufFalso[posi]='t';posi++;
+		bufFalso[posi]='e';posi++;
+		bufFalso[posi]='s';posi++;
+		bufFalso[posi]='s';posi++;
+		bufFalso[posi]=',';posi++;
+		bufFalso[posi]='H';posi++;
+		bufFalso[posi]=',';posi++;
+		bufFalso[posi]='H';posi++;
+		bufFalso[posi]=',';posi++;
+		bufFalso[posi]='H';posi++;
+		bufFalso[posi]=',';posi++;
+		bufFalso[posi]='H';posi++;
+		bufFalso[posi]=',';posi++;
+		bufFalso[posi]='H';posi++;
+		bufFalso[posi]=',';posi++;
+		bufFalso[posi]='H';posi++;
+		bufFalso[posi]=',';posi++;
+		bufFalso[posi]='H';posi++;
+		bufFalso[posi]=',';posi++;
+		bufFalso[posi]='H';posi++;
+		bufFalso[posi]=',';posi++;
+		bufFalso[posi]='H';posi++;
+		bufFalso[posi]=',';posi++;
+		bufFalso[posi]='S';posi++;
+		bufFalso[posi]='o';posi++;
+		bufFalso[posi]='r';posi++;
+		bufFalso[posi]=',';posi++;
+		bufFalso[posi]='H';posi++;
+		bufFalso[posi]='\n';posi++;
 	}
-			bufFalso[20971480]='\0';posi++;
-			bufFalso[20971481]='\0';posi++;
-			bufFalso[20971482]='\0';posi++;
-			bufFalso[20971483]='\0';posi++;
-			bufFalso[20971484]='\0';posi++;
-			bufFalso[20971485]='\0';posi++;
-			bufFalso[20971486]='\0';posi++;
-			bufFalso[20971487]='\0';posi++;
-			bufFalso[20971488]='\0';posi++;
-			bufFalso[20971489]='\0';posi++;
-			bufFalso[20971490]='\0';posi++;
-			bufFalso[20971491]='\0';posi++;
-			bufFalso[20971492]='\0';posi++;
-			bufFalso[20971493]='\0';posi++;
-			bufFalso[20971494]='\0';posi++;
-			bufFalso[20971495]='\0';posi++;
-			bufFalso[20971496]='\0';posi++;
-			bufFalso[20971497]='\0';posi++;
-			bufFalso[20971498]='\0';posi++;
-			bufFalso[20971499]='\0';posi++;
-			bufFalso[20971500]='\0';posi++;
-			bufFalso[20971501]='\0';posi++;
-			bufFalso[20971502]='\0';posi++;
-			bufFalso[20971503]='\0';posi++;
-			bufFalso[20971504]='\0';posi++;
-			bufFalso[20971505]='\0';posi++;
-			bufFalso[20971506]='\0';posi++;
-			bufFalso[20971507]='\0';posi++;
-			bufFalso[20971508]='\0';posi++;
-			bufFalso[20971509]='\0';posi++;
-			bufFalso[20971510]='\0';posi++;
-			bufFalso[20971511]='\0';posi++;
-			bufFalso[20971512]='\0';posi++;
-			bufFalso[20971513]='\0';posi++;
-			bufFalso[20971514]='\0';posi++;
-			bufFalso[20971515]='\0';posi++;
-			bufFalso[20971516]='\0';posi++;
-			bufFalso[20971517]='\0';posi++;
-			bufFalso[20971518]='\0';posi++;
-			bufFalso[20971519]='\0';posi++;
+	//pongo los ultimos 40 bytes con \0 (saco la ultima linea)
+	bufFalso[20971480]='\0';posi++;
+	bufFalso[20971481]='\0';posi++;
+	bufFalso[20971482]='\0';posi++;
+	bufFalso[20971483]='\0';posi++;
+	bufFalso[20971484]='\0';posi++;
+	bufFalso[20971485]='\0';posi++;
+	bufFalso[20971486]='\0';posi++;
+	bufFalso[20971487]='\0';posi++;
+	bufFalso[20971488]='\0';posi++;
+	bufFalso[20971489]='\0';posi++;
+	bufFalso[20971490]='\0';posi++;
+	bufFalso[20971491]='\0';posi++;
+	bufFalso[20971492]='\0';posi++;
+	bufFalso[20971493]='\0';posi++;
+	bufFalso[20971494]='\0';posi++;
+	bufFalso[20971495]='\0';posi++;
+	bufFalso[20971496]='\0';posi++;
+	bufFalso[20971497]='\0';posi++;
+	bufFalso[20971498]='\0';posi++;
+	bufFalso[20971499]='\0';posi++;
+	bufFalso[20971500]='\0';posi++;
+	bufFalso[20971501]='\0';posi++;
+	bufFalso[20971502]='\0';posi++;
+	bufFalso[20971503]='\0';posi++;
+	bufFalso[20971504]='\0';posi++;
+	bufFalso[20971505]='\0';posi++;
+	bufFalso[20971506]='\0';posi++;
+	bufFalso[20971507]='\0';posi++;
+	bufFalso[20971508]='\0';posi++;
+	bufFalso[20971509]='\0';posi++;
+	bufFalso[20971510]='\0';posi++;
+	bufFalso[20971511]='\0';posi++;
+	bufFalso[20971512]='\0';posi++;
+	bufFalso[20971513]='\0';posi++;
+	bufFalso[20971514]='\0';posi++;
+	bufFalso[20971515]='\0';posi++;
+	bufFalso[20971516]='\0';posi++;
+	bufFalso[20971517]='\0';posi++;
+	bufFalso[20971518]='\0';posi++;
+	bufFalso[20971519]='\0';posi++;
 	strcpy(bloqueRetorno,bufFalso);
-return bloqueRetorno;
+	return bloqueRetorno;
 }
