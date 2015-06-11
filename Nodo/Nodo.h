@@ -15,4 +15,26 @@ int estaEnListaMappers(int socket);
 int estaEnListaReducers(int socket);
 void ejecutarMapper(char *script,int bloque,char *resultado);
 void ordenarMapper(char *nombreMapperTemporal, char* nombreMapperOrdenado);
+char* crearBloqueFalso(); //Solo para uso interno, para probar las funciones mientras no esta implementado recibir el bloque desde el fs
 
+//Para probar crearBloqueFalso y grabar en un bloque del nodo hacer lo siguiente
+/*Generacion de datos para probar el funcionamiento de la funcion setBloque*/
+	//char* datosAEscribir;
+	//datosAEscribir=malloc(BLOCK_SIZE);
+	//datosAEscribir=crearBloqueFalso();
+	//printf("Bloque de tamaño=%d\n",strlen(datosAEscribir)); //me va a decir el tamaño del bloque falso
+	//int bloqueAEscribir=0;
+//
+
+// Grabará los datos enviados en el bloque solicitado
+	//setBloque(bloqueAEscribir,datosAEscribir);
+
+/*Generación de datos para probar la funcion getBloque*/
+
+	//char* datosLeidos;
+	//datosLeidos=malloc(BLOCK_SIZE);
+	//int bloqueALeer=0;
+//
+
+	//datosLeidos=getBloque(bloqueALeer); // Devolverá el contenido del bloque solicitado
+	//printf("El bloque leído tiene un tamaño de:%d\n",strlen(datosLeidos));

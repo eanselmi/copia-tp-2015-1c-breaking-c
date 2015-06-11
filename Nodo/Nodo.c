@@ -40,7 +40,7 @@ int* socketMapper; //para identificar los que son mappers conectados
 int* socketReducer; //para identificar los que son reducers conectados
 char nodo_id[6];
 char bufGetArchivo[BLOCK_SIZE]; //Buffer para la funcion getFileContent
-
+char bufFalso[BLOCK_SIZE]; //Buffer si voy a crear un bloque falso (para pruebas)
 
 int main(int argc , char *argv[]){
 
@@ -70,17 +70,6 @@ int main(int argc , char *argv[]){
 	//sprintf(bloquesTotales,"%d",sizeFileDatos/20971520);
 	bloquesTotales=malloc(sizeof(int));
 	*bloquesTotales=sizeFileDatos/20971520;
-
-			/*Generacion de datos para probar el funcionamiento de la funcion setBloque*/
-				char* datosAEscribir;
-				datosAEscribir=malloc(BLOCK_SIZE);
-				datosAEscribir=crearBloqueFalso();
-				//memset(datosAEscribir,'A',BLOCK_SIZE);
-				int bloqueAEscribir=1;
-			//
-
-			// Grabará los datos enviados en el bloque solicitado
-			setBloque(bloqueAEscribir,datosAEscribir);
 
 	//Estructura para conexion con FS
 	filesystem.sin_family = AF_INET;
@@ -475,6 +464,7 @@ void ejecutarMapper(char *script,int bloque,char *resultado){
 	int bak,pid,archivo_resultado;
 	bak=0;
 	char *path;
+	char *bloqueAMapear;
 	pipe(outfd); /* Donde escribe el padre */
 	if((pid=fork())==-1){
 		perror("fork");
@@ -500,10 +490,11 @@ void ejecutarMapper(char *script,int bloque,char *resultado){
 	else
 	{
 	close(outfd[0]); /* Estan siendo usados por el hijo */
-	//Se escribiría un getBloque
-	char *datoos=string_new();
-	string_append(&datoos,"WBAN,Date,Time,StationType,SkyCondition,SkyConditionFlag,Visibility,VisibilityFlag,WeatherType,WeatherTypeFlag,DryBulbFarenheit,DryBulbFarenheitFlag,DryBulbCelsius,DryBulbCelsiusFlag,WetBulbFarenheit,WetBulbFarenheitFlag,WetBulbCelsius,WetBulbCelsiusFlag,DewPointFarenheit,DewPointFarenheitFlag,DewPointCelsius,DewPointCelsiusFlag,RelativeHumidity,RelativeHumidityFlag,WindSpeed,WindSpeedFlag,WindDirection,WindDirectionFlag,ValueForWindCharacter,ValueForWindCharacterFlag,StationPressure,StationPressureFlag,PressureTendency,PressureTendencyFlag,PressureChange,PressureChangeFlag,SeaLevelPressure,SeaLevelPressureFlag,RecordType,RecordTypeFlag,HourlyPrecip,HourlyPrecipFlag,Altimeter,AltimeterFlag\n03011,20130101,0000,0,OVC, , 5.00, , , ,M, ,M, ,M, ,M, ,M, ,M, ,M, , 5, ,120, , , ,M, , , , , ,M, ,AA, , , ,29.93, \n03011,20130101,0015,0,SCT011 SCT020, , 7.00, ,-SN, ,M, ,M, ,M, ,M, ,M, ,M, ,M, , 6, ,120, , , ,21.33, , , , , ,M, ,AA, , , ,29.93, \n03011,20130101,0035,0,CLR, ,10.00, , , ,M, ,M, ,M, ,M, ,M, ,M, ,M, , 6, ,120, , , ,21.33, , , , , ,M, ,AA, , , ,29.93, \n03011,20130101,0055,0,CLR, ,10.00, , , ,M, ,M, ,M, ,M, ,M, ,M, ,M, , 5, ,120, , , ,21.33, , , , , ,M, ,AA, , , ,29.93, \n");
-	write(outfd[1],datoos,strlen(datoos));/* Escribe en el stdin del hijo el contenido del bloque*/
+//	char *datoos=string_new();
+//	string_append(&datoos,"WBAN,Date,Time,StationType,SkyCondition,SkyConditionFlag,Visibility,VisibilityFlag,WeatherType,WeatherTypeFlag,DryBulbFarenheit,DryBulbFarenheitFlag,DryBulbCelsius,DryBulbCelsiusFlag,WetBulbFarenheit,WetBulbFarenheitFlag,WetBulbCelsius,WetBulbCelsiusFlag,DewPointFarenheit,DewPointFarenheitFlag,DewPointCelsius,DewPointCelsiusFlag,RelativeHumidity,RelativeHumidityFlag,WindSpeed,WindSpeedFlag,WindDirection,WindDirectionFlag,ValueForWindCharacter,ValueForWindCharacterFlag,StationPressure,StationPressureFlag,PressureTendency,PressureTendencyFlag,PressureChange,PressureChangeFlag,SeaLevelPressure,SeaLevelPressureFlag,RecordType,RecordTypeFlag,HourlyPrecip,HourlyPrecipFlag,Altimeter,AltimeterFlag\n03011,20130101,0000,0,OVC, , 5.00, , , ,M, ,M, ,M, ,M, ,M, ,M, ,M, , 5, ,120, , , ,M, , , , , ,M, ,AA, , , ,29.93, \n03011,20130101,0015,0,SCT011 SCT020, , 7.00, ,-SN, ,M, ,M, ,M, ,M, ,M, ,M, ,M, , 6, ,120, , , ,21.33, , , , , ,M, ,AA, , , ,29.93, \n03011,20130101,0035,0,CLR, ,10.00, , , ,M, ,M, ,M, ,M, ,M, ,M, ,M, , 6, ,120, , , ,21.33, , , , , ,M, ,AA, , , ,29.93, \n03011,20130101,0055,0,CLR, ,10.00, , , ,M, ,M, ,M, ,M, ,M, ,M, ,M, , 5, ,120, , , ,21.33, , , , , ,M, ,AA, , , ,29.93, \n");
+//	write(outfd[1],datoos,strlen(datoos));/* Escribe en el stdin del hijo el contenido del bloque*/
+	bloqueAMapear=getBloque(bloque);
+	write(outfd[1],bloqueAMapear,strlen(bloqueAMapear));/* Escribe en el stdin del hijo el contenido del bloque*/
 	close(outfd[1]);
 	dup2(bak,STDOUT_FILENO);
 	}
@@ -642,3 +633,94 @@ char* mapearFileDeDatos(){
 	return fileDatos;
 }
 
+char* crearBloqueFalso(){
+	int posi,j;
+	posi=0;
+	j=0;
+	char* bloqueRetorno;
+	bloqueRetorno=malloc(BLOCK_SIZE);
+	for(j=0;j<524288;j++){ // Mete 524288 veces 40 caracteres , 40 B --> 40*524288 = 20971520 = 20MB
+		bufFalso[posi]='M';posi++;
+		bufFalso[posi]='a';posi++;
+		bufFalso[posi]='n';posi++;
+		bufFalso[posi]=',';posi++;
+		bufFalso[posi]='H';posi++;
+		bufFalso[posi]='o';posi++;
+		bufFalso[posi]='l';posi++;
+		bufFalso[posi]='a';posi++;
+		bufFalso[posi]=',';posi++;
+		bufFalso[posi]='P';posi++;
+		bufFalso[posi]='r';posi++;
+		bufFalso[posi]='u';posi++;
+		bufFalso[posi]='e';posi++;
+		bufFalso[posi]='b';posi++;
+		bufFalso[posi]='a';posi++;
+		bufFalso[posi]=',';posi++;
+		bufFalso[posi]='H';posi++;
+		bufFalso[posi]=',';posi++;
+		bufFalso[posi]='H';posi++;
+		bufFalso[posi]=',';posi++;
+		bufFalso[posi]='H';posi++;
+		bufFalso[posi]=',';posi++;
+		bufFalso[posi]='H';posi++;
+		bufFalso[posi]=',';posi++;
+		bufFalso[posi]='H';posi++;
+		bufFalso[posi]=',';posi++;
+		bufFalso[posi]='H';posi++;
+		bufFalso[posi]=',';posi++;
+		bufFalso[posi]='H';posi++;
+		bufFalso[posi]=',';posi++;
+		bufFalso[posi]='H';posi++;
+		bufFalso[posi]=',';posi++;
+		bufFalso[posi]='H';posi++;
+		bufFalso[posi]=',';posi++;
+		bufFalso[posi]='M';posi++;
+		bufFalso[posi]='a';posi++;
+		bufFalso[posi]='p';posi++;
+		bufFalso[posi]=',';posi++;
+		bufFalso[posi]='H';posi++;
+		bufFalso[posi]='\n';posi++;
+	}
+			bufFalso[20971480]='\0';posi++;
+			bufFalso[20971481]='\0';posi++;
+			bufFalso[20971482]='\0';posi++;
+			bufFalso[20971483]='\0';posi++;
+			bufFalso[20971484]='\0';posi++;
+			bufFalso[20971485]='\0';posi++;
+			bufFalso[20971486]='\0';posi++;
+			bufFalso[20971487]='\0';posi++;
+			bufFalso[20971488]='\0';posi++;
+			bufFalso[20971489]='\0';posi++;
+			bufFalso[20971490]='\0';posi++;
+			bufFalso[20971491]='\0';posi++;
+			bufFalso[20971492]='\0';posi++;
+			bufFalso[20971493]='\0';posi++;
+			bufFalso[20971494]='\0';posi++;
+			bufFalso[20971495]='\0';posi++;
+			bufFalso[20971496]='\0';posi++;
+			bufFalso[20971497]='\0';posi++;
+			bufFalso[20971498]='\0';posi++;
+			bufFalso[20971499]='\0';posi++;
+			bufFalso[20971500]='\0';posi++;
+			bufFalso[20971501]='\0';posi++;
+			bufFalso[20971502]='\0';posi++;
+			bufFalso[20971503]='\0';posi++;
+			bufFalso[20971504]='\0';posi++;
+			bufFalso[20971505]='\0';posi++;
+			bufFalso[20971506]='\0';posi++;
+			bufFalso[20971507]='\0';posi++;
+			bufFalso[20971508]='\0';posi++;
+			bufFalso[20971509]='\0';posi++;
+			bufFalso[20971510]='\0';posi++;
+			bufFalso[20971511]='\0';posi++;
+			bufFalso[20971512]='\0';posi++;
+			bufFalso[20971513]='\0';posi++;
+			bufFalso[20971514]='\0';posi++;
+			bufFalso[20971515]='\0';posi++;
+			bufFalso[20971516]='\0';posi++;
+			bufFalso[20971517]='\0';posi++;
+			bufFalso[20971518]='\0';posi++;
+			bufFalso[20971519]='\0';posi++;
+	strcpy(bloqueRetorno,bufFalso);
+return bloqueRetorno;
+}
