@@ -85,8 +85,7 @@ int main(int argc, char *argv[]) {
 		exit(-1);
 	}
 	// obviar el mensaje "address already in use" (la dirección ya se está usando)
-	if (setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int))
-			== -1) {
+	if (setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1) {
 		perror("setsockopt");
 		log_error(logger, "FALLO la ejecucion del setsockopt");
 		exit(-1);
@@ -299,7 +298,7 @@ static t_nodo *agregar_nodo_a_lista(char nodo_id[6], int socket, int est, int es
 	nodo_temporal->bloques_bitarray = malloc(i / 8);
 	nodo_temporal->bloques_del_nodo = bitarray_create(nodo_temporal->bloques_bitarray, i / 8);
 	for (i = 0; i < nodo_temporal->bloques_totales; i++)
-		bitarray_clean_bit(nodo_temporal->bloques_del_nodo, i);
+		bitarray_set_bit(nodo_temporal->bloques_del_nodo, i);
 	char *tmp_socket = malloc(sizeof(int));
 	char *tmp_estado = malloc(sizeof(int));
 	char *tmp_puerto = malloc(sizeof(int));
@@ -1111,11 +1110,12 @@ void BorrarBloque() {
 	nodoEncontrado = 0;
 	t_nodo* nodoBuscado;
 	cantNodos = list_size(nodos);
-	char* nodoId = malloc(1);
+	//char* nodoId = malloc(1);
+	char nodoId[6];
 	printf("Ingrese el ID del nodo del que desea borrar un bloque:\n");
 	scanf("%s", nodoId);
 	printf("Ingrese el número de bloque que desea borrar:\n");
-	scanf("%d", bloque);
+	scanf("%d", &bloque);
 	i = 0;
 	while (i < cantNodos && nodoEncontrado == 0) {
 		nodoBuscado = list_get(nodos, i);
