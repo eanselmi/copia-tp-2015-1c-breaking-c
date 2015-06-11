@@ -73,7 +73,7 @@ void CopiarBloque();				//TODAVIA NO DESARROLLADA
 void AgregarNodo();					//DESARROLLADA
 void EliminarNodo();  				//DESARROLLADA
 uint32_t BuscarArchivoPorNombre (); //DESARROLLADA
-uint32_t BuscarPadre ();            //DESARROLLADA
+uint32_t BuscarPadre ();            //Devuelve el idPadre en caso de éxito, devuelve -1 si no lo encuentra
 static void eliminar_bloques(t_copias *bloque);
 long ExisteEnLaLista(t_list* listaDirectorios, char* nombreDirectorioABuscar, uint32_t idPadre);
 int BuscarMenorIndiceLibre (char indiceDirectorios[]);

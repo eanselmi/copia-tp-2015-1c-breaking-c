@@ -570,13 +570,17 @@ void *connection_handler_escucha(void) {
 //Buscar el id del padre
 uint32_t BuscarPadre(char* path) {
 	t_dir* dir;
-	int directorioPadre = 0; //seteo a raíz
-	int tamanio = list_size(directorios);
+	int directorioPadre = 0,tamanio; //seteo a raíz
+	if (( tamanio = list_size(directorios))==0 | string_is_empty(path) | strncmp(path,"/",1)==0){ //No hay directorios
+		//printf("No se encontró el directorio\n");
+		directorioPadre = -1;
+		return directorioPadre;
+	}
 	int contadorDirectorio = 0;
 	int i;
 	char** directorio = string_split((char*) path, "/"); //Devuelve un array del path
 	//Obtener id del padre del archivo(ante-ultima posición antes de NULL)
-	while (directorio[contadorDirectorio + 1] != NULL) {
+	while (directorio[contadorDirectorio] != NULL) {
 		for (i = 0; i < tamanio; i++) { //recorro lista de directorios
 			dir = list_get(directorios, i); //agarro primer directorio de la lista de directorios
 			//comparo si el nombre es igual al string del array del path y el padre es igual al padre anterior
@@ -586,9 +590,9 @@ uint32_t BuscarPadre(char* path) {
 				break;
 			} else {
 				if (i == tamanio - 1) {
-					printf("No se encontró el directorio");
+					//printf("No se encontró el directorio");
 					directorioPadre = -1;
-					exit(-1);
+					return directorioPadre;
 				}
 			}
 		}
@@ -1007,8 +1011,8 @@ int CopiarArchivoAMDFS(){
     FILE * archivoLocal;
 	char* path;
 	char* pathMDFS;
-	path = strdup("");
-	pathMDFS = strdup("");
+	path = string_new();
+	pathMDFS = string_new();
 	int cantBytes=0;
 	int pos=0;
 	char car;
@@ -1018,23 +1022,23 @@ int CopiarArchivoAMDFS(){
     scanf("%s", path);
     //Validacion de si existe el archivo en el filesystem local
     if((archivoLocal = fopen(path,"r"))==NULL){
-    	perror("fopen");
     	log_error(logger,"El archivo que quiere copiar no existe en el filesystem local");
-    	exit(-1);
+    	perror("fopen");
+    	Menu();
     }
     printf("Ingrese el path del archivo destino \n");
     scanf("%s", pathMDFS);
-    //Buscar Directorio. Si no existe se muestra mensaje de error y se debe volver al menú para crearlo
+    //Buscar Directorio. Si existe se muestra mensaje de error
     uint32_t idPadre = BuscarPadre(pathMDFS);
     if(idPadre == -1){
       	printf("El directorio no existe. Se debe crear el directorio desde el menú. \n");
-       	exit(-1);
+       	Menu();
     }
     //Buscar Archivo. Si no existe se muestra mensaje de error y se debe volver al menú para crearlo
     uint32_t posArchivo = BuscarArchivoPorNombre (pathMDFS,idPadre);
     if(!(posArchivo == -1)){
      printf("El archivo ya existe. Se debe especificar un archivo nuevo. \n");
-     exit(-1);
+     Menu();
     }
     //Se debe crear un nuevo archivo con el nombre ingresado, cuyo padre sea "idPadre"
     while (!feof(archivoLocal)){
