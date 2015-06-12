@@ -204,9 +204,9 @@ void DibujarMenu(void) {
 	printf("#  9) Copiar un archivo local al MDFS                          #\n");
 	printf("# 10) Copiar un archivo del MDFS al filesystem local           #\n");
 	printf("# 11) Solicitar el MD5 de un archivo en MDFS                   #\n");
-	printf("# 12) Ver los bloques que componen un archivo                  #\n");
-	printf("# 13) Borrar los bloques que componen un archivo               #\n");
-	printf("# 14) Copiar los bloques que componen un archivo               #\n");
+	printf("# 12) Ver un bloque                                            #\n");
+	printf("# 13) Borrar un bloque                                         #\n");
+	printf("# 14) Copiar un bloque                                         #\n");
 	printf("# 15) Agregar un nodo de datos                                 #\n");
 	printf("# 16) Eliminar un nodo de datos                                #\n");
 	printf("# 17) Salir                                                    #\n");
@@ -1308,10 +1308,10 @@ void VerBloque() {
 		Menu();
 	}
 	enviarNumeroDeBloqueANodo(socket_nodo, nroBloque);
-	bloqueParaVer = recibirBloque(obtener_socket_de_nodo_con_id(nodo_id));
+	bloqueParaVer = recibirBloque(socket_nodo);
 	archivoParaVerPath = fopen("./archBloqueParaVer.txt", "w");
 	fprintf(archivoParaVerPath, "%s", bloqueParaVer);
-	printf("Se muestra path del archivo: ./archBloqueParaVer.txt");
+	printf("El bloque se copio en el archivo: ./archBloqueParaVer.txt\n");
 
 }
 
@@ -1332,10 +1332,10 @@ void enviarNumeroDeBloqueANodo( int socket_nodo, int bloque) {
 
 char *recibirBloque( socket_nodo) {
 	char* bloqueAObtener;
-		bloqueAObtener = malloc(sizeof(BLOCK_SIZE));
-		if (recv(socket_nodo, bloqueAObtener, sizeof(bloqueAObtener), 0) == -1) {
+		bloqueAObtener = malloc(BLOCK_SIZE);
+		if (recv(socket_nodo, bloqueAObtener, BLOCK_SIZE, 0) == -1) {
 			perror("recv");
-			log_error(logger, "FALLO el Recv");
+			log_error(logger, "FALLO el Recv del bloque por parte del nodo");
 			exit(-1);
 		}
 	return bloqueAObtener;

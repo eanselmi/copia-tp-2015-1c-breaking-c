@@ -313,8 +313,11 @@ void *manejador_de_escuchas(){
 								perror("recv");
 								log_error(logger, "FALLO el Recv de bloque");
 								exit(-1);
-							}// Envio el contenido del bloque que me pidio el FS
-							if (send(conectorFS, getBloque((int) bloque),BLOCK_SIZE, 0) == -1) {
+							}
+							printf("Voy a obtener el bloque:%d\n",*bloque);
+
+							// Envio el contenido del bloque que me pidio el FS
+							if (send(conectorFS, getBloque(*bloque),BLOCK_SIZE, 0) == -1) {
 								perror("send");
 								log_error(logger, "FALLO el envio del bloque ");
 								exit(-1);
