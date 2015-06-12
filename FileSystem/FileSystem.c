@@ -1099,6 +1099,38 @@ int CopiarArchivoAMDFS(){
 				for(j=pos+1;j<BLOCK_SIZE;j++) bufBloque[j]='\0';
 				obtenerNodosMasLibres();
 				//Copiar el contenido del Buffer en los nodos mas vacios por triplicado
+			    for (indice=0;indice<3;indice++){
+			    	if (send(nodosMasLibres[indice].socket, handshake, sizeof(handshake), 0) == -1) {
+			    		perror("send");
+			    		log_error(logger, "FALLO el envio del aviso de obtener bloque ");
+			    		exit(-1);
+			    	}
+			    	int indice_bitarray=0,corte=0;
+			    	while (corte==0){
+			    		if (!bitarray_test_bit(nodosMasLibres[indice].bloques_del_nodo,indice_bitarray)) corte=1;
+			    		else indice_bitarray++;
+			    	}
+			    	if (send(nodosMasLibres[indice].socket, &indice_bitarray, sizeof(int), 0) == -1) {
+			    		perror("send");
+			    		log_error(logger, "FALLO el envio del aviso de obtener bloque ");
+			    		exit(-1);
+			    	}
+			    	if (send(nodosMasLibres[indice].socket, bufBloque, BLOCK_SIZE, 0) == -1) {
+			    		perror("send");
+			    		log_error(logger, "FALLO el envio del aviso de obtener bloque ");
+			    		exit(-1);
+			    	}
+			    	if ((read_size = recv(nodosMasLibres[indice].socket, resultado, sizeof(int),0)) <= 0) {
+			    		perror("recv");
+			    		log_error(logger, "FALLO el Recv");
+			    		exit(-1);
+			    	}
+			    	if (!*resultado) bitarray_set_bit(nodosMasLibres[indice].bloques_del_nodo,indice_bitarray);
+			    	else{
+			    		printf ("Algo paso y no se pudo copiar el bloque, volvemos al menu\n");
+			    		exit(1);
+			    	}
+			    }
 				pos = 0; //pos = 0;
 				cantBytes=0;
 				fseek(archivoLocal,n,SEEK_SET);
