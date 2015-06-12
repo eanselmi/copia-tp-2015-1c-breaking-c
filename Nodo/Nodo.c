@@ -40,7 +40,8 @@ int* socketMapper; //para identificar los que son mappers conectados
 int* socketReducer; //para identificar los que son reducers conectados
 char nodo_id[6];
 char bufGetArchivo[BLOCK_SIZE]; //Buffer para la funcion getFileContent
-char bufFalso[BLOCK_SIZE]; //Buffer si voy a crear un bloque falso (para pruebas)
+//char bufFalso[BLOCK_SIZE]; //Buffer si voy a crear un bloque falso (para pruebas)
+char buffer[BLOCK_SIZE]; //Buffer que tiene un bloque que llega del filesystem
 
 int main(int argc , char *argv[]){
 
@@ -189,11 +190,10 @@ void *manejador_de_escuchas(){
 	int socketModificado,nbytes,newfd,addrlen;
 	char nomArchTemp[100];
 	memset(nomArchTemp,'\0',100);
+	memset(buffer,'\0',BLOCK_SIZE);
 	FILE* scriptMap;
 	int* bloque;
 	int read_size;
-	char buffer[BLOCK_SIZE];
-	memset(buffer,'\0',BLOCK_SIZE);
 	bloque=malloc(sizeof(int));
 	char rutinaMapper[MAPPER_SIZE]; //En este buffer se guardarán las rutinas mapper para luego pasarlas a un archivo local
 	memset(rutinaMapper,'\0',MAPPER_SIZE);
