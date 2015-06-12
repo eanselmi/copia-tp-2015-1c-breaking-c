@@ -194,7 +194,6 @@ void *manejador_de_escuchas(){
 	int read_size;
 	char buffer[BLOCK_SIZE];
 	memset(buffer,'\0',BLOCK_SIZE);
-	char handshake_pedido[14]="copiar_archivo";
 	bloque=malloc(sizeof(int));
 	char rutinaMapper[MAPPER_SIZE]; //En este buffer se guardarán las rutinas mapper para luego pasarlas a un archivo local
 	memset(rutinaMapper,'\0',MAPPER_SIZE);
@@ -289,12 +288,7 @@ void *manejador_de_escuchas(){
 					}
 					else{
 						/* -- el filesystem envío un mensaje a tratar -- */
-						if ((read_size = recv(conectorFS, handshake_pedido, strlen(handshake_pedido),0)) <= 0) {
-							perror("recv");
-							log_error(logger, "FALLO el Recv");
-							exit(-1);
-						}
-						if (strcmp(handshake_pedido,"copiar_archivo")==0){
+						if(strncmp(mensaje,"copiar_archivo",14)==0){
 							if ((read_size = recv(conectorFS, bloque, sizeof(int),0)) <= 0) {
 								perror("recv");
 								log_error(logger, "FALLO el Recv");
