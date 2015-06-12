@@ -1400,28 +1400,42 @@ int obtener_socket_de_nodo_con_id(char *id) {
 	return -1;
 }
 
-void VerBloque() {
+int VerBloque() {
 	FILE* archivoParaVerPath;
 	char * bloqueParaVer;
-	int nroBloque;
+	int nroBloque, i, cantNodos;
 	int socket_nodo;
+	t_nodo *nodoAEvaluar;
 	bloqueParaVer = malloc(BLOCK_SIZE);
 	printf("Ingrese id de Nodo: ");
 	scanf("%s", nodo_id);
 	printf("Numero de Bloque que desea ver: ");
 	scanf("%d", &nroBloque);
+	cantNodos= list_size(nodos);
+	for (i=0;i<cantNodos;i++){
+		nodoAEvaluar = list_get(nodos,i);
+		if(strcmp(nodoAEvaluar->nodo_id,nodo_id) && nodoAEvaluar->estado_red == 1 && nodoAEvaluar->estado == 1){
+			if(bitarray_test_bit(nodoAEvaluar->bloques_del_nodo, nroBloque)== 0){
+				log_error(logger,"Esta queriendo ver un bloque vacio");
+				printf("Esta queriendo ver un bloque vacio");
+				return -1;
+			}
+		}else {
 	socket_nodo =obtener_socket_de_nodo_con_id(nodo_id);
-	if (socket_nodo == -1){
-		log_error(logger, "El nodo ingresado no es valido o no esta disponible\n");
-		printf("El nodo ingresado no es valido o no esta disponible\n");
-		Menu();
-	}
+			if (socket_nodo == -1){
+				log_error(logger, "El nodo ingresado no es valido o no esta disponible\n");
+				printf("El nodo ingresado no es valido o no esta disponible\n");
+				Menu();
+			}
+		}
 	enviarNumeroDeBloqueANodo(socket_nodo, nroBloque);
 	bloqueParaVer = recibirBloque(socket_nodo);
 	archivoParaVerPath = fopen("./archBloqueParaVer.txt", "w");
 	fprintf(archivoParaVerPath, "%s", bloqueParaVer);
 	printf("El bloque se copio en el archivo: ./archBloqueParaVer.txt\n");
 
+		}
+return 0;
 }
 
 void enviarNumeroDeBloqueANodo( int socket_nodo, int bloque) {

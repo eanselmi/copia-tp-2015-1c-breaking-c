@@ -71,7 +71,7 @@ void MoverDirectorio();				//DESARROLLADA, falta persistencia
 int CopiarArchivoAMDFS();			//Pame TODAVIA NO DESARROLLADA
 void CopiarArchivoDelMDFS();		//Pame TODAVIA NO DESARROLLADA
 void MD5DeArchivo();				//Pame TODAVIA NO DESARROLLADA
-void VerBloque();					//DESARROLLADA
+int VerBloque();					//DESARROLLADA
 void BorrarBloque();				//DESARROLLADA
 void CopiarBloque();				//TODAVIA NO DESARROLLADA
 void AgregarNodo();					//DESARROLLADA
