@@ -1218,6 +1218,26 @@ void CopiarArchivoDelMDFS() {
 
 void MD5DeArchivo() {
 	printf("Eligió Solicitar el MD5 de un archivo en MDFS\n");
+	int fd[2];
+	int childpid;
+	pipe(fd);
+	char result[1000];
+	char *archivo="/tmp/archivito"; //archivo de ejemplo
+	// hay que pedir que ingrese un archivo que haya descargado previamente
+	// del MDFS y validar que exista
+	memset(result,'\0',1000);
+	if ( (childpid = fork() ) == -1){
+		fprintf(stderr, "FORK failed");
+	} else if( childpid == 0) {
+		close(1);
+		dup2(fd[1], 1);
+		close(fd[0]);
+		execlp("/usr/bin/md5sum","md5sum",archivo,NULL);
+	}
+	wait(NULL);
+	read(fd[0], result, sizeof(result));
+	printf("%s",result);
+
 }
 
 
