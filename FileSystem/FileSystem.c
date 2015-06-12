@@ -262,6 +262,31 @@ int Menu(void) {
 	}
 	return 0;
 }
+
+static t_copias *agregar_copia_a_lista(char *id,int bloque,char *md5) {
+	t_copias *copia_temporal = malloc(sizeof(t_copias));
+	strcpy(copia_temporal->nodo,id);
+	copia_temporal->bloqueNodo=bloque;
+	strcpy(copia_temporal->md5,md5);
+	return copia_temporal;
+}
+
+static t_bloque *agregar_bloque_a_lista(t_bloque bloque_temporal){
+	t_bloque *copia_temporal = malloc(sizeof(t_bloque));
+    copia_temporal->copias = bloque_temporal.copias;
+    return copia_temporal;
+}
+
+static t_archivo *agregar_archivos_a_lista(t_archivo archivo_temporal){
+	t_archivo *copia_temporal = malloc(sizeof(t_archivo));
+	copia_temporal->bloques=archivo_temporal.bloques;
+	copia_temporal->estado=archivo_temporal.estado;
+	copia_temporal->nombre=archivo_temporal.nombre;
+	copia_temporal->padre=archivo_temporal.padre;
+	copia_temporal->tamanio=archivo_temporal.tamanio;
+	return copia_temporal;
+}
+
 static t_nodo *agregar_nodo_a_lista(char nodo_id[6], int socket, int est, int est_red, char *ip, int port, int puerto_escucha, int bloques_lib,int bloques_tot) {
 	t_nodo *nodo_temporal = malloc(sizeof(t_nodo));
 
@@ -1012,6 +1037,10 @@ int CopiarArchivoAMDFS(){
     FILE * archivoLocal;
     char handshake[14]="copiar_archivo";
 	char* path;
+	t_archivo archivo_temporal;
+	t_bloque bloque_temporal;
+	char ruta[100];
+	memset(ruta,'\0',100);
 	int *resultado=malloc(sizeof(int));
 	int indice=0;
 	char* pathMDFS;
@@ -1091,7 +1120,9 @@ int CopiarArchivoAMDFS(){
 						printf ("Algo paso y no se pudo copiar el bloque, volvemos al menu\n");
 						exit(1);
 					}
+					list_add(bloque_temporal.copias,agregar_copia_a_lista(nodosMasLibres[indice].nodo_id,indice_bitarray,obtener_md5(bufBloque)));
 			    }
+			    list_add(archivo_temporal.bloques,agregar_bloque_a_lista(bloque_temporal));
 				pos = 0; // pos = 0;
 				cantBytes=0;
 				memset(bufBloque,'\0',BLOCK_SIZE); //Vaciar el Buffer
@@ -1130,7 +1161,9 @@ int CopiarArchivoAMDFS(){
 			    		printf ("Algo paso y no se pudo copiar el bloque, volvemos al menu\n");
 			    		exit(1);
 			    	}
+			    	list_add(bloque_temporal.copias,agregar_copia_a_lista(nodosMasLibres[indice].nodo_id,indice_bitarray,obtener_md5(bufBloque)));
 			    }
+			    list_add(archivo_temporal.bloques,agregar_bloque_a_lista(bloque_temporal));
 				pos = 0; //pos = 0;
 				cantBytes=0;
 				fseek(archivoLocal,n,SEEK_SET);
@@ -1139,6 +1172,18 @@ int CopiarArchivoAMDFS(){
 			}
 		}
 	}
+    strcpy(ruta,path);
+    char *nombre_del_archivo;
+    int aux1,aux2=0;
+    char *saveptr;
+    for (aux1=0;aux1<strlen(ruta);aux1++) if (ruta[aux1]=='/') aux2++;
+    nombre_del_archivo = strtok_r(ruta,"/",&saveptr);
+    for (aux1=0;aux1<aux2-1;aux1++) nombre_del_archivo = strtok_r(NULL,"/",&saveptr);
+    strcpy(archivo_temporal.nombre,nombre_del_archivo);
+    archivo_temporal.estado=1;
+    archivo_temporal.padre=BuscarPadre(path);
+    archivo_temporal.tamanio=0; //para mi este campo esta al pedo
+    list_add(archivos,agregar_archivos_a_lista(archivo_temporal));
     fclose(archivoLocal);
     return 0;
 }

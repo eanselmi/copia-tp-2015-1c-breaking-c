@@ -52,6 +52,9 @@ static t_nodo *agregar_nodo_a_lista(char nodo_id[6],int socket,int est,int estad
 void modificar_estado_nodo (char nodo_id[6],int socket,int port,int estado,int estado_red);
 void listar_nodos_conectados(t_list *nodos);
 char *obtener_md5(char *bloque);
+static t_copias *agregar_copia_a_lista(char *id,int bloque,char *md5);
+static t_bloque *agregar_bloque_a_lista(t_bloque bloque_temporal);
+static t_archivo *agregar_archivos_a_lista(t_archivo archivo_temporal);
 int validar_nodo_nuevo (char nodo_id[6]);
 int validar_nodo_reconectado (char nodo_id[6]);
 char *buscar_nodo_id(char *ip, int port);
@@ -74,7 +77,7 @@ void CopiarBloque();				//TODAVIA NO DESARROLLADA
 void AgregarNodo();					//DESARROLLADA
 void EliminarNodo();  				//DESARROLLADA
 uint32_t BuscarArchivoPorNombre (); //DESARROLLADA
-uint32_t BuscarPadre ();            //Devuelve el idPadre en caso de éxito, devuelve -1 si no lo encuentra
+uint32_t BuscarPadre (char* path);            //Devuelve el idPadre en caso de éxito, devuelve -1 si no lo encuentra
 static void eliminar_bloques(t_copias *bloque);
 long ExisteEnLaLista(t_list* listaDirectorios, char* nombreDirectorioABuscar, uint32_t idPadre);
 int BuscarMenorIndiceLibre (char indiceDirectorios[]);
