@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <unistd.h>
-#include <sys/socket.h>
+#include <sys/socket.h>Agregar
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
@@ -1339,7 +1339,7 @@ void AgregarNodo(){
 	i = 0;
 	while (i < cantNodos && nodoEncontrado == 0){
 		nodoAEvaluar = list_get(nodos,i);
-		if (strcmp(nodoAEvaluar->nodo_id, nodoID)==0 && nodoAEvaluar->estado == 0) {
+		if (strcmp(nodoAEvaluar->nodo_id, nodoID)==0 && nodoAEvaluar->estado_red == 1 && nodoAEvaluar->estado == 0) {
 			nodoEncontrado = 1;
 		}
 		i++;
@@ -1373,7 +1373,7 @@ void EliminarNodo(){
 	i = 0;
 	while (i < cantNodos && nodoEncontrado == 0){
 		nodoAEvaluar = list_get(nodos,i);
-		if (strcmp(nodoAEvaluar->nodo_id, nodoID)==0 && nodoAEvaluar->estado == 1) {
+		if (strcmp(nodoAEvaluar->nodo_id, nodoID)==0 && nodoAEvaluar->estado_red == 1 && nodoAEvaluar->estado == 1) {
 		nodoEncontrado = 1;
 	}
 		i++;
