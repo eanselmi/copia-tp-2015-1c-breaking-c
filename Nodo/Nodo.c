@@ -291,12 +291,12 @@ void *manejador_de_escuchas(){
 						if(strncmp(mensaje,"copiar_archivo",14)==0){
 							if ((read_size = recv(conectorFS, bloque, sizeof(int),0)) <= 0) {
 								perror("recv");
-								log_error(logger, "FALLO el Recv");
+								log_error(logger, "FALLO el Recv de bloque");
 								exit(-1);
 							}
 							if ((read_size = recv(conectorFS, buffer, BLOCK_SIZE,0)) <= 0) {
 								perror("recv");
-								log_error(logger, "FALLO el Recv");
+								log_error(logger, "FALLO el Recv de buffer");
 								exit(-1);
 							}
 							setBloque(*bloque,buffer);
@@ -304,6 +304,19 @@ void *manejador_de_escuchas(){
 							if (send(conectorFS, 0, sizeof(int), 0) == -1) {
 								perror("send");
 								log_error(logger, "FALLO el envio del aviso de obtener bloque ");
+								exit(-1);
+							}
+						}
+						if(strncmp(mensaje,"obtener bloque", 14) == 0){
+							//Recibo un numero de bloque del FS
+							if ((read_size = recv(conectorFS, bloque, sizeof(int),0)) <= 0) {
+								perror("recv");
+								log_error(logger, "FALLO el Recv de bloque");
+								exit(-1);
+							}// Envio el contenido del bloque que me pidio el FS
+							if (send(conectorFS, getBloque((int) bloque),BLOCK_SIZE, 0) == -1) {
+								perror("send");
+								log_error(logger, "FALLO el envio del bloque ");
 								exit(-1);
 							}
 						}
@@ -662,7 +675,7 @@ char* mapearFileDeDatos(){
 	return fileDatos;
 }
 
-char* crearBloqueFalso(){
+/*char* crearBloqueFalso(){
 	int posi,j;
 	posi=0;
 	j=0;
@@ -796,4 +809,4 @@ char* crearBloqueFalso(){
 	bufFalso[20971519]='\0';posi++;
 	strcpy(bloqueRetorno,bufFalso);
 	return bloqueRetorno;
-}
+}*/
