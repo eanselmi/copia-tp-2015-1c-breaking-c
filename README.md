@@ -1,5 +1,10 @@
 # tp-2015-1c-breaking-c
 
+## Crear un archivo falso en /tmp/archivoFalso.txt
+Dentro del proceso Nodo se deben descomentar las variables globales bufFalso y bufAMediasFalso, se deben descomentar por completo las funciones crearBloqueFalso(), crearBloqueAMediasFalso() y crearArchivoFalso(). Dentro del main llamar a la funcion crearArchivoFalso() y correrlo.
+Si salió bien, se encontrará el archivo falso creado en "/tmp/archivoFalso.txt" con un tamaño de 50MB. (se puede configurar el tamaño en multiplos de 10MB)
+Importante: Una vez creado el archivo, volver a comentar las dos variables globales y las tres funciones por completo.
+
 ## Filesystem: Archivos y Directorios
 Falta persistir lo que sería tabla de directorios y de archivos.
 

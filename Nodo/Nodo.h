@@ -15,7 +15,9 @@ int estaEnListaMappers(int socket);
 int estaEnListaReducers(int socket);
 void ejecutarMapper(char *script,int bloque,char *resultado);
 void ordenarMapper(char *nombreMapperTemporal, char* nombreMapperOrdenado);
-char* crearBloqueFalso(); //Solo para uso interno, para probar las funciones mientras no esta implementado recibir el bloque desde el fs
+char* crearBloqueFalso(); //Solo para uso interno, crea un bloque de 20MB
+char* crearBloqueAMediasFalso(); // Solo para uso interno, crea un bloque de 10MB
+void crearArchivoFalso();//Solo para uso interno, crea un archivo de 50MB en /tmp/archivoPrueba.txt (se puede regular el tamaño en multiplos de 10MB)
 
 //Para probar crearBloqueFalso y grabar en un bloque del nodo hacer lo siguiente
 /*Generacion de datos para probar el funcionamiento de la funcion setBloque*/
