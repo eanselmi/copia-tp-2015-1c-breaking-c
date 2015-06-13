@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <unistd.h>
-#include <sys/socket.h>
+#include <sys/socket.h>Agregar
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
