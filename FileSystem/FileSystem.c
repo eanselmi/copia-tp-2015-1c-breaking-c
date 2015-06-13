@@ -1033,6 +1033,13 @@ void MoverDirectorio() {
 }
 
 int CopiarArchivoAMDFS(){
+
+	// Entiendo que se deberia hacer tambien una copia de la lista de nodos, en caso de que se empiecen a repartir los bloques
+	// pero no se lleguen a repartir todos, y la operacion no sea exitosa, no se estan actualizando igual en la lista de nodos
+	// los bloques ocupados ? (bitarray)
+	// a lo mejor se usa semaforo para las 2 listas, de archivos y de nodos, como para hasta no saber si la operacion es exitosa
+	// o no, nadie mas las pueda modificar
+
 	printf("Eligió Copiar un archivo local al MDFS\n");
     FILE * archivoLocal;
     char handshake[14]="copiar_archivo";
@@ -1053,6 +1060,8 @@ int CopiarArchivoAMDFS(){
 	char car;
     memset(bufBloque,'\0',BLOCK_SIZE); //inicializo el buffer
 	int j;
+	archivo_temporal.bloques=list_create(); //inicializo las listas ficticias
+	bloque_temporal.copias=list_create(); //inicializo las listas ficticias
 	printf("Ingrese el path del archivo local \n");
     scanf("%s", path);
     //Validacion de si existe el archivo en el filesystem local
@@ -1117,6 +1126,7 @@ int CopiarArchivoAMDFS(){
 						log_error(logger, "FALLO el envio del aviso de obtener bloque ");
 						exit(-1);
 					}
+					printf("El FS envía %d bytes\n",strlen(bufBloque));
 					/*if ((read_size = recv(nodosMasLibres[indice].socket, resultado, sizeof(int),0)) <= 0) {
 						perror("recv");
 						log_error(logger, "FALLO el Recv");
@@ -1232,8 +1242,14 @@ int CopiarArchivoAMDFS(){
 
     }
     if (strlen(bufBloque)!=0){ //quedo algo que no se mando aun
+
+    	// Cual sería este caso?
+
     	if (bufBloque[strlen(bufBloque)-1]== '\n'){
     		bufBloque[strlen(bufBloque)]=0;
+
+    		// = 0 o ='\0' ?
+
     		obtenerNodosMasLibres();
     		//Copiar el contenido del Buffer en los nodos mas vacios por triplicado
     		for (indice=0;indice<3;indice++){

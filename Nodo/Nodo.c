@@ -301,6 +301,7 @@ void *manejador_de_escuchas(){
 								log_error(logger, "FALLO el Recv de buffer");
 								exit(-1);
 							}
+							printf("Tamaño del bloque que recibi=%d\n",strlen(buffer));
 							setBloque(*bloque,buffer); //esto deberia devolver algo que identifique si salio bien o no para informar al fs si fallo o fue exitosa la copai del bloque en el mdfs
 							//si salio bien tengo que mandar un 0
 							/*int *lalala=0;
