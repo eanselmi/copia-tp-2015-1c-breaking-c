@@ -294,6 +294,7 @@ void *manejador_de_escuchas(){
 								log_error(logger, "FALLO el Recv de bloque");
 								exit(-1);
 							}
+							printf ("Me van a mandar un coso de 20MB para el bloque %d\n",*bloque);
 							if ((read_size = recv(conectorFS, buffer, BLOCK_SIZE,0)) <= 0) {
 								perror("recv");
 								log_error(logger, "FALLO el Recv de buffer");
@@ -301,11 +302,12 @@ void *manejador_de_escuchas(){
 							}
 							setBloque(*bloque,buffer); //esto deberia devolver algo que identifique si salio bien o no para informar al fs si fallo o fue exitosa la copai del bloque en el mdfs
 							//si salio bien tengo que mandar un 0
-							if (send(conectorFS, 0, sizeof(int), 0) == -1) {
+							/*int *lalala=0;
+							if (send(conectorFS, lalala, sizeof(int), 0) == -1) {
 								perror("send");
 								log_error(logger, "FALLO el envio del aviso de obtener bloque ");
 								exit(-1);
-							}
+							}*/
 						}
 						if(strncmp(mensaje,"obtener bloque", 14) == 0){
 							//Recibo un numero de bloque del FS

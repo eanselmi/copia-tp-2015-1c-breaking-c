@@ -1061,7 +1061,7 @@ int CopiarArchivoAMDFS(){
     	perror("fopen");
     	Menu();
     }
-    printf("Ingrese el path del archivo destino \n");
+    /*printf("Ingrese el path del archivo destino \n");
     scanf("%s", pathMDFS);
     //Buscar Directorio. Si existe se muestra mensaje de error
     uint32_t idPadre = BuscarPadre(pathMDFS);
@@ -1076,8 +1076,14 @@ int CopiarArchivoAMDFS(){
      Menu();
     }
     //Se debe crear un nuevo archivo con el nombre ingresado, cuyo padre sea "idPadre"
-    while ((car = fgetc(archivoLocal)) != EOF){
-		cantBytes++;
+    */
+    int leido=0;
+    while (1){
+    	leido=fread(&bufBloque,sizeof(char),BLOCK_SIZE,archivoLocal);
+    	if (leido == BLOCK_SIZE){
+    		if (bufBloque[BLOCK_SIZE-1]=='\n'){
+
+		/*cantBytes++;
 		k++;
 		bufBloque[cantBytes-1]=car;
 		if(car == '\n'){
@@ -1085,7 +1091,7 @@ int CopiarArchivoAMDFS(){
 			n=k;
 		}
 		if(strlen(bufBloque) == BLOCK_SIZE){
-			if(car == '\n'){ //Caso Feliz
+			if(car == '\n'){ //Caso Feliz*/
 
 				obtenerNodosMasLibres();
 			    //Copiar el contenido del Buffer en los nodos mas vacios por triplicado
@@ -1127,6 +1133,13 @@ int CopiarArchivoAMDFS(){
 				cantBytes=0;
 				memset(bufBloque,'\0',BLOCK_SIZE); //Vaciar el Buffer
 			}else{ //Caso en que el bloque no termina en "\n"
+				int p;
+				for (p=BLOCK_SIZE-1;p>=0;p--){
+					if (bufBloque[p]=='\n'){
+						pos=p;
+						break;
+					}
+				}
 				for(j=pos+1;j<BLOCK_SIZE;j++) bufBloque[j]='\0';
 				obtenerNodosMasLibres();
 				//Copiar el contenido del Buffer en los nodos mas vacios por triplicado
@@ -1141,7 +1154,10 @@ int CopiarArchivoAMDFS(){
 			    		if (!bitarray_test_bit(nodosMasLibres[indice].bloques_del_nodo,indice_bitarray)) corte=1;
 			    		else indice_bitarray++;
 			    	}
-			    	if (send(nodosMasLibres[indice].socket, &indice_bitarray, sizeof(int), 0) == -1) {
+			    	int *bloque_para_pasar=malloc(sizeof(int));
+			    	*bloque_para_pasar=indice_bitarray;
+
+			    	if (send(nodosMasLibres[indice].socket, bloque_para_pasar, sizeof(int), 0) == -1) {
 			    		perror("send");
 			    		log_error(logger, "FALLO el envio del aviso de obtener bloque ");
 			    		exit(-1);
@@ -1151,11 +1167,11 @@ int CopiarArchivoAMDFS(){
 			    		log_error(logger, "FALLO el envio del aviso de obtener bloque ");
 			    		exit(-1);
 			    	}
-			    	if ((read_size = recv(nodosMasLibres[indice].socket, resultado, sizeof(int),0)) <= 0) {
+			    	/*if ((read_size = recv(nodosMasLibres[indice].socket, resultado, sizeof(int),0)) <= 0) {
 			    		perror("recv");
 			    		log_error(logger, "FALLO el Recv");
 			    		exit(-1);
-			    	}
+			    	}*/
 			    	if (!*resultado) bitarray_set_bit(nodosMasLibres[indice].bloques_del_nodo,indice_bitarray);
 			    	else{
 			    		printf ("Algo paso y no se pudo copiar el bloque, volvemos al menu\n");
@@ -1171,6 +1187,8 @@ int CopiarArchivoAMDFS(){
 				memset(bufBloque,'\0',BLOCK_SIZE); //Vaciar el Buffer
 			}
 		}
+    	//si leyo menos
+    	break;
 	}
     if (strlen(bufBloque)!=0){ //quedo algo que no se mando aun
     	if (bufBloque[strlen(bufBloque)-1]== '\n'){
@@ -1339,7 +1357,7 @@ void AgregarNodo(){
 	i = 0;
 	while (i < cantNodos && nodoEncontrado == 0){
 		nodoAEvaluar = list_get(nodos,i);
-		if (strcmp(nodoAEvaluar->nodo_id, nodoID)==0 && nodoAEvaluar->estado == 0) {
+		if (strcmp(nodoAEvaluar->nodo_id, nodoID)==0 && nodoAEvaluar->estado_red == 1 && nodoAEvaluar->estado == 0) {
 			nodoEncontrado = 1;
 		}
 		i++;
@@ -1373,7 +1391,7 @@ void EliminarNodo(){
 	i = 0;
 	while (i < cantNodos && nodoEncontrado == 0){
 		nodoAEvaluar = list_get(nodos,i);
-		if (strcmp(nodoAEvaluar->nodo_id, nodoID)==0 && nodoAEvaluar->estado == 1) {
+		if (strcmp(nodoAEvaluar->nodo_id, nodoID)==0 && nodoAEvaluar->estado_red == 1 && nodoAEvaluar->estado == 1) {
 		nodoEncontrado = 1;
 	}
 		i++;
