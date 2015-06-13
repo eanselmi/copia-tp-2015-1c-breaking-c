@@ -1043,21 +1043,21 @@ int CopiarArchivoAMDFS(){
 	printf("Eligió Copiar un archivo local al MDFS\n");
     FILE * archivoLocal;
     char handshake[14]="copiar_archivo";
-	char* path;
+	char* path=string_new();
 	t_archivo archivo_temporal;
 	t_bloque bloque_temporal;
 	char ruta[100];
 	memset(ruta,'\0',100);
 	int *resultado=malloc(sizeof(int));
 	int indice=0;
-	char* pathMDFS;
-	path = string_new();
-	pathMDFS = string_new();
+	//char* pathMDFS;
+	//path = string_new();
+	//pathMDFS = string_new();
 	uint32_t cantBytes=0;
 	int pos=0;
-	int k=0;
-	int n=0;
-	char car;
+	//int k=0;
+	//int n=0;
+	//char car;
     memset(bufBloque,'\0',BLOCK_SIZE); //inicializo el buffer
 	int j;
 	archivo_temporal.bloques=list_create(); //inicializo las listas ficticias
@@ -1086,7 +1086,7 @@ int CopiarArchivoAMDFS(){
     }
     //Se debe crear un nuevo archivo con el nombre ingresado, cuyo padre sea "idPadre"
     */
-    int leido=0,historico=0;
+    int leido=0;
     while (1){
     	leido=fread(&bufBloque,sizeof(char),BLOCK_SIZE,archivoLocal);
     	cantBytes+=BLOCK_SIZE;
@@ -1240,56 +1240,6 @@ int CopiarArchivoAMDFS(){
     		break; //para romper el while
     	}else if (leido == NULL) break; //para romper el while
 
-    }
-    if (strlen(bufBloque)!=0){ //quedo algo que no se mando aun
-
-    	// Cual sería este caso?
-
-    	if (bufBloque[strlen(bufBloque)-1]== '\n'){
-    		bufBloque[strlen(bufBloque)]=0;
-
-    		// = 0 o ='\0' ?
-
-    		obtenerNodosMasLibres();
-    		//Copiar el contenido del Buffer en los nodos mas vacios por triplicado
-    		for (indice=0;indice<3;indice++){
-    			if (send(nodosMasLibres[indice].socket, handshake, sizeof(handshake), 0) == -1) {
-    				perror("send");
-    				log_error(logger, "FALLO el envio del aviso de obtener bloque ");
-    				exit(-1);
-    			}
-    			int indice_bitarray=0,corte=0;
-    			while (corte==0){
-    				if (!bitarray_test_bit(nodosMasLibres[indice].bloques_del_nodo,indice_bitarray)) corte=1;
-    				else indice_bitarray++;
-    			}
-    			if (send(nodosMasLibres[indice].socket, &indice_bitarray, sizeof(int), 0) == -1) {
-    				perror("send");
-    				log_error(logger, "FALLO el envio del aviso de obtener bloque ");
-    				exit(-1);
-    			}
-    			if (send(nodosMasLibres[indice].socket, bufBloque, BLOCK_SIZE, 0) == -1) {
-    				perror("send");
-    				log_error(logger, "FALLO el envio del aviso de obtener bloque ");
-    				exit(-1);
-    			}
-    			if ((read_size = recv(nodosMasLibres[indice].socket, resultado, sizeof(int),0)) <= 0) {
-    				perror("recv");
-    				log_error(logger, "FALLO el Recv");
-    				exit(-1);
-    			}
-    			if (!*resultado) bitarray_set_bit(nodosMasLibres[indice].bloques_del_nodo,indice_bitarray);
-    			else{
-    				printf ("Algo paso y no se pudo copiar el bloque, volvemos al menu\n");
-    				exit(1);
-    			}
-    			list_add(bloque_temporal.copias,agregar_copia_a_lista(nodosMasLibres[indice].nodo_id,indice_bitarray,obtener_md5(bufBloque)));
-    		}
-    		list_add(archivo_temporal.bloques,agregar_bloque_a_lista(bloque_temporal));
-    		pos = 0; // pos = 0;
-    		cantBytes=0;
-    		memset(bufBloque,'\0',BLOCK_SIZE); //Vaciar el Buffer
-    	}
     }
     strcpy(ruta,path);
     char *nombre_del_archivo;
