@@ -15,6 +15,7 @@ int estaEnListaMappers(int socket);
 int estaEnListaReducers(int socket);
 void ejecutarMapper(char *script,int bloque,char *resultado);
 void ordenarMapper(char *nombreMapperTemporal, char* nombreMapperOrdenado);
+void* rutinaMap(int *socketMap); //Hilo encargado de ejecutar una rutina Map
 char* crearBloqueFalso(); //Solo para uso interno, crea un bloque de 20MB
 char* crearBloqueAMediasFalso(); // Solo para uso interno, crea un bloque de 10MB
 void crearArchivoFalso();//Solo para uso interno, crea un archivo de 50MB en /tmp/archivoPrueba.txt (se puede regular el tamaño en multiplos de 10MB)

@@ -92,24 +92,40 @@ int main(void){
 		exit(-1);
 	}
 
+	pthread_t mapperThread2;
 	t_mapper* punteroMapper;
+	t_mapper* punteroMapper2;
 	punteroMapper=malloc(sizeof(t_mapper));
+	punteroMapper2=malloc(sizeof(t_mapper));
+
 	memset(punteroMapper->nombreArchivoTemporal,'\0',100);
 	memset(punteroMapper->ip_nodo,'\0',20);
-//	string_append(&(punteroMapper->nombreArchivoTemporal),datosMapper.nombreArchivoTemporal);
-//	string_append(&(punteroMapper->ip_nodo),datosMapper.ip_nodo);
 	strcpy(punteroMapper->ip_nodo,datosMapper.ip_nodo);
 	punteroMapper->bloque=datosMapper.bloque;
 	punteroMapper->puerto_nodo=datosMapper.puerto_nodo;
 	strcpy(punteroMapper->nombreArchivoTemporal,datosMapper.nombreArchivoTemporal);
+
+		memset(punteroMapper2->nombreArchivoTemporal,'\0',100);
+		memset(punteroMapper2->ip_nodo,'\0',20);
+		strcpy(punteroMapper2->ip_nodo,"127.0.0.1");
+		punteroMapper2->bloque=0;
+		punteroMapper2->puerto_nodo=6500;
+		strcpy(punteroMapper2->nombreArchivoTemporal,"/tmp/jacinto.txt");
 
 	if(pthread_create(&mapperThread,NULL,(void*)hilo_mapper,punteroMapper)!=0){
 		perror("pthread_create");
 		log_error(logger,"Fallo la creación del hilo rutina mapper");
 		return 1;
 	}
+	if(pthread_create(&mapperThread2,NULL,(void*)hilo_mapper,punteroMapper2)!=0){
+		perror("pthread_create");
+		log_error(logger,"Fallo la creación del hilo rutina mapper");
+		return 1;
+	}
 
 	pthread_join(mapperThread,NULL);
+	pthread_join(mapperThread2,NULL);
+
 	log_destroy(logger); //se elimina la instancia de log
 	config_destroy(configurador);
 	return 0;
