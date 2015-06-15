@@ -1,5 +1,5 @@
 #define BLOCK_SIZE 20971520 //block size 20MB
-#define BUF_SIZE 14
+#define BUF_SIZE 15
 #define MAPPER_SIZE 4096
 #define PATHMAPPERS "./RutinasMap/" //Donde guardará las rutinas Map que lleguen
 #define PATHTP "/home/utnso/TP" //Donde se hace el git clone

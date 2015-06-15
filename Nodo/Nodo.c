@@ -282,7 +282,7 @@ void *manejador_de_escuchas(){
 					else{
 						/* -- el filesystem envío un mensaje a tratar -- */
 						if(strncmp(mensaje,"copiar_archivo",14)==0){
-							mensaje[14]=0;
+							//mensaje[14]=0;
 							printf ("Handshake: %s\n",mensaje);
 							if ((read_size = recv(conectorFS, &combo, sizeof(combo),MSG_WAITALL)) <= 0) {
 								perror("recv");
