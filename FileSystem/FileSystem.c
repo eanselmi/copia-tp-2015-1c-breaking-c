@@ -1045,7 +1045,7 @@ int CopiarArchivoAMDFS(){
 
 	printf("Eligió Copiar un archivo local al MDFS\n");
     FILE * archivoLocal;
-    char handshake[14]="copiar_archivo";
+    char handshake[15]="copiar_archivo";
 	char* path=string_new();
 	t_archivo archivo_temporal;
 	t_bloque bloque_temporal;

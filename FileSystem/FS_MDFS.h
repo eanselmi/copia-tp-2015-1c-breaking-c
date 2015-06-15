@@ -1,4 +1,4 @@
-#define BUF_SIZE 14
+#define BUF_SIZE 15
 #define BLOCK_SIZE 20971520
 #define MENSAJE_SIZE 4096
 #define MAX_DIRECTORIOS 1024
