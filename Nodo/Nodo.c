@@ -69,6 +69,7 @@ int main(int argc , char *argv[]){
 	struct sockaddr_in filesystem; //direccion del fs a donde se conectará
 	struct sockaddr_in nodoAddr; //direccion del nodo que será servidor
 	memset(&filesystem, 0, sizeof(filesystem));
+	memset(identificacion,'\0',BUF_SIZE);
 	listaNodosConectados=list_create();
 	listaMappersConectados=list_create();
 	listaReducersConectados=list_create();
