@@ -1,4 +1,4 @@
-#define BUF_SIZE 50
+#define BUF_SIZE 15
 #define MENSAJE_SIZE 4096
 
 //Estructura para manejar los Jobs

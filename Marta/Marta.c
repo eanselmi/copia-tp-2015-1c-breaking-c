@@ -58,13 +58,13 @@ int main(int argc, char**argv){
 	fdmax = socket_fs; // por ahora es éste el ultimo socket
 
 	strcpy(identificacion,"marta");
-	if((send(socket_fs,identificacion,sizeof(identificacion),0))==-1) {
+	if((send(socket_fs,identificacion,sizeof(identificacion),MSG_WAITALL))==-1) {
 		perror("send");
 		log_error(logger,"FALLO el envio del saludo al FS");
 	exit(-1);
 	}
 	int nbytes;
-	if ((nbytes = recv(socket_fs, identificacion, sizeof(identificacion), 0)) < 0) { //si entra aca es porque hubo un error, no considero desconexion porque es nuevo
+	if ((nbytes = recv(socket_fs, identificacion, sizeof(identificacion), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error, no considero desconexion porque es nuevo
 		perror("recv");
 		log_error(logger,"FALLO el Recv");
 		exit(-1);
@@ -134,7 +134,7 @@ void *connection_handler_jobs(){
 						log_info(logger,"FALLO el ACCEPT");
 						exit(-1);
 					} else { //llego una nueva conexion, se acepto y ahora tengo que tratarla
-						if ((nbytes = recv(newfd, mensaje, sizeof(mensaje), 0)) <= 0) { //si entra aca es porque hubo un error, no considero desconexion porque es nuevo
+						if ((nbytes = recv(newfd, mensaje, sizeof(mensaje), MSG_WAITALL)) <= 0) { //si entra aca es porque hubo un error, no considero desconexion porque es nuevo
 							perror("recv");
 							log_info(logger,"FALLO el Recv");
 							exit(-1);
@@ -156,7 +156,7 @@ void *connection_handler_jobs(){
 							}
 							//fin de la prueba
 
-							if(recv(newfd,mensajeCombiner,sizeof(mensajeCombiner),0)==-1){
+							if(recv(newfd,mensajeCombiner,sizeof(mensajeCombiner),MSG_WAITALL)==-1){
 								perror("recv");
 								log_error(logger,"Fallo al recibir el atributo COMBINER");
 								exit(-1);
@@ -178,7 +178,7 @@ void *connection_handler_jobs(){
 							datosMapper.bloque=1;
 							strcpy(datosMapper.nombreArchivoTemporal,"/tmp/map3tmp.txt");
 
-							if(send(newfd,&datosMapper,sizeof(t_mapper),0)==-1){
+							if(send(newfd,&datosMapper,sizeof(t_mapper),MSG_WAITALL)==-1){
 								perror("send");
 								log_error(logger,"Fallo el envio de los datos para el mapper");
 								exit(-1);
@@ -191,7 +191,7 @@ void *connection_handler_jobs(){
 				//.................................................
 				} else {
 					// gestionar datos de un job o del fs
-					if ((nbytes = recv(i, mensaje, sizeof(mensaje), 0)) <= 0) { //si entra aca es porque se desconecto o hubo un error
+					if ((nbytes = recv(i, mensaje, sizeof(mensaje), MSG_WAITALL)) <= 0) { //si entra aca es porque se desconecto o hubo un error
 						if (nbytes == 0) {
 							// Un job o el fs se desconecto, lo identifico
 							if (i==socket_fs){ //se desconecto el FS
