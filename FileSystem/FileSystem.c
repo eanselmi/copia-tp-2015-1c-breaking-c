@@ -54,7 +54,7 @@ int directoriosDisponibles; //reservo raiz
 int j; //variable para recorrer el vector de indices
 int *puerto_escucha_nodo;
 char nodo_id[6];
-t_nodo nodosMasLibres[3];
+//t_nodo nodosMasLibres[3];
 //char bufBloque[BLOCK_SIZE];
 //Variables para la persistencia con mongo
 mongoc_client_t *client;
@@ -410,7 +410,7 @@ char *obtener_md5(char *bloque) {
 void listar_nodos_conectados(t_list *nodos) {
 	int i, j, cantidad_nodos;
 	t_nodo *elemento;
-	obtenerNodosMasLibres();
+	//obtenerNodosMasLibres();
 	cantidad_nodos = list_size(nodos);
 	for (i = 0; i < cantidad_nodos; i++) {
 		elemento = list_get(nodos, i);
@@ -1022,6 +1022,41 @@ void MoverDirectorio() {
 	}
 }
 
+bool nodos_mas_libres(t_nodo *vacio, t_nodo *mas_vacio) {
+	return vacio->bloques_libres > mas_vacio->bloques_libres;
+}
+
+int copiar_lista_de_nodos(t_list* destino, t_list* origen){
+	int i,k;
+	t_nodo *original=malloc(sizeof(t_nodo));
+	t_nodo *copia=malloc(sizeof(t_nodo));
+	for (i=0;i<list_size(origen);i++){
+		original=list_get(origen,i);
+		memset(copia->nodo_id, '\0', 6);
+		strcpy(copia->nodo_id, original->nodo_id);
+		copia->socket = original->socket;
+		copia->estado = original->estado;
+		copia->estado_red = original->estado_red;
+		copia->ip = strdup(original->ip);
+		copia->puerto = original->puerto;
+		copia->bloques_libres = original->bloques_libres;
+		copia->bloques_totales = original->bloques_totales;
+		copia->puerto_escucha_nodo = original->puerto_escucha_nodo;
+
+		//Creo e inicializo el bitarray del nodo, 0 es bloque libre, 1 es blloque ocupado
+		//Como recien se esta conectadno el nodo, todos sus bloques son libres
+		for (k = 8; k < original->bloques_totales; k += 8);
+		copia->bloques_bitarray = malloc(i / 8);
+		copia->bloques_del_nodo = bitarray_create(copia->bloques_bitarray, i / 8);
+		for (k = 0; k < copia->bloques_totales; k++)
+			if (!bitarray_test_bit(original->bloques_del_nodo, k))
+				bitarray_clean_bit(copia->bloques_del_nodo, k);
+			else bitarray_set_bit(copia->bloques_del_nodo, k);
+		list_add(destino,copia);
+	}
+	return 0;
+}
+
 int CopiarArchivoAMDFS(){
 
 	// Entiendo que se deberia hacer tambien una copia de la lista de nodos, en caso de que se empiecen a repartir los bloques
@@ -1032,6 +1067,13 @@ int CopiarArchivoAMDFS(){
 
 	printf("Eligió Copiar un archivo local al MDFS\n");
     FILE * archivoLocal;
+    t_list *nodos_temporales;
+    nodos_temporales=list_create();
+    if (copiar_lista_de_nodos(nodos_temporales,nodos)){
+    	printf ("No se pudo crear la copia de la lista de nodos\n");
+    	return -1;
+    }
+    t_nodo *nodo_temporal;
     char handshake[15]="copiar_archivo";
 	char* path=string_new();
 	t_archivo archivo_temporal;
@@ -1080,39 +1122,51 @@ int CopiarArchivoAMDFS(){
     */
     int leido=0;
     int n_copia=0;
+    int bandera;
     memset(combo.buf_20mb,0,sizeof(combo.buf_20mb));
     while (fread(&combo.buf_20mb,sizeof(char),sizeof(combo.buf_20mb),archivoLocal) == BLOCK_SIZE){
     		cantBytes+=BLOCK_SIZE;
     		n_copia++;
     		if (combo.buf_20mb[BLOCK_SIZE-1]=='\n'){
-    			obtenerNodosMasLibres();
+    			//obtenerNodosMasLibres();
+    			list_sort(nodos_temporales, (void*) nodos_mas_libres);
     			//Copiar el contenido del Buffer en los nodos mas vacios por triplicado
-    			for (indice=0;indice<3;indice++){
-    				if (send(nodosMasLibres[indice].socket, handshake, sizeof(handshake), MSG_WAITALL) == -1) {
-    					perror("send handshake en funcion subir archivo");
-    					log_error(logger, "FALLO el envio del aviso de obtener bloque ");
-    					exit(-1);
+    			bandera=0;
+    			for (indice=0;indice<list_size(nodos_temporales);indice++){
+    				if (bandera==3) break;
+    				nodo_temporal=list_get(nodos_temporales,indice);
+    				if (nodo_temporal->estado == 1 && nodo_temporal->bloques_libres > 0){
+    					bandera++;
+    					if (send(nodo_temporal->socket, handshake, sizeof(handshake), MSG_WAITALL) == -1) {
+							perror("send handshake en funcion subir archivo");
+							log_error(logger, "FALLO el envio del aviso de obtener bloque ");
+							exit(-1);
+						}
+						corte=0;
+						for(combo.n_bloque=0;combo.n_bloque<nodo_temporal->bloques_totales;combo.n_bloque++){
+							if (!bitarray_test_bit(nodo_temporal->bloques_del_nodo,combo.n_bloque)){
+								corte=1;
+								break;
+							}
+						}
+						if (corte==0){
+							printf ("El nodo %s no tiene bloques libles, se cancela la subida del archivo\n",nodo_temporal->nodo_id);
+							return -1;
+						}
+						printf ("voy a mandar al nodo %s la copia %d del bloque %d y la guardara en el bloque %d\n",nodo_temporal->nodo_id,indice+1,n_copia,combo.n_bloque);
+						if (send(nodo_temporal->socket, &combo, sizeof(combo), 0) == -1) {
+							perror("send buffer en subir archivo");
+							log_error(logger, "FALLO el envio del aviso de obtener bloque ");
+							exit(-1);
+						}
+						bitarray_set_bit(nodo_temporal->bloques_del_nodo,combo.n_bloque);
+						nodo_temporal->bloques_libres--;
+						//		list_add(bloque_temporal.copias,agregar_copia_a_lista(nodosMasLibres[indice].nodo_id,indice_bitarray,obtener_md5(bufBloque)));
     				}
-    				corte=0;
-    				for(combo.n_bloque=0;combo.n_bloque<nodosMasLibres[indice].bloques_totales;combo.n_bloque++){
-    					if (!bitarray_test_bit(nodosMasLibres[indice].bloques_del_nodo,combo.n_bloque)){
-    						corte=1;
-    						break;
-    					}
-    				}
-    				if (corte==0){
-    					printf ("El nodo %s no tiene bloques libles, se cancela la subida del archivo\n",nodosMasLibres[indice].nodo_id);
-    					return -1;
-    				}
-    				printf ("voy a mandar al nodo %s la copia %d del bloque %d y la guardara en el bloque %d\n",nodosMasLibres[indice].nodo_id,indice+1,n_copia,combo.n_bloque);
-    				if (send(nodosMasLibres[indice].socket, &combo, sizeof(combo), 0) == -1) {
-    					perror("send buffer en subir archivo");
-    					log_error(logger, "FALLO el envio del aviso de obtener bloque ");
-    					exit(-1);
-    				}
-      				bitarray_set_bit(nodosMasLibres[indice].bloques_del_nodo,combo.n_bloque);
-      				nodosMasLibres[indice].bloques_libres--;
-    				//		list_add(bloque_temporal.copias,agregar_copia_a_lista(nodosMasLibres[indice].nodo_id,indice_bitarray,obtener_md5(bufBloque)));
+    			}
+    			if (bandera!=3){
+    				printf ("No hay suficientes nodos disponibles con espacio libre\n");
+    				return -1;
     			}
     			//list_add(archivo_temporal.bloques,agregar_bloque_a_lista(bloque_temporal));
 
@@ -1125,38 +1179,48 @@ int CopiarArchivoAMDFS(){
     				}
     			}
     			for(j=pos+1;j<BLOCK_SIZE;j++) combo.buf_20mb[j]=0;
-    			obtenerNodosMasLibres();
-
+    			//obtenerNodosMasLibres();
+    			list_sort(nodos_temporales, (void*) nodos_mas_libres);
     			//Copiar el contenido del Buffer en los nodos mas vacios por triplicado
-    			for (indice=0;indice<3;indice++){
-    				if ((total_enviado=send(nodosMasLibres[indice].socket, handshake, sizeof(handshake), MSG_WAITALL)) == -1) {
-    					perror("send error del envio de handshake en subir archivo");
-    					log_error(logger, "FALLO el envio del aviso de obtener bloque ");
-    					exit(-1);
-    				}
-    				printf ("Lo que mande del handshake: %d\n",total_enviado);
-    				corte=0;
-    				for(combo.n_bloque=0;combo.n_bloque<nodosMasLibres[indice].bloques_totales;combo.n_bloque++){
-    					if (!bitarray_test_bit(nodosMasLibres[indice].bloques_del_nodo,combo.n_bloque)){
-    						corte=1;
-    						break;
+    			bandera=0;
+    			for (indice=0;indice<list_size(nodos_temporales);indice++){
+    				if (bandera==3) break;
+    				nodo_temporal=list_get(nodos_temporales,indice);
+    				if (nodo_temporal->estado == 1 && nodo_temporal->bloques_libres > 0){
+    					bandera++;
+    					if ((total_enviado=send(nodo_temporal->socket, handshake, sizeof(handshake), MSG_WAITALL)) == -1) {
+    						perror("send error del envio de handshake en subir archivo");
+    						log_error(logger, "FALLO el envio del aviso de obtener bloque ");
+    						exit(-1);
     					}
-    				}
-    				if (corte==0){
-    					printf ("El nodo %s no tiene bloques libles, se cancela la subida del archivo\n",nodosMasLibres[indice].nodo_id);
-    					return -1;
-    				}
-    				printf ("voy a mandar al nodo %s la copia %d del bloque %d y la guardara en el bloque %d\n",nodosMasLibres[indice].nodo_id,indice+1,n_copia,combo.n_bloque);
+    					printf ("Lo que mande del handshake: %d\n",total_enviado);
+    					corte=0;
+    					for(combo.n_bloque=0;combo.n_bloque<nodo_temporal->bloques_totales;combo.n_bloque++){
+    						if (!bitarray_test_bit(nodo_temporal->bloques_del_nodo,combo.n_bloque)){
+    							corte=1;
+    							break;
+    						}
+    					}
+    					if (corte==0){
+    						printf ("El nodo %s no tiene bloques libles, se cancela la subida del archivo\n",nodo_temporal->nodo_id);
+    						return -1;
+    					}
+    					printf ("voy a mandar al nodo %s la copia %d del bloque %d y la guardara en el bloque %d\n",nodo_temporal->nodo_id,indice+1,n_copia,combo.n_bloque);
 
-    				if ((total_enviado=send(nodosMasLibres[indice].socket, &combo, sizeof(combo), 0)) == -1) {
-    					perror("send buffer en subir archivo");
-    					log_error(logger, "FALLO el envio del aviso de obtener bloque ");
-    					exit(-1);
+    					if ((total_enviado=send(nodo_temporal->socket, &combo, sizeof(combo), 0)) == -1) {
+    						perror("send buffer en subir archivo");
+    						log_error(logger, "FALLO el envio del aviso de obtener bloque ");
+    						exit(-1);
+    					}
+    					printf ("Quiero enviar %d y envie %d\n",sizeof(combo),total_enviado);
+    					nodo_temporal->bloques_libres--;
+    					bitarray_set_bit(nodo_temporal->bloques_del_nodo,combo.n_bloque);
+    					//list_add(bloque_temporal.copias,agregar_copia_a_lista(nodosMasLibres[indice].nodo_id,indice_bitarray,obtener_md5(bufBloque)));
     				}
-    				printf ("Quiero enviar %d y envie %d\n",sizeof(combo),total_enviado);
-    				nodosMasLibres[indice].bloques_libres--;
-    				bitarray_set_bit(nodosMasLibres[indice].bloques_del_nodo,combo.n_bloque);
-    				//list_add(bloque_temporal.copias,agregar_copia_a_lista(nodosMasLibres[indice].nodo_id,indice_bitarray,obtener_md5(bufBloque)));
+    			}
+    			if (bandera!=3){
+    				printf ("No hay suficientes nodos disponibles con espacio libre\n");
+    				return -1;
     			}
     			//list_add(archivo_temporal.bloques,agregar_bloque_a_lista(bloque_temporal));
     			pos = 0; //pos = 0;
@@ -1171,40 +1235,46 @@ int CopiarArchivoAMDFS(){
     		//aca va el fin
     		//si leyo menos lo mando de una porque seguro temina en \n y esta relleno de 0
     		n_copia++;
-    		obtenerNodosMasLibres();
+    		//obtenerNodosMasLibres();
+    		list_sort(nodos_temporales, (void*) nodos_mas_libres);
     		//Copiar el contenido del Buffer en los nodos mas vacios por triplicado
-    		for (indice=0;indice<3;indice++){
-    			if ((total_enviado=send(nodosMasLibres[indice].socket, handshake, sizeof(handshake), MSG_WAITALL)) == -1) {
-    				perror("send handshake en subir archivo");
-    				log_error(logger, "FALLO el envio del aviso de obtener bloque ");
-    				exit(-1);
-    			}
-    			printf ("Lo que mande del handshake: %d\n",total_enviado);
-    			corte=0;
-    			for(combo.n_bloque=0;combo.n_bloque<nodosMasLibres[indice].bloques_totales;combo.n_bloque++){
-    				if (!bitarray_test_bit(nodosMasLibres[indice].bloques_del_nodo,combo.n_bloque)){
-    					corte=1;
-    					break;
+    		bandera=0;
+    		for (indice=0;indice<list_size(nodos_temporales);indice++){
+    			if (bandera==3) break;
+    			nodo_temporal=list_get(nodos_temporales,indice);
+    			if (nodo_temporal->estado == 1 && nodo_temporal->bloques_libres > 0){
+    				bandera++;
+    				if ((total_enviado=send(nodo_temporal->socket, handshake, sizeof(handshake), MSG_WAITALL)) == -1) {
+    					perror("send handshake en subir archivo");
+    					log_error(logger, "FALLO el envio del aviso de obtener bloque ");
+    					exit(-1);
     				}
+    				printf ("Lo que mande del handshake: %d\n",total_enviado);
+    				corte=0;
+    				for(combo.n_bloque=0;combo.n_bloque<nodo_temporal->bloques_totales;combo.n_bloque++){
+    					if (!bitarray_test_bit(nodo_temporal->bloques_del_nodo,combo.n_bloque)){
+    						corte=1;
+    						break;
+    					}
+    				}
+    				if (corte==0){
+    					printf ("El nodo %s no tiene bloques libles, se cancela la subida del archivo\n",nodo_temporal->nodo_id);
+    					return -1;
+    				}
+    				printf ("voy a mandar al nodo %s la copia %d del bloque %d y la guardara en el bloque %d\n",nodo_temporal->nodo_id,indice+1,n_copia,combo.n_bloque);
+    				if ((total_enviado=send(nodo_temporal->socket, &combo, sizeof(combo), 0)) == -1) {
+    					perror("send buffer en subir archivo");
+    					log_error(logger, "FALLO el envio del aviso de obtener bloque ");
+    					exit(-1);
+    				}
+    				printf ("Esto es lo que quedo, Quiero enviar %d y envie %d\n",sizeof(combo),total_enviado);
+    				nodo_temporal->bloques_libres--;
+    				bitarray_set_bit(nodo_temporal->bloques_del_nodo,combo.n_bloque);
+    				//list_add(bloque_temporal.copias,agregar_copia_a_lista(nodosMasLibres[indice].nodo_id,indice_bitarray,obtener_md5(bufBloque)));
     			}
-    			if (corte==0){
-    				printf ("El nodo %s no tiene bloques libles, se cancela la subida del archivo\n",nodosMasLibres[indice].nodo_id);
-    				return -1;
-    			}
-    			printf ("voy a mandar al nodo %s la copia %d del bloque %d y la guardara en el bloque %d\n",nodosMasLibres[indice].nodo_id,indice+1,n_copia,combo.n_bloque);
-    			if ((total_enviado=send(nodosMasLibres[indice].socket, &combo, sizeof(combo), 0)) == -1) {
-    				perror("send buffer en subir archivo");
-    				log_error(logger, "FALLO el envio del aviso de obtener bloque ");
-    				exit(-1);
-    			}
-    			printf ("Esto es lo que quedo, Quiero enviar %d y envie %d\n",sizeof(combo),total_enviado);
-    			nodosMasLibres[indice].bloques_libres--;
-    			bitarray_set_bit(nodosMasLibres[indice].bloques_del_nodo,combo.n_bloque);
-    			//list_add(bloque_temporal.copias,agregar_copia_a_lista(nodosMasLibres[indice].nodo_id,indice_bitarray,obtener_md5(bufBloque)));
+    			//list_add(archivo_temporal.bloques,agregar_bloque_a_lista(bloque_temporal));
+    			//memset(bufBloque,'\0',BLOCK_SIZE); //Vaciar el Buffer
     		}
-    		//list_add(archivo_temporal.bloques,agregar_bloque_a_lista(bloque_temporal));
-    		//memset(bufBloque,'\0',BLOCK_SIZE); //Vaciar el Buffer
-
 
     	}
     	strcpy(ruta,path);
@@ -1224,7 +1294,7 @@ int CopiarArchivoAMDFS(){
     }
 
 
-void obtenerNodosMasLibres() {  //carga con vector con los 3 nodos mas libres
+/*void obtenerNodosMasLibres() {  //carga con vector con los 3 nodos mas libres
 	int i,k, j = 0;
 	t_nodo *nodoAEvaluar;
 
@@ -1265,7 +1335,7 @@ void obtenerNodosMasLibres() {  //carga con vector con los 3 nodos mas libres
 		printf("No hay 3 nodos disponibles\n");
 		exit(-1);
 	}
-}
+}*/
 void CopiarArchivoDelMDFS() {
 	printf("Eligió Copiar un archivo del MDFS al filesystem local\n");
 }
