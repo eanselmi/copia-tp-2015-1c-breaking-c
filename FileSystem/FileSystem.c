@@ -24,6 +24,8 @@
 #include "FS_MDFS.h"
 
 //Variables globales
+t_datos_y_bloque combo;
+//uint32_t n_bloque;
 fd_set master; // conjunto maestro de descriptores de fichero
 fd_set read_fds; // conjunto temporal de descriptores de fichero para select()
 t_log* logger;
@@ -53,7 +55,7 @@ int j; //variable para recorrer el vector de indices
 int *puerto_escucha_nodo;
 char nodo_id[6];
 t_nodo nodosMasLibres[3];
-char bufBloque[BLOCK_SIZE];
+//char bufBloque[BLOCK_SIZE];
 //Variables para la persistencia con mongo
 mongoc_client_t *client;
 mongoc_collection_t *collection;
@@ -120,7 +122,7 @@ int main(int argc, char *argv[]) {
 			log_error(logger, "FALLO el ACCEPT");
 			exit(-1);
 		}
-		if ((read_size = recv(newfd, identificacion, 50, 0)) == -1) {
+		if ((read_size = recv(newfd, identificacion, sizeof(identificacion), MSG_WAITALL)) == -1) {
 			perror("recv");
 			log_error(logger, "FALLO el RECV");
 			exit(-1);
@@ -128,18 +130,18 @@ int main(int argc, char *argv[]) {
 		if (read_size > 0 && strncmp(identificacion, "nuevo", 5) == 0) {
 			bloquesTotales = malloc(sizeof(int));
 			//Segundo recv, aca espero recibir la capacidad del nodo
-			if ((read_size = recv(newfd, bloquesTotales, sizeof(int), 0))== -1) {
+			if ((read_size = recv(newfd, bloquesTotales, sizeof(int), MSG_WAITALL))== -1) {
 				perror("recv");
 				log_error(logger, "FALLO el RECV");
 				exit(-1);
 			}
 			puerto_escucha_nodo = malloc(sizeof(int));
-			if ((read_size = recv(newfd, puerto_escucha_nodo, sizeof(int), 0))== -1) {
+			if ((read_size = recv(newfd, puerto_escucha_nodo, sizeof(int), MSG_WAITALL))== -1) {
 				perror("recv");
 				log_error(logger, "FALLO el RECV");
 				exit(-1);
 			}
-			if ((read_size = recv(newfd, nodo_id, sizeof(nodo_id), 0)) == -1) {
+			if ((read_size = recv(newfd, nodo_id, sizeof(nodo_id), MSG_WAITALL)) == -1) {
 				perror("recv");
 				log_error(logger, "FALLO el RECV");
 				exit(-1);
@@ -307,7 +309,8 @@ static t_nodo *agregar_nodo_a_lista(char nodo_id[6], int socket, int est, int es
 	strcpy(nodo_temporal->nodo_id, nodo_id);
 	nodo_temporal->socket = socket;
 	//strcat(nodo_temporal->nodo_id,nombre_temporal);
-	nodo_temporal->estado = est;
+	//nodo_temporal->estado = est;
+	nodo_temporal->estado = 1;
 	nodo_temporal->estado_red = est_red;
 	nodo_temporal->ip = strdup(ip);
 	nodo_temporal->puerto = port;
@@ -452,7 +455,7 @@ void *connection_handler_escucha(void) {
 						log_error(logger, "FALLO el ACCEPT");
 						exit(-1);
 					} else { //llego una nueva conexion, se acepto y ahora tengo que tratarla
-						if ((read_size = recv(newfd, identificacion,sizeof(identificacion), 0)) <= 0) { //si entra aca es porque hubo un error, no considero desconexion porque es nuevo
+						if ((read_size = recv(newfd, identificacion,sizeof(identificacion), 0)) <= MSG_WAITALL) { //si entra aca es porque hubo un error, no considero desconexion porque es nuevo
 							perror("recv");
 							log_error(logger, "FALLO el Recv");
 							exit(-1);
@@ -470,7 +473,7 @@ void *connection_handler_escucha(void) {
 										fdmax = newfd;
 									}
 									strcpy(identificacion, "ok");
-									if ((send(marta_sock, identificacion,sizeof(identificacion), 0)) == -1) {
+									if ((send(marta_sock, identificacion,sizeof(identificacion), MSG_WAITALL)) == -1) {
 										perror("send");
 										log_error(logger, "FALLO el envio del ok a Marta");
 										exit(-1);
@@ -486,18 +489,18 @@ void *connection_handler_escucha(void) {
 							}
 							if (read_size > 0 && strncmp(identificacion, "nuevo", 5) == 0) {
 								bloquesTotales = malloc(sizeof(int));
-								if ((read_size = recv(newfd, bloquesTotales,sizeof(int), 0)) == -1) {
+								if ((read_size = recv(newfd, bloquesTotales,sizeof(int), MSG_WAITALL)) == -1) {
 									perror("recv");
 									log_error(logger, "FALLO el RECV");
 									exit(-1);
 								}
 								puerto_escucha_nodo = malloc(sizeof(int));
-								if ((read_size = recv(newfd,puerto_escucha_nodo, sizeof(int), 0)) == -1) {
+								if ((read_size = recv(newfd,puerto_escucha_nodo, sizeof(int), MSG_WAITALL)) == -1) {
 									perror("recv");
 									log_error(logger, "FALLO el RECV");
 									exit(-1);
 								}
-								if ((read_size = recv(newfd, nodo_id,sizeof(nodo_id), 0)) == -1) {
+								if ((read_size = recv(newfd, nodo_id,sizeof(nodo_id), MSG_WAITALL)) == -1) {
 									perror("recv");
 									log_error(logger, "FALLO el RECV");
 									exit(-1);
@@ -520,7 +523,7 @@ void *connection_handler_escucha(void) {
 								}
 							}
 							if (read_size > 0 && strncmp(identificacion, "reconectado",11) == 0) {
-								if ((read_size = recv(newfd, nodo_id,sizeof(nodo_id), 0)) == -1) {
+								if ((read_size = recv(newfd, nodo_id,sizeof(nodo_id), MSG_WAITALL)) == -1) {
 									perror("recv");
 									log_error(logger, "FALLO el RECV");
 									exit(-1);
@@ -549,7 +552,7 @@ void *connection_handler_escucha(void) {
 
 				} else { //si entra aca no es un cliente nuevo, es uno que ya tenia y me esta mandando algo
 					// gestionar datos de un cliente
-					if ((read_size = recv(i, mensaje, sizeof(mensaje), 0))
+					if ((read_size = recv(i, mensaje, sizeof(mensaje), MSG_WAITALL))
 							<= 0) { //si entra aca es porque se desconecto o hubo un error
 						if (read_size == 0) {
 							// Un nodo o marta cerro su conexion, actualizo la lista de nodos, reviso quien fue
@@ -1055,10 +1058,11 @@ int CopiarArchivoAMDFS(){
 	//pathMDFS = string_new();
 	uint32_t cantBytes=0;
 	int pos=0;
+	int total_enviado;
 	//int k=0;
 	//int n=0;
 	//char car;
-    memset(bufBloque,'\0',BLOCK_SIZE); //inicializo el buffer
+    //memset(bufBloque,'\0',BLOCK_SIZE); //inicializo el buffer
 	int j;
 	archivo_temporal.bloques=list_create(); //inicializo las listas ficticias
 	bloque_temporal.copias=list_create(); //inicializo las listas ficticias
@@ -1087,175 +1091,135 @@ int CopiarArchivoAMDFS(){
     //Se debe crear un nuevo archivo con el nombre ingresado, cuyo padre sea "idPadre"
     */
     int leido=0;
-    while (1){
-    	leido=fread(&bufBloque,sizeof(char),BLOCK_SIZE,archivoLocal);
-    	cantBytes+=BLOCK_SIZE;
-    	if (leido == BLOCK_SIZE){
-    		if (bufBloque[BLOCK_SIZE-1]=='\n'){
+    int n_copia=0;
+    memset(combo.buf_20mb,0,sizeof(combo.buf_20mb));
+    while (fread(&combo.buf_20mb,sizeof(char),sizeof(combo.buf_20mb),archivoLocal) == BLOCK_SIZE){
+    		cantBytes+=BLOCK_SIZE;
+    		n_copia++;
+    		if (combo.buf_20mb[BLOCK_SIZE-1]=='\n'){
+    			obtenerNodosMasLibres();
+    			//Copiar el contenido del Buffer en los nodos mas vacios por triplicado
+    			for (indice=0;indice<3;indice++){
+    				if (send(nodosMasLibres[indice].socket, handshake, sizeof(handshake), MSG_WAITALL) == -1) {
+    					perror("send handshake en funcion subir archivo");
+    					log_error(logger, "FALLO el envio del aviso de obtener bloque ");
+    					exit(-1);
+    				}
+    				int corte=0;
+    				combo.n_bloque=0;
+    				while (corte==0){
+    					if (!bitarray_test_bit(nodosMasLibres[indice].bloques_del_nodo,combo.n_bloque)) corte=1;
+    					else combo.n_bloque++;
+    				}
+    				printf ("voy a mandar al nodo %s la copia %d del bloque %d y la guardara en el bloque %d\n",nodosMasLibres[indice].nodo_id,indice+1,n_copia,combo.n_bloque);
+    				if (send(nodosMasLibres[indice].socket, &combo, sizeof(combo), 0) == -1) {
+    					perror("send buffer en subir archivo");
+    					log_error(logger, "FALLO el envio del aviso de obtener bloque ");
+    					exit(-1);
+    				}
+      				bitarray_set_bit(nodosMasLibres[indice].bloques_del_nodo,combo.n_bloque);
+      				nodosMasLibres[indice].bloques_libres--;
+    				//		list_add(bloque_temporal.copias,agregar_copia_a_lista(nodosMasLibres[indice].nodo_id,indice_bitarray,obtener_md5(bufBloque)));
+    			}
+    			//list_add(archivo_temporal.bloques,agregar_bloque_a_lista(bloque_temporal));
 
-		/*cantBytes++;
-		k++;
-		bufBloque[cantBytes-1]=car;
-		if(car == '\n'){
-			pos = cantBytes -1;
-			n=k;
-		}
-		if(strlen(bufBloque) == BLOCK_SIZE){
-			if(car == '\n'){ //Caso Feliz*/
+    		}else{ //Caso en que el bloque no termina en "\n"
+    			int p,aux;
+    			for (p=BLOCK_SIZE-1,aux=0;p>=0;p--,aux++){
+    				if (combo.buf_20mb[p]=='\n'){
+    					pos=p;
+    					break;
+    				}
+    			}
+    			for(j=pos+1;j<BLOCK_SIZE;j++) combo.buf_20mb[j]=0;
+    			obtenerNodosMasLibres();
 
-				obtenerNodosMasLibres();
-			    //Copiar el contenido del Buffer en los nodos mas vacios por triplicado
-			    for (indice=0;indice<3;indice++){
-					if (send(nodosMasLibres[indice].socket, handshake, sizeof(handshake), 0) == -1) {
-						perror("send");
-						log_error(logger, "FALLO el envio del aviso de obtener bloque ");
-						exit(-1);
-					}
-					int indice_bitarray=0,corte=0;
-					while (corte==0){
-						if (!bitarray_test_bit(nodosMasLibres[indice].bloques_del_nodo,indice_bitarray)) corte=1;
-						else indice_bitarray++;
-					}
-					if (send(nodosMasLibres[indice].socket, &indice_bitarray, sizeof(int), 0) == -1) {
-						perror("send");
-						log_error(logger, "FALLO el envio del aviso de obtener bloque ");
-						exit(-1);
-					}
-					if (send(nodosMasLibres[indice].socket, bufBloque, BLOCK_SIZE, 0) == -1) {
-						perror("send");
-						log_error(logger, "FALLO el envio del aviso de obtener bloque ");
-						exit(-1);
-					}
-					printf("El FS envía %d bytes\n",strlen(bufBloque));
-					/*if ((read_size = recv(nodosMasLibres[indice].socket, resultado, sizeof(int),0)) <= 0) {
-						perror("recv");
-						log_error(logger, "FALLO el Recv");
-						exit(-1);
-					}*/
-					//if (!*resultado) bitarray_set_bit(nodosMasLibres[indice].bloques_del_nodo,indice_bitarray);
-					//else{
-					//	printf ("Algo paso y no se pudo copiar el bloque, volvemos al menu\n");
-					//	exit(1);
-					//}
-					bitarray_set_bit(nodosMasLibres[indice].bloques_del_nodo,indice_bitarray);
-					list_add(bloque_temporal.copias,agregar_copia_a_lista(nodosMasLibres[indice].nodo_id,indice_bitarray,obtener_md5(bufBloque)));
-			    }
-			    list_add(archivo_temporal.bloques,agregar_bloque_a_lista(bloque_temporal));
-				memset(bufBloque,'\0',BLOCK_SIZE); //Vaciar el Buffer
-			}else{ //Caso en que el bloque no termina en "\n"
-				int p,aux;
-				for (p=BLOCK_SIZE-1,aux=0;p>=0;p--,aux++){
-					if (bufBloque[p]=='\n'){
-						pos=p;
-						break;
-					}
-				}
-				for(j=pos+1;j<BLOCK_SIZE;j++) bufBloque[j]='\0';
-				obtenerNodosMasLibres();
-				//Copiar el contenido del Buffer en los nodos mas vacios por triplicado
-			    for (indice=0;indice<3;indice++){
-			    	if (send(nodosMasLibres[indice].socket, handshake, sizeof(handshake), 0) == -1) {
-			    		perror("send");
-			    		log_error(logger, "FALLO el envio del aviso de obtener bloque ");
-			    		exit(-1);
-			    	}
-			    	int indice_bitarray=0,corte=0;
-			    	while (corte==0){
-			    		if (!bitarray_test_bit(nodosMasLibres[indice].bloques_del_nodo,indice_bitarray)) corte=1;
-			    		else indice_bitarray++;
-			    	}
-			    	int *bloque_para_pasar=malloc(sizeof(int));
-			    	*bloque_para_pasar=indice_bitarray;
 
-			    	if (send(nodosMasLibres[indice].socket, bloque_para_pasar, sizeof(int), 0) == -1) {
-			    		perror("send");
-			    		log_error(logger, "FALLO el envio del aviso de obtener bloque ");
-			    		exit(-1);
-			    	}
-			    	if (send(nodosMasLibres[indice].socket, bufBloque, BLOCK_SIZE, 0) == -1) {
-			    		perror("send");
-			    		log_error(logger, "FALLO el envio del aviso de obtener bloque ");
-			    		exit(-1);
-			    	}
-			    	/*if ((read_size = recv(nodosMasLibres[indice].socket, resultado, sizeof(int),0)) <= 0) {
-			    		perror("recv");
-			    		log_error(logger, "FALLO el Recv");
-			    		exit(-1);
-			    	}*/
-			    	//if (!*resultado) bitarray_set_bit(nodosMasLibres[indice].bloques_del_nodo,indice_bitarray);
-			    	//else{
-			    //		printf ("Algo paso y no se pudo copiar el bloque, volvemos al menu\n");
-			    //		exit(1);
-			    //	}
-			    	bitarray_set_bit(nodosMasLibres[indice].bloques_del_nodo,indice_bitarray);
-			    	list_add(bloque_temporal.copias,agregar_copia_a_lista(nodosMasLibres[indice].nodo_id,indice_bitarray,obtener_md5(bufBloque)));
-			    }
-			    list_add(archivo_temporal.bloques,agregar_bloque_a_lista(bloque_temporal));
-				pos = 0; //pos = 0;
-				cantBytes-=aux;
-				fseek(archivoLocal,cantBytes,SEEK_SET);
-				memset(bufBloque,'\0',BLOCK_SIZE); //Vaciar el Buffer
-			}
-    	}else if (strlen(bufBloque) < BLOCK_SIZE && bufBloque[0]!=NULL){
+    			//Copiar el contenido del Buffer en los nodos mas vacios por triplicado
+    			for (indice=0;indice<3;indice++){
+    				if ((total_enviado=send(nodosMasLibres[indice].socket, handshake, sizeof(handshake), MSG_WAITALL)) == -1) {
+    					perror("send error del envio de handshake en subir archivo");
+    					log_error(logger, "FALLO el envio del aviso de obtener bloque ");
+    					exit(-1);
+    				}
+    				printf ("Lo que mande del handshake: %d\n",total_enviado);
+    				int corte=0;
+    				combo.n_bloque=0;
+    				while (corte==0){
+    					if (!bitarray_test_bit(nodosMasLibres[indice].bloques_del_nodo,combo.n_bloque)) corte=1;
+    					else combo.n_bloque++;
+    				}
+    				printf ("voy a mandar al nodo %s la copia %d del bloque %d y la guardara en el bloque %d\n",nodosMasLibres[indice].nodo_id,indice+1,n_copia,combo.n_bloque);
+
+    				if ((total_enviado=send(nodosMasLibres[indice].socket, &combo, sizeof(combo), 0)) == -1) {
+    					perror("send buffer en subir archivo");
+    					log_error(logger, "FALLO el envio del aviso de obtener bloque ");
+    					exit(-1);
+    				}
+    				printf ("Quiero enviar %d y envie %d\n",sizeof(combo),total_enviado);
+    				nodosMasLibres[indice].bloques_libres--;
+    				bitarray_set_bit(nodosMasLibres[indice].bloques_del_nodo,combo.n_bloque);
+    				//list_add(bloque_temporal.copias,agregar_copia_a_lista(nodosMasLibres[indice].nodo_id,indice_bitarray,obtener_md5(bufBloque)));
+    			}
+    			//list_add(archivo_temporal.bloques,agregar_bloque_a_lista(bloque_temporal));
+    			pos = 0; //pos = 0;
+    			cantBytes-=aux;
+    			fseek(archivoLocal,cantBytes,SEEK_SET);
+
+    		}
+    	}
+    	//FIN DEL WHILE
+    	if (feof(archivoLocal))
+    	{
+    		//aca va el fin
     		//si leyo menos lo mando de una porque seguro temina en \n y esta relleno de 0
-
+    		n_copia++;
     		obtenerNodosMasLibres();
     		//Copiar el contenido del Buffer en los nodos mas vacios por triplicado
     		for (indice=0;indice<3;indice++){
-    			if (send(nodosMasLibres[indice].socket, handshake, sizeof(handshake), 0) == -1) {
-    				perror("send");
+    			if ((total_enviado=send(nodosMasLibres[indice].socket, handshake, sizeof(handshake), MSG_WAITALL)) == -1) {
+    				perror("send handshake en subir archivo");
     				log_error(logger, "FALLO el envio del aviso de obtener bloque ");
     				exit(-1);
     			}
-    			int indice_bitarray=0,corte=0;
+    			printf ("Lo que mande del handshake: %d\n",total_enviado);
+    			int corte=0;
+    			combo.n_bloque=0;
     			while (corte==0){
-    				if (!bitarray_test_bit(nodosMasLibres[indice].bloques_del_nodo,indice_bitarray)) corte=1;
-    				else indice_bitarray++;
+    				if (!bitarray_test_bit(nodosMasLibres[indice].bloques_del_nodo,combo.n_bloque)) corte=1;
+    				else combo.n_bloque++;
     			}
-    			if (send(nodosMasLibres[indice].socket, &indice_bitarray, sizeof(int), 0) == -1) {
-    				perror("send");
+    			printf ("voy a mandar al nodo %s la copia %d del bloque %d y la guardara en el bloque %d\n",nodosMasLibres[indice].nodo_id,indice+1,n_copia,combo.n_bloque);
+    			if ((total_enviado=send(nodosMasLibres[indice].socket, &combo, sizeof(combo), 0)) == -1) {
+    				perror("send buffer en subir archivo");
     				log_error(logger, "FALLO el envio del aviso de obtener bloque ");
     				exit(-1);
     			}
-    			if (send(nodosMasLibres[indice].socket, bufBloque, BLOCK_SIZE, 0) == -1) {
-    				perror("send");
-    				log_error(logger, "FALLO el envio del aviso de obtener bloque ");
-    				exit(-1);
-    			}
-    			/*if ((read_size = recv(nodosMasLibres[indice].socket, resultado, sizeof(int),0)) <= 0) {
-			    							perror("recv");
-			    							log_error(logger, "FALLO el Recv");
-			    							exit(-1);
-			    						}*/
-    			//if (!*resultado) bitarray_set_bit(nodosMasLibres[indice].bloques_del_nodo,indice_bitarray);
-    			//else{
-    			//	printf ("Algo paso y no se pudo copiar el bloque, volvemos al menu\n");
-    			//	exit(1);
-    			//}
-    			bitarray_set_bit(nodosMasLibres[indice].bloques_del_nodo,indice_bitarray);
-    			list_add(bloque_temporal.copias,agregar_copia_a_lista(nodosMasLibres[indice].nodo_id,indice_bitarray,obtener_md5(bufBloque)));
+    			printf ("Esto es lo que quedo, Quiero enviar %d y envie %d\n",sizeof(combo),total_enviado);
+    			nodosMasLibres[indice].bloques_libres--;
+    			bitarray_set_bit(nodosMasLibres[indice].bloques_del_nodo,combo.n_bloque);
+    			//list_add(bloque_temporal.copias,agregar_copia_a_lista(nodosMasLibres[indice].nodo_id,indice_bitarray,obtener_md5(bufBloque)));
     		}
-    		list_add(archivo_temporal.bloques,agregar_bloque_a_lista(bloque_temporal));
-    		memset(bufBloque,'\0',BLOCK_SIZE); //Vaciar el Buffer
-    		break; //para romper el while
-    	}else if (leido == NULL) break; //para romper el while
+    		//list_add(archivo_temporal.bloques,agregar_bloque_a_lista(bloque_temporal));
+    		//memset(bufBloque,'\0',BLOCK_SIZE); //Vaciar el Buffer
 
+
+    	}
+    	strcpy(ruta,path);
+    	char *nombre_del_archivo;
+    	int aux1,aux2=0;
+    	char *saveptr;
+    	for (aux1=0;aux1<strlen(ruta);aux1++) if (ruta[aux1]=='/') aux2++;
+    	nombre_del_archivo = strtok_r(ruta,"/",&saveptr);
+    	for (aux1=0;aux1<aux2-1;aux1++) nombre_del_archivo = strtok_r(NULL,"/",&saveptr);
+    	strcpy(archivo_temporal.nombre,nombre_del_archivo);
+    	archivo_temporal.estado=1;
+    	archivo_temporal.padre=BuscarPadre(path);
+    	archivo_temporal.tamanio=0; //para mi este campo esta al pedo
+    	//list_add(archivos,agregar_archivos_a_lista(archivo_temporal));
+    	fclose(archivoLocal);
+    	return 0;
     }
-    strcpy(ruta,path);
-    char *nombre_del_archivo;
-    int aux1,aux2=0;
-    char *saveptr;
-    for (aux1=0;aux1<strlen(ruta);aux1++) if (ruta[aux1]=='/') aux2++;
-    nombre_del_archivo = strtok_r(ruta,"/",&saveptr);
-    for (aux1=0;aux1<aux2-1;aux1++) nombre_del_archivo = strtok_r(NULL,"/",&saveptr);
-    strcpy(archivo_temporal.nombre,nombre_del_archivo);
-    archivo_temporal.estado=1;
-    archivo_temporal.padre=BuscarPadre(path);
-    archivo_temporal.tamanio=0; //para mi este campo esta al pedo
-    list_add(archivos,agregar_archivos_a_lista(archivo_temporal));
-    fclose(archivoLocal);
-    return 0;
-}
 
 
 void obtenerNodosMasLibres() {
@@ -1279,8 +1243,6 @@ void obtenerNodosMasLibres() {
 	}
 
 }
-
-
 void CopiarArchivoDelMDFS() {
 	printf("Eligió Copiar un archivo del MDFS al filesystem local\n");
 }
@@ -1465,12 +1427,12 @@ return 0;
 
 void enviarNumeroDeBloqueANodo( int socket_nodo, int bloque) {
 	strcpy(identificacion, "obtener bloque");
-	if (send(socket_nodo, identificacion, sizeof(identificacion), 0) == -1) {
+	if (send(socket_nodo, identificacion, sizeof(identificacion), MSG_WAITALL) == -1) {
 		perror("send");
 		log_error(logger, "FALLO el envio del aviso de obtener bloque ");
 		exit(-1);
 	}
-	if (send(socket_nodo, &bloque, sizeof(int), 0) == -1) {
+	if (send(socket_nodo, &bloque, sizeof(int), MSG_WAITALL) == -1) {
 		perror("send");
 		log_error(logger, "FALLO el envio del numero de bloque");
 		exit(-1);
@@ -1481,7 +1443,7 @@ void enviarNumeroDeBloqueANodo( int socket_nodo, int bloque) {
 char *recibirBloque( socket_nodo) {
 	char* bloqueAObtener;
 		bloqueAObtener = malloc(BLOCK_SIZE);
-		if (recv(socket_nodo, bloqueAObtener, BLOCK_SIZE, 0) == -1) {
+		if (recv(socket_nodo, bloqueAObtener, BLOCK_SIZE, MSG_WAITALL) == -1) {
 			perror("recv");
 			log_error(logger, "FALLO el Recv del bloque por parte del nodo");
 			exit(-1);

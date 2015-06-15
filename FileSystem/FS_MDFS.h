@@ -1,7 +1,12 @@
-#define BUF_SIZE 50
+#define BUF_SIZE 14
 #define BLOCK_SIZE 20971520
 #define MENSAJE_SIZE 4096
 #define MAX_DIRECTORIOS 1024
+
+typedef struct datos_y_bloque{
+	uint32_t n_bloque;
+	char buf_20mb[BLOCK_SIZE];
+} t_datos_y_bloque;
 
 //se creara una lista de archivos, que contendra elementos del tipo "t_archivo"
 typedef struct estructura_filesystem {
