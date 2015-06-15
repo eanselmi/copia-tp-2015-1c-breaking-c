@@ -14,7 +14,7 @@
 #include <commons/temporal.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-
+#include <semaphore.h>
 
 
 #include "Nodo.h"
@@ -43,6 +43,9 @@ int* socketReducer; //para identificar los que son reducers conectados
 char nodo_id[6];
 char bufGetArchivo[BLOCK_SIZE]; //Buffer para la funcion getFileContent
 //char buffer[BLOCK_SIZE]; //Buffer que tiene un bloque que llega del filesystem
+int indiceMappers; //Indice de mappers
+sem_t semBloques[205]; //Soporta nodos de hasta 4GB 205 *20MB = 4100 MB --> ~4GB  (serían 205 bloques)
+sem_t semSort; // Un sort a la vez porque llama a bash
 //char bufFalso[BLOCK_SIZE]; //Buffer si voy a crear un bloque falso (para pruebas) 20MB
 //char bufAMediasFalso[BLOCK_SIZE/2]; //Buffer si voy a crear medio bloque falso (para pruebas) 10MB
 
@@ -51,7 +54,7 @@ int main(int argc , char *argv[]){
 	//-------------------------- Cuerpo ppal del programa ---------------------------------------
 	//------------ Variables locales a la funcion main --------------------
 
-
+	int semBloque;
 	pthread_t escucha; // Hilo que va a escuchar nuevas conexiones
 	configurador= config_create("resources/nodoConfig.conf"); //se asigna el archivo de configuración especificado en la ruta
 	logger = log_create("./nodoLog.log", "Nodo", true, LOG_LEVEL_INFO);
@@ -61,7 +64,6 @@ int main(int argc , char *argv[]){
 	FD_ZERO(&read_fds);
 	int yes=1; // para setsockopt() SO_REUSEADDR, más abajo
 	char identificacion[BUF_SIZE]; //para el mensaje que envie al conectarse para identificarse, puede cambiar
-	//char bloquesTotales[2]; //tendra la cantidad de bloques totales del file de datos
 	int *bloquesTotales;
 	int *puerto_escucha;
 	struct sockaddr_in filesystem; //direccion del fs a donde se conectará
@@ -71,9 +73,15 @@ int main(int argc , char *argv[]){
 	listaMappersConectados=list_create();
 	listaReducersConectados=list_create();
 
-	//sprintf(bloquesTotales,"%d",sizeFileDatos/20971520);
+
 	bloquesTotales=malloc(sizeof(int));
 	*bloquesTotales=sizeFileDatos/20971520;
+
+
+	for(semBloque=0;semBloque<*bloquesTotales;semBloque++){
+		sem_init(&semBloques[semBloque],0,1);
+	}
+	sem_init(&semSort,0,1);
 
 	//Estructura para conexion con FS
 	filesystem.sin_family = AF_INET;
@@ -174,6 +182,7 @@ int main(int argc , char *argv[]){
 		fdmax=listener; //el fd máximo hasta el momento es el listener
 	}
 
+
 	//Creación del hilo que va a manejar nuevas conexiones / cambios en las conexiones
 	if( pthread_create(&escucha, NULL, manejador_de_escuchas, NULL) != 0 ) {
 		perror("pthread_create");
@@ -191,11 +200,14 @@ int main(int argc , char *argv[]){
 
 void *manejador_de_escuchas(){
 	pthread_t mapper;
-	int socketModificado,nbytes,newfd,addrlen,socketMap;
+	int socketModificado,nbytes,newfd,addrlen,socketMap,read_size;
 	int* bloque=malloc(sizeof(int));
+	socketNodo=malloc(sizeof(int));
+	socketMapper=malloc(sizeof(int));
+	socketReducer=malloc(sizeof(int));
 
-	//memset(buffer,'\0',BLOCK_SIZE);
-	int read_size;
+
+	//indiceMappers=0;
 
 
 	printf("Nodo en la espera de conexiones/solicitudes del FS\n");
@@ -206,6 +218,8 @@ void *manejador_de_escuchas(){
 			log_error(logger,"FALLO el Select");
 			exit(-1);
 		}
+		memset(mensaje,'\0',BUF_SIZE);
+		//memset(buffer,'\0',BLOCK_SIZE);
 
 		// explorar conexiones existentes en busca de datos que leer
 		for(socketModificado = 0; socketModificado <= fdmax; socketModificado++) {
@@ -229,7 +243,6 @@ void *manejador_de_escuchas(){
 							// el nuevo conectado me manda algo, se identifica como mapper, reducer o nodo
 							if(nbytes>0 && strncmp(mensaje,"soy nodo",9)==0){
 								//se conectó un nodo
-								socketNodo=malloc(sizeof(int));
 								*socketNodo=newfd;
 								list_add(listaNodosConectados,socketNodo); //agrego el nuevo socket a la lista de Nodos conectados
 								FD_SET(newfd,&master); //añadir al conjunto maestro
@@ -240,7 +253,6 @@ void *manejador_de_escuchas(){
 							}
 							if(nbytes>0 && strncmp(mensaje,"soy mapper",11)==0){
 								//se conectó un hilo mapper
-								socketMapper=malloc(sizeof(int));
 								*socketMapper=newfd;
 								list_add(listaMappersConectados,socketMapper); //agrego el nuevo socket a la lista de Mappers conectados
 								FD_SET(newfd,&master); //añadir al conjunto maestro
@@ -251,7 +263,6 @@ void *manejador_de_escuchas(){
 							}
 							if(nbytes>0 && strncmp(mensaje,"soy reducer",12)==0){
 								//se conectó un hilo reducer
-								socketReducer=malloc(sizeof(int));
 								*socketReducer=newfd;
 								list_add(listaReducersConectados,socketReducer); //agrego el nuevo socket a la lista de Reducers conectados
 								FD_SET(newfd,&master); //añadir al conjunto maestro
@@ -282,7 +293,7 @@ void *manejador_de_escuchas(){
 					else{
 						/* -- el filesystem envío un mensaje a tratar -- */
 						if(strncmp(mensaje,"copiar_archivo",14)==0){
-							//mensaje[14]=0;
+							mensaje[14]=0;
 							printf ("Handshake: %s\n",mensaje);
 							if ((read_size = recv(conectorFS, &combo, sizeof(combo),MSG_WAITALL)) <= 0) {
 								perror("recv");
@@ -292,8 +303,6 @@ void *manejador_de_escuchas(){
 							printf ("Recibi: %d\n",read_size);
 							printf ("Me mandaron un coso de 20MB para el bloque %d\n",combo.n_bloque);
 							setBloque(combo.n_bloque,combo.buf_20mb); //esto deberia devolver algo que identifique si salio bien o no para informar al fs si fallo o fue exitosa la copai del bloque en el mdfs
-
-
 						}
 						if(strncmp(mensaje,"obtener bloque", 14) == 0){
 							//Recibo un numero de bloque del FS
@@ -346,15 +355,20 @@ void *manejador_de_escuchas(){
 					if(nbytes==0){ //se desconectó
 						close(socketModificado);
 						FD_CLR(socketModificado,&master);
+//						log_info(logger,"Se fue un mapper");
+//						if(socketModificado=fdmax){
+//							fdmax-=1;
+//						}
 					}
 					else{
 						/* -- el mapper envío un mensaje a tratar -- */
-						if(strncmp(mensaje,"Ejecuta rutina map",18)==0){
+						if(strncmp(mensaje,"Ejecuta map",11)==0){
 							socketMap=socketModificado;
 							FD_CLR(socketModificado,&master); //saco el socket momentaneamente del master (hasta que termine el map)
-							if(socketModificado==fdmax){
-								fdmax-=1; //¿Estara bien así?
-							}
+
+//							if(socketModificado==fdmax){
+//								fdmax-=1; //¿Estara bien así?
+//							}
 
 							if(pthread_create(&mapper,NULL,rutinaMap,&socketMap)!=0){
 								perror("pthread_create");
@@ -397,6 +411,10 @@ void ordenarMapper(char* pathMapperTemporal, char* nombreMapperOrdenado){
 	char** pathMapperSeparado;
 	char* nombreMapperTemporal;
 	char* contenidoDelMapper;
+	struct stat estadoDelFile; //declaro una estructura que guarda el estado de un archivo
+	sem_t terminoSort;
+	sem_wait(&semSort);
+	sem_init(&terminoSort,0,1);
 	nombreMapperTemporal=string_new();
 	pathMapperSeparado=string_split(pathMapperTemporal,"/");
 	string_append(&nombreMapperTemporal,pathMapperSeparado[1]);
@@ -407,6 +425,7 @@ void ordenarMapper(char* pathMapperTemporal, char* nombreMapperOrdenado){
 	else if(pid==0)
 	{
 		archivo_resultado=open(nombreMapperOrdenado,O_RDWR|O_CREAT,S_IRWXU|S_IRWXG); //abro file resultado, si no esta lo crea, asigno permisos
+		fstat(archivo_resultado,&estadoDelFile);
 		fflush(stdout);
 		bak=dup(STDOUT_FILENO);
 		dup2(archivo_resultado,STDOUT_FILENO); //STDOUT de este proceso se grabara en el file resultado
@@ -423,6 +442,7 @@ void ordenarMapper(char* pathMapperTemporal, char* nombreMapperOrdenado){
 	        NULL
 	    };
 	    execvp(name[0], name);
+	    sem_post(&terminoSort);
 	}
 	else
 	{
@@ -433,7 +453,10 @@ void ordenarMapper(char* pathMapperTemporal, char* nombreMapperOrdenado){
 		write(outfd[1],contenidoDelMapper,strlen(contenidoDelMapper));
 		close(outfd[1]);
 		dup2(bak,STDOUT_FILENO);
+		sem_wait(&terminoSort);
 	}
+
+sem_post(&semSort);
 }
 
 
@@ -443,6 +466,8 @@ void ejecutarMapper(char *script,int bloque,char *resultado){
 	bak=0;
 	char *path;
 	char *bloqueAMapear;
+	sem_t terminoElMap;
+	sem_init(&terminoElMap,0,1);
 	pipe(outfd); /* Donde escribe el padre */
 	if((pid=fork())==-1){
 		perror("fork");
@@ -464,6 +489,7 @@ void ejecutarMapper(char *script,int bloque,char *resultado){
 	string_append(&path,"/tp-2015-1c-breaking-c/Nodo/RutinasMap/");
 	string_append(&path,script);
 	execlp(path,script,NULL); //Ejecuto el script
+	sem_post(&terminoElMap);
 	}
 	else
 	{
@@ -472,9 +498,10 @@ void ejecutarMapper(char *script,int bloque,char *resultado){
 //	string_append(&datoos,"WBAN,Date,Time,StationType,SkyCondition,SkyConditionFlag,Visibility,VisibilityFlag,WeatherType,WeatherTypeFlag,DryBulbFarenheit,DryBulbFarenheitFlag,DryBulbCelsius,DryBulbCelsiusFlag,WetBulbFarenheit,WetBulbFarenheitFlag,WetBulbCelsius,WetBulbCelsiusFlag,DewPointFarenheit,DewPointFarenheitFlag,DewPointCelsius,DewPointCelsiusFlag,RelativeHumidity,RelativeHumidityFlag,WindSpeed,WindSpeedFlag,WindDirection,WindDirectionFlag,ValueForWindCharacter,ValueForWindCharacterFlag,StationPressure,StationPressureFlag,PressureTendency,PressureTendencyFlag,PressureChange,PressureChangeFlag,SeaLevelPressure,SeaLevelPressureFlag,RecordType,RecordTypeFlag,HourlyPrecip,HourlyPrecipFlag,Altimeter,AltimeterFlag\n03011,20130101,0000,0,OVC, , 5.00, , , ,M, ,M, ,M, ,M, ,M, ,M, ,M, , 5, ,120, , , ,M, , , , , ,M, ,AA, , , ,29.93, \n03011,20130101,0015,0,SCT011 SCT020, , 7.00, ,-SN, ,M, ,M, ,M, ,M, ,M, ,M, ,M, , 6, ,120, , , ,21.33, , , , , ,M, ,AA, , , ,29.93, \n03011,20130101,0035,0,CLR, ,10.00, , , ,M, ,M, ,M, ,M, ,M, ,M, ,M, , 6, ,120, , , ,21.33, , , , , ,M, ,AA, , , ,29.93, \n03011,20130101,0055,0,CLR, ,10.00, , , ,M, ,M, ,M, ,M, ,M, ,M, ,M, , 5, ,120, , , ,21.33, , , , , ,M, ,AA, , , ,29.93, \n");
 //	write(outfd[1],datoos,strlen(datoos));/* Escribe en el stdin del hijo el contenido del bloque*/
 	bloqueAMapear=getBloque(bloque);
-	write(outfd[1],bloqueAMapear,strlen(bloqueAMapear));/* Escribe en el stdin del hijo el contenido del bloque*/
+	write(outfd[1],bloqueAMapear,BLOCK_SIZE);/* Escribe en el stdin del hijo el contenido del bloque*/
 	close(outfd[1]);
 	dup2(bak,STDOUT_FILENO);
+	sem_wait(&terminoElMap);
 	}
 }
 
@@ -524,12 +551,15 @@ void setBloque(uint32_t numBloque,char* datosAEscribir){
 	* datosAEscribir, recibido por parametro, tiene los datos que quiero escribir
 	* Con el memcpy a ubicacionEnElFile, escribo en ese bloque
 	*/
+	sem_wait(&semBloques[numBloque]);
 
 	char *ubicacionEnElFile;
 	ubicacionEnElFile=malloc(BLOCK_SIZE);
 	ubicacionEnElFile=fileDeDatos+(BLOCK_SIZE*(numBloque));
-	//memcpy(ubicacionEnElFile,datosAEscribir,BLOCK_SIZE); //Copia el valor de BLOCK_SIZE bytes desde la direccion de memoria apuntada por datos a la direccion de memoria apuntada por fileDeDatos
+	memcpy(ubicacionEnElFile,datosAEscribir,BLOCK_SIZE); //Copia el valor de BLOCK_SIZE bytes desde la direccion de memoria apuntada por datos a la direccion de memoria apuntada por fileDeDatos
 	log_info(logger_archivo,"Se escribió el bloque %d",numBloque);
+	sem_post(&semBloques[numBloque]);
+
 	return;
 }
 
@@ -540,6 +570,7 @@ char* getBloque(int numBloque){
 	* Con el memcpy a datosLeidos, copio ese bloque
 	*/
 
+	sem_wait(&semBloques[numBloque]);
 	char* datosLeidos;
 	char *ubicacionEnElFile;
 	datosLeidos=malloc(BLOCK_SIZE);
@@ -547,17 +578,19 @@ char* getBloque(int numBloque){
 	ubicacionEnElFile=fileDeDatos+(BLOCK_SIZE*(numBloque));
 	memcpy(datosLeidos,ubicacionEnElFile,BLOCK_SIZE); //Copia el valor de BLOCK_SIZE bytes desde la direccion de memoria apuntada por fileDeDatos a la direccion de memoria apuntada por datosLeidos
 	log_info(logger_archivo,"Se leyó el bloque %d",numBloque);
+	sem_post(&semBloques[numBloque]);
 	return datosLeidos;
 }
 
 char* getFileContent(char* nombreFile){
 	FILE * archivoLocal;
-	char* path = strdup("");
-	strcat(path,config_get_string_value(configurador,"DIR_TEMP"));
-	strcat(path,"/");
-	strcat(path,nombreFile);
 	int i=0;
+	char* path;
 	char car;
+	path = string_new();
+	string_append(&path,config_get_string_value(configurador,"DIR_TEMP"));
+	string_append(&path,"/");
+	string_append(&path,nombreFile);
 	memset(bufGetArchivo,'\0',BLOCK_SIZE);
 	archivoLocal = fopen(path,"r");
 	fseek(archivoLocal,0,SEEK_SET);
@@ -625,6 +658,8 @@ void* rutinaMap(int* socketMapper){
 	char *pathNuevoMap=string_new();//El path completo del nuevo Map
 	FILE* scriptMap;
 
+
+
 	if(recv(*socketMapper,bloque,sizeof(bloque),MSG_WAITALL)==-1){
 		perror("recv");
 		log_error(logger,"Fallo al recibir el bloque para el map");
@@ -639,7 +674,7 @@ void* rutinaMap(int* socketMapper){
 		log_error(logger,"Fallo al recibir el nombre del archivo temporal donde guardar el Map");
 		exit(-1);
 	}
-	printf("Se guardará el resultado del mapper en el archivo temporal %s\n",nomArchTemp);
+//	printf("Se guardará el resultado del mapper en el archivo temporal %s\n",nomArchTemp);
 
 	//Recibirá la rutina mapper
 
@@ -648,7 +683,7 @@ void* rutinaMap(int* socketMapper){
 		log_error(logger,"Fallo al recibir la rutina mapper");
 		exit(1);
 	}
-	printf("se recibió la rutina mapper:\n%s",rutinaMapper);
+//	printf("se recibió la rutina mapper:\n%s",rutinaMapper);
 
 	//Creo el archivo que guarda la rutina de map enviada por el Job
 	//Generar un nombre para este script Map
@@ -667,9 +702,9 @@ void* rutinaMap(int* socketMapper){
 	string_append(&resultadoTemporal,tiempo);
 	string_append(&resultadoTemporal,".tmp");
 
-	printf("Hora:%s\n",tiempo);
-	printf("Nombre del nuevo map:%s\n",nombreNuevoMap);
-	printf("Path completo del nuevo map:%s\n",pathNuevoMap);
+//	printf("Hora:%s\n",tiempo);
+//	printf("Nombre del nuevo map:%s\n",nombreNuevoMap);
+//	printf("Path completo del nuevo map:%s\n",pathNuevoMap);
 	printf("Nombre del map temporal(antes del sort):%s\n",resultadoTemporal);
 	printf("Nombre del map ordenado(luego del sort):%s\n",nomArchTemp);
 
@@ -695,11 +730,20 @@ void* rutinaMap(int* socketMapper){
 	ejecutarMapper(nombreNuevoMap,*bloque,resultadoTemporal);
 	ordenarMapper(resultadoTemporal,nomArchTemp);
 
-	FD_SET(*socketMapper,&master); //Vuelvo a agregar el socket al master para que lo considere el select
+//	FD_SET(*socketMapper,&master); //Vuelvo a agregar el socket al master para que lo considere el select
+//
+//	if(*socketMapper>fdmax){
+//		fdmax=*socketMapper;
+//	}
 
-	if(*socketMapper>fdmax){
-		fdmax=*socketMapper;
-	}
+	free(arrayTiempo);
+	free(bloque);
+	free(resultadoTemporal);
+	free(nombreNuevoMap);
+	free(tiempo);
+	free(pathNuevoMap);
+
+	close(*socketMapper);
 
 	pthread_exit((void*)0);
 
