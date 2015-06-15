@@ -20,6 +20,8 @@
 #include "Nodo.h"
 
 //Declaración de variables Globales
+//uint32_t n_bloque;
+t_datos_y_bloque combo;
 t_config* configurador;
 t_log* logger; //log en pantalla y archivo de log
 t_log* logger_archivo; //log solo en archivo de log
@@ -40,7 +42,7 @@ int* socketMapper; //para identificar los que son mappers conectados
 int* socketReducer; //para identificar los que son reducers conectados
 char nodo_id[6];
 char bufGetArchivo[BLOCK_SIZE]; //Buffer para la funcion getFileContent
-char buffer[BLOCK_SIZE]; //Buffer que tiene un bloque que llega del filesystem
+//char buffer[BLOCK_SIZE]; //Buffer que tiene un bloque que llega del filesystem
 //char bufFalso[BLOCK_SIZE]; //Buffer si voy a crear un bloque falso (para pruebas) 20MB
 //char bufAMediasFalso[BLOCK_SIZE/2]; //Buffer si voy a crear medio bloque falso (para pruebas) 10MB
 
@@ -99,23 +101,23 @@ int main(int argc , char *argv[]){
 	if (string_equals_ignore_case(config_get_string_value(configurador,"NODO_NUEVO"),"SI")){ //verifica si el nodo es nuevo
 			//envio mensaje de identificación
 			strcpy(identificacion,"nuevo");
-			if((send(conectorFS,identificacion,sizeof(identificacion),0))==-1) {
+			if((send(conectorFS,identificacion,sizeof(identificacion),MSG_WAITALL))==-1) {
 					perror("send");
 					log_error(logger,"FALLO el envio del saludo al FS");
 					exit(-1);
 			}
 			//envio cantidad de bloques totales
-			if((send(conectorFS,bloquesTotales,sizeof(int),0))==-1){
+			if((send(conectorFS,bloquesTotales,sizeof(int),MSG_WAITALL))==-1){
 				perror("send");
 				log_error(logger,"FALLO el envío de la cantidad de bloques totales al FS");
 				exit(-1);
 			}
-			if((send(conectorFS,puerto_escucha,sizeof(int),0))==-1){
+			if((send(conectorFS,puerto_escucha,sizeof(int),MSG_WAITALL))==-1){
 				perror("send");
 				log_error(logger,"FALLO el envío de la cantidad de bloques totales al FS");
 				exit(-1);
 			}
-			if((send(conectorFS,nodo_id,sizeof(nodo_id),0))==-1){
+			if((send(conectorFS,nodo_id,sizeof(nodo_id),MSG_WAITALL))==-1){
 				perror("send");
 				log_error(logger,"FALLO el envío del ID del nodo al FS");
 				exit(-1);
@@ -124,12 +126,12 @@ int main(int argc , char *argv[]){
 		else {
 			//si el if da falso por nodo existente que se esta reconectando
 			strcpy(identificacion,"reconectado");
-			if((send(conectorFS,identificacion,sizeof(identificacion),0))==-1) {
+			if((send(conectorFS,identificacion,sizeof(identificacion),MSG_WAITALL))==-1) {
 					perror("send");
 					log_error(logger,"FALLO el envio del saludo al FS");
 					exit(-1);
 			}
-			if((send(conectorFS,nodo_id,sizeof(nodo_id),0))==-1){
+			if((send(conectorFS,nodo_id,sizeof(nodo_id),MSG_WAITALL))==-1){
 				perror("send");
 				log_error(logger,"FALLO el envío de la cantidad de bloques totales al FS");
 				exit(-1);
@@ -190,9 +192,9 @@ int main(int argc , char *argv[]){
 void *manejador_de_escuchas(){
 	pthread_t mapper;
 	int socketModificado,nbytes,newfd,addrlen,socketMap;
-	int* bloque;
-	bloque=malloc(sizeof(int));
-	memset(buffer,'\0',BLOCK_SIZE);
+	int* bloque=malloc(sizeof(int));
+
+	//memset(buffer,'\0',BLOCK_SIZE);
 	int read_size;
 
 
@@ -218,7 +220,7 @@ void *manejador_de_escuchas(){
 						log_error(logger,"FALLO el ACCEPT");
 						exit(-1);
 					} else {//llego una nueva conexion, se acepto y ahora tengo que tratarla
-						if((nbytes=recv(newfd,mensaje,sizeof(mensaje),0))<=0){ //error
+						if((nbytes=recv(newfd,mensaje,sizeof(mensaje),MSG_WAITALL))<=0){ //error
 							perror("recive");
 							log_error(logger,"Falló el receive");
 							exit(-1);
@@ -265,11 +267,12 @@ void *manejador_de_escuchas(){
 				/*-- Conexión con el fileSystem --*/
 
 				if(socketModificado==conectorFS){
-					if ((nbytes=recv(conectorFS,mensaje,sizeof(mensaje),0))==-1){ //da error
+					if ((nbytes=recv(conectorFS,mensaje,sizeof(mensaje),MSG_WAITALL))==-1){ //da error
 						perror("recv");
 						log_error(logger,"Falló el receive");
 						exit(-1);
 					}
+					printf ("Recibi del handshake %d\n",nbytes);
 					if(nbytes==0){ //se desconectó
 						close(conectorFS);
 						FD_CLR(conectorFS,&master);
@@ -279,29 +282,22 @@ void *manejador_de_escuchas(){
 					else{
 						/* -- el filesystem envío un mensaje a tratar -- */
 						if(strncmp(mensaje,"copiar_archivo",14)==0){
-							if ((read_size = recv(conectorFS, bloque, sizeof(int),0)) <= 0) {
+							mensaje[14]=0;
+							printf ("Handshake: %s\n",mensaje);
+							if ((read_size = recv(conectorFS, &combo, sizeof(combo),MSG_WAITALL)) <= 0) {
 								perror("recv");
 								log_error(logger, "FALLO el Recv de bloque");
 								exit(-1);
 							}
-							printf ("Me van a mandar un coso de 20MB para el bloque %d\n",*bloque);
-							if ((read_size = recv(conectorFS, buffer, BLOCK_SIZE,0)) <= 0) {
-								perror("recv");
-								log_error(logger, "FALLO el Recv de buffer");
-								exit(-1);
-							}
-							printf("Tamaño del bloque que recibi=%d\n",strlen(buffer));
-							setBloque(*bloque,buffer); //esto deberia devolver algo que identifique si salio bien o no para informar al fs si fallo o fue exitosa la copai del bloque en el mdfs
-							//si salio bien tengo que mandar un 0
-							/*int *lalala=0;
-							if (send(conectorFS, lalala, sizeof(int), 0) == -1) {
-								perror("send");
-								log_error(logger, "FALLO el envio del aviso de obtener bloque ");
-								exit(-1);
-							}*/
+							printf ("Recibi: %d\n",read_size);
+							printf ("Me mandaron un coso de 20MB para el bloque %d\n",combo.n_bloque);
+							setBloque(combo.n_bloque,combo.buf_20mb); //esto deberia devolver algo que identifique si salio bien o no para informar al fs si fallo o fue exitosa la copai del bloque en el mdfs
+
+
 						}
 						if(strncmp(mensaje,"obtener bloque", 14) == 0){
 							//Recibo un numero de bloque del FS
+							mensaje[14]=0;
 							if ((read_size = recv(conectorFS, bloque, sizeof(int),0)) <= 0) {
 								perror("recv");
 								log_error(logger, "FALLO el Recv de bloque");
@@ -322,7 +318,7 @@ void *manejador_de_escuchas(){
 				//-- Conexión con otro nodo --//
 
 				if(estaEnListaNodos(socketModificado)==0){
-					if ((nbytes=recv(socketModificado,mensaje,sizeof(mensaje),0))==-1){ //da error
+					if ((nbytes=recv(socketModificado,mensaje,sizeof(mensaje),MSG_WAITALL))==-1){ //da error
 						perror("recv");
 						log_error(logger,"Falló el receive");
 						exit(-1);
@@ -342,7 +338,7 @@ void *manejador_de_escuchas(){
 				//-- Conexión con hilo mapper --//
 
 				if(estaEnListaMappers(socketModificado)==0){
-					if ((nbytes=recv(socketModificado,mensaje,sizeof(mensaje),0))==-1){ //da error
+					if ((nbytes=recv(socketModificado,mensaje,sizeof(mensaje),MSG_WAITALL))==-1){ //da error
 						perror("recv");
 						log_error(logger,"Falló el receive");
 						exit(-1);
@@ -374,7 +370,7 @@ void *manejador_de_escuchas(){
 				//-- Conexión con hilo reducer --//
 
 				if(estaEnListaReducers(socketModificado)==0){
-					if ((nbytes=recv(socketModificado,mensaje,sizeof(mensaje),0))==-1){ //da error
+					if ((nbytes=recv(socketModificado,mensaje,sizeof(mensaje),MSG_WAITALL))==-1){ //da error
 						perror("recv");
 						log_error(logger,"Falló el receive");
 						exit(-1);
@@ -522,7 +518,7 @@ int estaEnListaReducers(int socket){
 }
 
 
-void setBloque(int numBloque,char* datosAEscribir){
+void setBloque(uint32_t numBloque,char* datosAEscribir){
 	/*
 	* El puntero ubicacionEnElFile, se va a posicionar en el bloque que se desea escribir el archivo
 	* datosAEscribir, recibido por parametro, tiene los datos que quiero escribir
@@ -532,7 +528,7 @@ void setBloque(int numBloque,char* datosAEscribir){
 	char *ubicacionEnElFile;
 	ubicacionEnElFile=malloc(BLOCK_SIZE);
 	ubicacionEnElFile=fileDeDatos+(BLOCK_SIZE*(numBloque));
-	memcpy(ubicacionEnElFile,datosAEscribir,BLOCK_SIZE); //Copia el valor de BLOCK_SIZE bytes desde la direccion de memoria apuntada por datos a la direccion de memoria apuntada por fileDeDatos
+	//memcpy(ubicacionEnElFile,datosAEscribir,BLOCK_SIZE); //Copia el valor de BLOCK_SIZE bytes desde la direccion de memoria apuntada por datos a la direccion de memoria apuntada por fileDeDatos
 	log_info(logger_archivo,"Se escribió el bloque %d",numBloque);
 	return;
 }
@@ -629,7 +625,7 @@ void* rutinaMap(int* socketMapper){
 	char *pathNuevoMap=string_new();//El path completo del nuevo Map
 	FILE* scriptMap;
 
-	if(recv(*socketMapper,bloque,sizeof(bloque),0)==-1){
+	if(recv(*socketMapper,bloque,sizeof(bloque),MSG_WAITALL)==-1){
 		perror("recv");
 		log_error(logger,"Fallo al recibir el bloque para el map");
 	}
@@ -638,7 +634,7 @@ void* rutinaMap(int* socketMapper){
 	printf("Se aplicará la rutina mapper en el bloque %d\n",*bloque);
 
 	/*Recibe el nombre del archivo temporal a donde guardar el mapper*/
-	if(recv(*socketMapper,nomArchTemp,sizeof(nomArchTemp),0)==-1){
+	if(recv(*socketMapper,nomArchTemp,sizeof(nomArchTemp),MSG_WAITALL)==-1){
 		perror("recv");
 		log_error(logger,"Fallo al recibir el nombre del archivo temporal donde guardar el Map");
 		exit(-1);
@@ -647,7 +643,7 @@ void* rutinaMap(int* socketMapper){
 
 	//Recibirá la rutina mapper
 
-	if(recv(*socketMapper,rutinaMapper,MAPPER_SIZE,0)==-1){
+	if(recv(*socketMapper,rutinaMapper,MAPPER_SIZE,MSG_WAITALL)==-1){
 		perror("recv");
 		log_error(logger,"Fallo al recibir la rutina mapper");
 		exit(1);
