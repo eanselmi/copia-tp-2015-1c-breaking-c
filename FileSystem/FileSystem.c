@@ -291,25 +291,11 @@ static t_archivo *agregar_archivos_a_lista(t_archivo archivo_temporal){
 
 static t_nodo *agregar_nodo_a_lista(char nodo_id[6], int socket, int est, int est_red, char *ip, int port, int puerto_escucha, int bloques_lib,int bloques_tot) {
 	t_nodo *nodo_temporal = malloc(sizeof(t_nodo));
-
-	//===========================================================================
-	//Preparo el nombre que identificara al nodo, esto antes lo hacia una funcion
-	//===========================================================================
-	//char nombre_temporal[10]="nodo";
-	char *numero_nodo = malloc(sizeof(int));
-	sprintf(numero_nodo, "%d", cantidad_nodos_historico);
-	//strcat(nombre_temporal,numero_nodo);
 	int i;
-
-	//===========================================================================
-	//===========================================================================
-	//===========================================================================
-
 	memset(nodo_temporal->nodo_id, '\0', 6);
 	strcpy(nodo_temporal->nodo_id, nodo_id);
 	nodo_temporal->socket = socket;
-	//strcat(nodo_temporal->nodo_id,nombre_temporal);
-	//nodo_temporal->estado = est;
+	//nodo_temporal->estado = est; por ahora lo comento para forzar el estado a 1
 	nodo_temporal->estado = 1;
 	nodo_temporal->estado_red = est_red;
 	nodo_temporal->ip = strdup(ip);
@@ -320,12 +306,13 @@ static t_nodo *agregar_nodo_a_lista(char nodo_id[6], int socket, int est, int es
 
 	//Creo e inicializo el bitarray del nodo, 0 es bloque libre, 1 es blloque ocupado
 	//Como recien se esta conectadno el nodo, todos sus bloques son libres
-	for (i = 8; i < bloques_tot; i += 8)
-		;
+	for (i = 8; i < bloques_tot; i += 8);
 	nodo_temporal->bloques_bitarray = malloc(i / 8);
 	nodo_temporal->bloques_del_nodo = bitarray_create(nodo_temporal->bloques_bitarray, i / 8);
 	for (i = 0; i < nodo_temporal->bloques_totales; i++)
 		bitarray_clean_bit(nodo_temporal->bloques_del_nodo, i);
+
+	//mongo
 	char *tmp_socket = malloc(sizeof(int));
 	char *tmp_estado = malloc(sizeof(int));
 	char *tmp_puerto = malloc(sizeof(int));
@@ -1060,7 +1047,8 @@ int CopiarArchivoAMDFS(){
 	int pos=0;
 	int total_enviado;
 	//int k=0;
-	//int n=0;
+	int n=0;
+	int corte=0;
 	//char car;
     //memset(bufBloque,'\0',BLOCK_SIZE); //inicializo el buffer
 	int j;
@@ -1105,11 +1093,16 @@ int CopiarArchivoAMDFS(){
     					log_error(logger, "FALLO el envio del aviso de obtener bloque ");
     					exit(-1);
     				}
-    				int corte=0;
-    				combo.n_bloque=0;
-    				while (corte==0){
-    					if (!bitarray_test_bit(nodosMasLibres[indice].bloques_del_nodo,combo.n_bloque)) corte=1;
-    					else combo.n_bloque++;
+    				corte=0;
+    				for(combo.n_bloque=0;combo.n_bloque<nodosMasLibres[indice].bloques_totales;combo.n_bloque++){
+    					if (!bitarray_test_bit(nodosMasLibres[indice].bloques_del_nodo,combo.n_bloque)){
+    						corte=1;
+    						break;
+    					}
+    				}
+    				if (corte==0){
+    					printf ("El nodo %s no tiene bloques libles, se cancela la subida del archivo\n",nodosMasLibres[indice].nodo_id);
+    					return -1;
     				}
     				printf ("voy a mandar al nodo %s la copia %d del bloque %d y la guardara en el bloque %d\n",nodosMasLibres[indice].nodo_id,indice+1,n_copia,combo.n_bloque);
     				if (send(nodosMasLibres[indice].socket, &combo, sizeof(combo), 0) == -1) {
@@ -1134,7 +1127,6 @@ int CopiarArchivoAMDFS(){
     			for(j=pos+1;j<BLOCK_SIZE;j++) combo.buf_20mb[j]=0;
     			obtenerNodosMasLibres();
 
-
     			//Copiar el contenido del Buffer en los nodos mas vacios por triplicado
     			for (indice=0;indice<3;indice++){
     				if ((total_enviado=send(nodosMasLibres[indice].socket, handshake, sizeof(handshake), MSG_WAITALL)) == -1) {
@@ -1143,11 +1135,16 @@ int CopiarArchivoAMDFS(){
     					exit(-1);
     				}
     				printf ("Lo que mande del handshake: %d\n",total_enviado);
-    				int corte=0;
-    				combo.n_bloque=0;
-    				while (corte==0){
-    					if (!bitarray_test_bit(nodosMasLibres[indice].bloques_del_nodo,combo.n_bloque)) corte=1;
-    					else combo.n_bloque++;
+    				corte=0;
+    				for(combo.n_bloque=0;combo.n_bloque<nodosMasLibres[indice].bloques_totales;combo.n_bloque++){
+    					if (!bitarray_test_bit(nodosMasLibres[indice].bloques_del_nodo,combo.n_bloque)){
+    						corte=1;
+    						break;
+    					}
+    				}
+    				if (corte==0){
+    					printf ("El nodo %s no tiene bloques libles, se cancela la subida del archivo\n",nodosMasLibres[indice].nodo_id);
+    					return -1;
     				}
     				printf ("voy a mandar al nodo %s la copia %d del bloque %d y la guardara en el bloque %d\n",nodosMasLibres[indice].nodo_id,indice+1,n_copia,combo.n_bloque);
 
@@ -1183,11 +1180,16 @@ int CopiarArchivoAMDFS(){
     				exit(-1);
     			}
     			printf ("Lo que mande del handshake: %d\n",total_enviado);
-    			int corte=0;
-    			combo.n_bloque=0;
-    			while (corte==0){
-    				if (!bitarray_test_bit(nodosMasLibres[indice].bloques_del_nodo,combo.n_bloque)) corte=1;
-    				else combo.n_bloque++;
+    			corte=0;
+    			for(combo.n_bloque=0;combo.n_bloque<nodosMasLibres[indice].bloques_totales;combo.n_bloque++){
+    				if (!bitarray_test_bit(nodosMasLibres[indice].bloques_del_nodo,combo.n_bloque)){
+    					corte=1;
+    					break;
+    				}
+    			}
+    			if (corte==0){
+    				printf ("El nodo %s no tiene bloques libles, se cancela la subida del archivo\n",nodosMasLibres[indice].nodo_id);
+    				return -1;
     			}
     			printf ("voy a mandar al nodo %s la copia %d del bloque %d y la guardara en el bloque %d\n",nodosMasLibres[indice].nodo_id,indice+1,n_copia,combo.n_bloque);
     			if ((total_enviado=send(nodosMasLibres[indice].socket, &combo, sizeof(combo), 0)) == -1) {
@@ -1222,8 +1224,8 @@ int CopiarArchivoAMDFS(){
     }
 
 
-void obtenerNodosMasLibres() {
-	int i, j = 0;
+void obtenerNodosMasLibres() {  //carga con vector con los 3 nodos mas libres
+	int i,k, j = 0;
 	t_nodo *nodoAEvaluar;
 
 	bool nodos_mas_libres(t_nodo *vacio, t_nodo *mas_vacio) {
@@ -1233,7 +1235,29 @@ void obtenerNodosMasLibres() {
 	for (i = 0; i < 3; i++) {
 		nodoAEvaluar = list_get(nodos, i);
 		if (nodoAEvaluar->estado_red == 1 && nodoAEvaluar->estado == 1 && nodoAEvaluar->bloques_libres > 0) {
-			nodosMasLibres[i] = *nodoAEvaluar;
+
+			memset(nodosMasLibres[i].nodo_id, '\0', 6);
+			strcpy(nodosMasLibres[i].nodo_id, nodoAEvaluar->nodo_id);
+			nodosMasLibres[i].socket = nodoAEvaluar->socket;
+			nodosMasLibres[i].estado = nodoAEvaluar->estado;
+			nodosMasLibres[i].estado_red = nodoAEvaluar->estado_red;
+			nodosMasLibres[i].ip = strdup(nodoAEvaluar->ip);
+			nodosMasLibres[i].puerto = nodoAEvaluar->puerto;
+			nodosMasLibres[i].bloques_libres = nodoAEvaluar->bloques_libres;
+			nodosMasLibres[i].bloques_totales = nodoAEvaluar->bloques_totales;
+			nodosMasLibres[i].puerto_escucha_nodo = nodoAEvaluar->puerto_escucha_nodo;
+
+			//Creo e inicializo el bitarray del nodo, 0 es bloque libre, 1 es blloque ocupado
+			//Como recien se esta conectadno el nodo, todos sus bloques son libres
+			for (k = 8; k < nodoAEvaluar->bloques_totales; k += 8);
+			nodosMasLibres[i].bloques_bitarray = malloc(i / 8);
+			nodosMasLibres[i].bloques_del_nodo = bitarray_create(nodosMasLibres[i].bloques_bitarray, i / 8);
+			for (k = 0; k < nodosMasLibres[i].bloques_totales; k++)
+				if (!bitarray_test_bit(nodoAEvaluar->bloques_del_nodo, k))
+					bitarray_clean_bit(nodosMasLibres[i].bloques_del_nodo, k);
+				else bitarray_set_bit(nodosMasLibres[i].bloques_del_nodo, k);
+
+			//nodosMasLibres[i] = *nodoAEvaluar; asi no me servia
 			j++;
 		}
 	}
@@ -1241,7 +1265,6 @@ void obtenerNodosMasLibres() {
 		printf("No hay 3 nodos disponibles\n");
 		exit(-1);
 	}
-
 }
 void CopiarArchivoDelMDFS() {
 	printf("Eligió Copiar un archivo del MDFS al filesystem local\n");
@@ -1380,8 +1403,7 @@ int obtener_socket_de_nodo_con_id(char *id) {
 	cantidad_nodos = list_size(nodos);
 	for (i = 0; i < cantidad_nodos; i++) {
 		elemento = list_get(nodos, i);
-		if (strcmp(elemento->nodo_id, id) == 0 && elemento->estado == 1
-				&& elemento->estado_red == 1)
+		if (strcmp(elemento->nodo_id, id) == 0 && elemento->estado == 1	&& elemento->estado_red == 1)
 			return elemento->socket;
 	}
 	return -1;
