@@ -24,6 +24,7 @@
 #include "FS_MDFS.h"
 
 //Variables globales
+t_list *nodos_temporales;
 t_datos_y_bloque combo;
 //uint32_t n_bloque;
 fd_set master; // conjunto maestro de descriptores de fichero
@@ -1028,9 +1029,9 @@ bool nodos_mas_libres(t_nodo *vacio, t_nodo *mas_vacio) {
 
 int copiar_lista_de_nodos(t_list* destino, t_list* origen){
 	int i,k;
-	t_nodo *original=malloc(sizeof(t_nodo));
-	t_nodo *copia=malloc(sizeof(t_nodo));
 	for (i=0;i<list_size(origen);i++){
+		t_nodo *original=malloc(sizeof(t_nodo));
+		t_nodo *copia=malloc(sizeof(t_nodo));
 		original=list_get(origen,i);
 		memset(copia->nodo_id, '\0', 6);
 		strcpy(copia->nodo_id, original->nodo_id);
@@ -1053,6 +1054,8 @@ int copiar_lista_de_nodos(t_list* destino, t_list* origen){
 				bitarray_clean_bit(copia->bloques_del_nodo, k);
 			else bitarray_set_bit(copia->bloques_del_nodo, k);
 		list_add(destino,copia);
+		//free(original);
+		//free(copia);
 	}
 	return 0;
 }
@@ -1067,12 +1070,13 @@ int CopiarArchivoAMDFS(){
 
 	printf("Eligió Copiar un archivo local al MDFS\n");
     FILE * archivoLocal;
-    t_list *nodos_temporales;
+
     nodos_temporales=list_create();
     if (copiar_lista_de_nodos(nodos_temporales,nodos)){
     	printf ("No se pudo crear la copia de la lista de nodos\n");
     	return -1;
     }
+    listar_nodos_conectados(nodos_temporales);
     t_nodo *nodo_temporal;
     char handshake[15]="copiar_archivo";
 	char* path=string_new();
@@ -1127,15 +1131,16 @@ int CopiarArchivoAMDFS(){
     while (fread(&combo.buf_20mb,sizeof(char),sizeof(combo.buf_20mb),archivoLocal) == BLOCK_SIZE){
     		cantBytes+=BLOCK_SIZE;
     		n_copia++;
+
     		if (combo.buf_20mb[BLOCK_SIZE-1]=='\n'){
     			//obtenerNodosMasLibres();
-    			list_sort(nodos_temporales, (void*) nodos_mas_libres);
+    			list_sort(nodos_temporales, (void*)nodos_mas_libres);
     			//Copiar el contenido del Buffer en los nodos mas vacios por triplicado
     			bandera=0;
     			for (indice=0;indice<list_size(nodos_temporales);indice++){
     				if (bandera==3) break;
     				nodo_temporal=list_get(nodos_temporales,indice);
-    				if (nodo_temporal->estado == 1 && nodo_temporal->bloques_libres > 0){
+    				if (nodo_temporal->estado == 1 && nodo_temporal->bloques_libres > 0){  //controlo que el nodo tenga espacio y este habilitado
     					bandera++;
     					if (send(nodo_temporal->socket, handshake, sizeof(handshake), MSG_WAITALL) == -1) {
 							perror("send handshake en funcion subir archivo");
@@ -1180,7 +1185,7 @@ int CopiarArchivoAMDFS(){
     			}
     			for(j=pos+1;j<BLOCK_SIZE;j++) combo.buf_20mb[j]=0;
     			//obtenerNodosMasLibres();
-    			list_sort(nodos_temporales, (void*) nodos_mas_libres);
+    			list_sort(nodos_temporales,(void*)nodos_mas_libres);
     			//Copiar el contenido del Buffer en los nodos mas vacios por triplicado
     			bandera=0;
     			for (indice=0;indice<list_size(nodos_temporales);indice++){
@@ -1236,7 +1241,7 @@ int CopiarArchivoAMDFS(){
     		//si leyo menos lo mando de una porque seguro temina en \n y esta relleno de 0
     		n_copia++;
     		//obtenerNodosMasLibres();
-    		list_sort(nodos_temporales, (void*) nodos_mas_libres);
+    		list_sort(nodos_temporales, (void*)nodos_mas_libres);
     		//Copiar el contenido del Buffer en los nodos mas vacios por triplicado
     		bandera=0;
     		for (indice=0;indice<list_size(nodos_temporales);indice++){
