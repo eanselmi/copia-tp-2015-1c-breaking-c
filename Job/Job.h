@@ -1,4 +1,4 @@
-#define BUF_SIZE 50
+#define BUF_SIZE 15
 #define BUF_ARCH 4096
 #define MAPPER_SIZE 4096
 

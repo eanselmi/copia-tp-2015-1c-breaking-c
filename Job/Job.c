@@ -68,7 +68,7 @@ int main(void){
 		strcat(mensajeArchivos,archivosDelJob[contMensajeArch]);
 	}
 
-	if (send(marta_sock,mensajeArchivos,sizeof(mensajeArchivos),0)==-1){
+	if (send(marta_sock,mensajeArchivos,sizeof(mensajeArchivos),MSG_WAITALL)==-1){
 		perror("send");
 		log_error(logger,"Falló el envío a MaRTA de la lista de archivos");
 		exit(-1);
@@ -78,7 +78,7 @@ int main(void){
 	 * Envío a MaRTA si el Job acepta combiner o no
 	*/
 
-	if (send(marta_sock,config_get_string_value(configurador,"COMBINER"),3,0)==-1){
+	if (send(marta_sock,config_get_string_value(configurador,"COMBINER"),3,MSG_WAITALL)==-1){
 		perror("send");
 		log_error(logger,"Falló el envío del atributo COMBINER");
 		exit(-1);
@@ -86,7 +86,7 @@ int main(void){
 
 	t_mapper datosMapper;
 
-	if(recv(marta_sock,&datosMapper,sizeof(t_mapper),0)==-1){
+	if(recv(marta_sock,&datosMapper,sizeof(t_mapper),MSG_WAITALL)==-1){
 		perror("recv");
 		log_error(logger,"Fallo al recibir los datos para el mapper");
 		exit(-1);
@@ -162,7 +162,7 @@ void* hilo_mapper(t_mapper* mapperStruct){
 		exit(1);
 	}
 	strcpy(identificacion,"soy mapper");
-	if(send(nodo_sock,identificacion,sizeof(identificacion),0)==-1){
+	if(send(nodo_sock,identificacion,sizeof(identificacion),MSG_WAITALL)==-1){
 		perror("send");
 		log_error(logger,"Fallo el envío de identificación mapper-nodo");
 	}
@@ -170,28 +170,28 @@ void* hilo_mapper(t_mapper* mapperStruct){
 	log_info(logger,"Hilo mapper conectado al Nodo con IP: %s,en el Puerto: %d",mapperStruct->ip_nodo,mapperStruct->puerto_nodo);
 
 	//Envio al Nodo que tendrá que ejecutar una rutina map
-	strcpy(accion,"Ejecuta rutina map");
-	if(send(nodo_sock,accion,sizeof(accion),0)==-1){
+	strcpy(accion,"Ejecuta map");
+	if(send(nodo_sock,accion,sizeof(accion),MSG_WAITALL)==-1){
 		perror("send");
 		log_error(logger,"Fallo el envío de la accion mapper-nodo");
 	}
 
 	//Envio al nodo el bloque donde deberá ejecutar el map
-	if(send(nodo_sock,&(mapperStruct->bloque),sizeof(int),0)==-1){
+	if(send(nodo_sock,&(mapperStruct->bloque),sizeof(int),MSG_WAITALL)==-1){
 		perror("send");
 		log_error(logger,"Fallo el envio del bloque a mapear hacia el Nodo");
 		exit(-1);
 	}
 
 	//Envio al nodo donde debera guardar la rutina Map
-	if(send(nodo_sock,&(mapperStruct->nombreArchivoTemporal),100,0)==-1){
+	if(send(nodo_sock,&(mapperStruct->nombreArchivoTemporal),100,MSG_WAITALL)==-1){
 		perror("send");
 		log_error(logger,"Fallo el envio del nombre del archivo temporal a guardar el Map");
 		exit(-1);
 	}
 
 	//envío la rutina mapper
-	if(send(nodo_sock,getFileContent(config_get_string_value(configurador,"MAPPER")),MAPPER_SIZE,0)==-1){
+	if(send(nodo_sock,getFileContent(config_get_string_value(configurador,"MAPPER")),MAPPER_SIZE,MSG_WAITALL)==-1){
 		perror("send");
 		log_error(logger,"Fallo el envio de la rutina mapper");
 		exit(1);
