@@ -1128,7 +1128,7 @@ int CopiarArchivoAMDFS(){
 	int j;
 	archivo_temporal.bloques=list_create(); //inicializo las listas ficticias
 	bloque_temporal.copias=list_create(); //inicializo las listas ficticias
-	printf("Ingrese el path del archivo local \n");
+	printf("Ingrese el path del archivo local desde raíz, por ejemplo /home/tp/nombreArchivo \n");
 	scanf("%99s", path);
 	//Validacion de si existe el archivo en el filesystem local
     if((archivoLocal = fopen(path,"r"))==NULL){
