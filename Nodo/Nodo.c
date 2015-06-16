@@ -662,7 +662,7 @@ void* rutinaMap(int* sckMap){
 	if(recv(*sckMap,bloque,sizeof(bloque),MSG_WAITALL)==-1){
 		perror("recv");
 		log_error(logger,"Fallo al recibir el bloque para el map");
-		resultado=1;
+		pthread_exit((void*)0);
 	}
 
 	/*En el mensaje recibio el bloque a donde aplicar mapper*/
@@ -672,7 +672,7 @@ void* rutinaMap(int* sckMap){
 	if(recv(*sckMap,nomArchTemp,sizeof(nomArchTemp),MSG_WAITALL)==-1){
 		perror("recv");
 		log_error(logger,"Fallo al recibir el nombre del archivo temporal donde guardar el Map");
-		resultado=1;
+		pthread_exit((void*)0);
 	}
 //	printf("Se guardará el resultado del mapper en el archivo temporal %s\n",nomArchTemp);
 
@@ -681,7 +681,7 @@ void* rutinaMap(int* sckMap){
 	if(recv(*sckMap,rutinaMapper,MAPPER_SIZE,MSG_WAITALL)==-1){
 		perror("recv");
 		log_error(logger,"Fallo al recibir la rutina mapper");
-		resultado=1;
+		pthread_exit((void*)0);
 	}
 //	printf("se recibió la rutina mapper:\n%s",rutinaMapper);
 
@@ -719,7 +719,7 @@ void* rutinaMap(int* sckMap){
 	if((scriptMap=fopen(pathNuevoMap,"w+"))==NULL){ //path donde guardara el script
 		perror("fopen");
 		log_error(logger,"Fallo al crear el script del mapper");
-		resultado=1;
+		pthread_exit((void*)0);
 	}
 	fputs(rutinaMapper,scriptMap);
 
@@ -727,7 +727,7 @@ void* rutinaMap(int* sckMap){
 	if(chmod(pathNuevoMap,S_IRWXU|S_IRWXG|S_IROTH|S_IXOTH)==-1){
 		perror("chmod");
 		log_error(logger,"Fallo el cambio de permisos para el script de map");
-		resultado=1;
+		pthread_exit((void*)0);
 	}
 	fclose(scriptMap); //cierro el file
 

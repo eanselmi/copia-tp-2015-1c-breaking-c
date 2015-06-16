@@ -137,13 +137,13 @@ int main(void){
 		log_error(logger,"Fallo la creación del hilo rutina mapper");
 		return 1;
 	}
-	sleep(1); //descanso - Map Falso abajo
+	sleep(3); //descanso - Map Falso abajo
 	if(pthread_create(&mapperThread2,NULL,(void*)hilo_mapper,punteroMapper2)!=0){
 		perror("pthread_create");
 		log_error(logger,"Fallo la creación del hilo rutina mapper");
 		return 1;
 	}
-	sleep(1); //descanso - Map falso abajo
+	sleep(3); //descanso - Map falso abajo
 
 	if(pthread_create(&mapperThread3,NULL,(void*)hilo_mapper,punteroMapper3)!=0){
 			perror("pthread_create");
@@ -155,6 +155,7 @@ int main(void){
 	pthread_join(mapperThread2,NULL); //map falso
 	pthread_join(mapperThread3,NULL); //map falso
 
+	printf("Terminaron los 3 map\n");
 
 	log_destroy(logger); //se elimina la instancia de log
 	config_destroy(configurador);
@@ -171,16 +172,21 @@ void* hilo_mapper(t_mapper* mapperStruct){
 	//comienzo de conexion con nodo
 	struct sockaddr_in nodo_addr;
 	int nodo_sock;
+	int resultado;
 	char identificacion[BUF_SIZE];
 	char accion[BUF_SIZE];
 	memset(identificacion,'\0',BUF_SIZE);
 	memset(accion,'\0',BUF_SIZE);
 
 
+
 	if((nodo_sock=socket(AF_INET,SOCK_STREAM,0))==-1){ //si función socket devuelve -1 es error
 		perror("socket");
 		log_error(logger,"Fallo la creación del socket (conexión mapper-nodo)");
-		exit(1);
+		resultado=1;
+		printf("Resultado:%d\n",resultado);
+		//envío a marta el resultado
+		pthread_exit((void*)0);
 	}
 
 	nodo_addr.sin_family=AF_INET;
@@ -190,14 +196,21 @@ void* hilo_mapper(t_mapper* mapperStruct){
 
 	if((connect(nodo_sock,(struct sockaddr *)&nodo_addr,sizeof(struct sockaddr)))==-1){
 		perror("connect");
-		log_error(logger,"Fallo la conexión con MaRTA");
-		exit(1);
+		log_error(logger,"Fallo la conexión con el nodo");
+		resultado=1;
+		printf("Resultado:%d\n",resultado);
+		//envío a marta el resultado
+		pthread_exit((void*)0);
 	}
 
 	strcpy(identificacion,"soy mapper");
 	if(send(nodo_sock,identificacion,sizeof(identificacion),MSG_WAITALL)==-1){
 		perror("send");
 		log_error(logger,"Fallo el envío de identificación mapper-nodo");
+		resultado=1;
+		printf("Resultado:%d\n",resultado);
+		//envío a marta el resultado
+		pthread_exit((void*)0);
 	}
 	/*Conexión mapper-nodo establecida*/
 	log_info(logger,"Hilo mapper conectado al Nodo con IP: %s,en el Puerto: %d",mapperStruct->ip_nodo,mapperStruct->puerto_nodo);
@@ -207,20 +220,30 @@ void* hilo_mapper(t_mapper* mapperStruct){
 	if(send(nodo_sock,accion,sizeof(accion),MSG_WAITALL)==-1){
 		perror("send");
 		log_error(logger,"Fallo el envío de la accion mapper-nodo");
+		resultado=1;
+		printf("Resultado:%d\n",resultado);
+		//envío a marta el resultado
+		pthread_exit((void*)0);
 	}
 
 	//Envio al nodo el bloque donde deberá ejecutar el map
 	if(send(nodo_sock,&(mapperStruct->bloque),sizeof(int),MSG_WAITALL)==-1){
 		perror("send");
 		log_error(logger,"Fallo el envio del bloque a mapear hacia el Nodo");
-		exit(-1);
+		resultado=1;
+		printf("Resultado:%d\n",resultado);
+		//envío a marta el resultado
+		pthread_exit((void*)0);
 	}
 
 	//Envio al nodo donde debera guardar la rutina Map
 	if(send(nodo_sock,&(mapperStruct->nombreArchivoTemporal),100,MSG_WAITALL)==-1){
 		perror("send");
 		log_error(logger,"Fallo el envio del nombre del archivo temporal a guardar el Map");
-		exit(-1);
+		resultado=1;
+		printf("Resultado:%d\n",resultado);
+		//envío a marta el resultado
+		pthread_exit((void*)0);
 	}
 
 	//envío la rutina mapper
@@ -228,9 +251,26 @@ void* hilo_mapper(t_mapper* mapperStruct){
 	if(send(nodo_sock,getFileContent(config_get_string_value(configurador,"MAPPER")),MAPPER_SIZE,MSG_WAITALL)==-1){
 		perror("send");
 		log_error(logger,"Fallo el envio de la rutina mapper");
-		exit(1);
+		resultado=1;
+		printf("Resultado:%d\n",resultado);
+		//envío a marta el resultado
+		pthread_exit((void*)0);
 	}
 	sem_post(&obtenerRutinaMap);
+
+	if(recv(nodo_sock,&resultado,sizeof(resultado),MSG_WAITALL)==-1){
+		perror("recv");
+		log_error(logger,"Fallo el recibo del resultado de parte del Nodo");
+		resultado=1;
+		printf("Resultado:%d\n",resultado);
+		//envío a marta el resultado
+		pthread_exit((void*)0);
+	}
+
+	printf("Resultado:%d\n",resultado);
+
+	//Se envía el resultado de la operacion Map a Marta//
+
 	pthread_exit((void*)0);
 
 }
