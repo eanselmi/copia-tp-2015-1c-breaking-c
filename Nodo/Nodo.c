@@ -367,9 +367,9 @@ void *manejador_de_escuchas(){
 							socketMap=socketModificado;
 							FD_CLR(socketModificado,&master); //saco el socket momentaneamente del master (hasta que termine el map)
 
-//							if(socketModificado==fdmax){
-//								fdmax-=1; //¿Estara bien así?
-//							}
+							if(socketModificado==fdmax){
+								fdmax-=1; //¿Estara bien así?
+							}
 
 							if(pthread_create(&mapper,NULL,rutinaMap,&socketMap)!=0){
 								perror("pthread_create");
@@ -455,9 +455,9 @@ void ordenarMapper(char* pathMapperTemporal, char* nombreMapperOrdenado){
 		close(outfd[1]);
 		dup2(bak,STDOUT_FILENO);
 		sem_wait(&terminoSort);
-	}
+		sem_post(&semSort);
 
-sem_post(&semSort);
+	}
 }
 
 
@@ -603,6 +603,7 @@ char* getFileContent(char* nombreFile){
 		i++;
 	}
 	fclose(archivoLocal);
+	free(path);
 	return bufGetArchivo;
 }
 
