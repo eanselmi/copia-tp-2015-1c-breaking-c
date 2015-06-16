@@ -25,6 +25,7 @@
 
 //Variables globales
 t_list *nodos_temporales;
+t_list *archivos_temporales;
 t_datos_y_bloque combo;
 //uint32_t n_bloque;
 fd_set master; // conjunto maestro de descriptores de fichero
@@ -913,7 +914,6 @@ void EliminarDirectorio() {
 			}
 		}
 	}
-
 }
 
 void RenombrarDirectorio() {
@@ -1025,6 +1025,38 @@ void MoverDirectorio() {
 
 bool nodos_mas_libres(t_nodo *vacio, t_nodo *mas_vacio) {
 	return vacio->bloques_libres > mas_vacio->bloques_libres;
+}
+
+int copiar_lista_de_archivos(t_list* destino, t_list* origen){
+	int i,j,k;
+	for (i=0;i<list_size(origen);i++){
+		t_archivo *original=malloc(sizeof(t_nodo));
+		t_archivo *copia=malloc(sizeof(t_nodo));
+		original=list_get(origen,i);
+		copia->bloques=original->bloques;
+		copia->estado=original->estado;
+		copia->nombre=strdup(original->nombre);
+		copia->padre=original->padre;
+		copia->bloques=list_create();
+		for (j=0;j<list_size(original->bloques);j++){
+			t_bloque *bloque_original=malloc(sizeof(t_bloque));
+			t_bloque *bloque_copia=malloc(sizeof(t_bloque));
+			bloque_original=list_get(original->bloques,j);
+			bloque_copia->copias=list_create();
+			for(k=0;k<list_size(bloque_original->copias);k++){
+				t_copias *copia_original=malloc(sizeof(t_copias));
+				t_copias *copia_copia=malloc(sizeof(t_copias));
+				copia_original=list_get(bloque_original->copias,k);
+				copia_copia->bloqueNodo=copia_original->bloqueNodo;
+				strcpy(copia_copia->md5,copia_original->md5);
+				copia_copia->nodo=strdup(copia_original->nodo);
+				list_add(bloque_copia->copias,copia_copia);
+			}
+			list_add(copia->bloques,bloque_copia);
+		}
+		list_add(destino,copia);
+	}
+	return 0;
 }
 
 int copiar_lista_de_nodos(t_list* destino, t_list* origen){
