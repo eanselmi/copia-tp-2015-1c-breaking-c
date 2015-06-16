@@ -411,7 +411,8 @@ void ordenarMapper(char* pathMapperTemporal, char* nombreMapperOrdenado){
 	sem_init(&terminoSort,0,1);
 	nombreMapperTemporal=string_new();
 	pathMapperSeparado=string_split(pathMapperTemporal,"/");
-	string_append(&nombreMapperTemporal,pathMapperSeparado[1]);
+	string_append(&nombreMapperTemporal,pathMapperSeparado[1]); // le agrega al nombre mapper lo que hay dps de /tmp
+	// si cada nodo tiene su tmp en una carpeta distinta --> string_append(&nombreMapperTemporal,pathMapperSeparado[2]); // le agrega al nombre mapper lo que hay dps de /tmp/nombredir
 	pipe(outfd);
 	if((pid=fork())==-1){
 		perror("fork");
@@ -639,44 +640,48 @@ char* mapearFileDeDatos(){
 	return fileDatos;
 }
 
-void* rutinaMap(int* socketMapper){
+void* rutinaMap(int* sckMap){
 	char rutinaMapper[MAPPER_SIZE]; //En este buffer se guardarán las rutinas mapper para luego pasarlas a un archivo local
 	char** arrayTiempo;
 	char nomArchTemp[100];
 	int* bloque;
+	int resultado;
 	bloque=malloc(sizeof(int));
 	memset(nomArchTemp,'\0',100);
 	memset(rutinaMapper,'\0',MAPPER_SIZE);
+	// si cada nodo tiene su tmp en otra carpeta --> char *nombreMapFinal=string_new();
 	char *resultadoTemporal=string_new();
 	char *nombreNuevoMap=string_new(); //será el nombre del nuevo map
 	char *tiempo=string_new(); //string que tendrá la hora
 	char *pathNuevoMap=string_new();//El path completo del nuevo Map
 	FILE* scriptMap;
+	pthread_detach(pthread_self());
 
 
 
-	if(recv(*socketMapper,bloque,sizeof(bloque),MSG_WAITALL)==-1){
+	if(recv(*sckMap,bloque,sizeof(bloque),MSG_WAITALL)==-1){
 		perror("recv");
 		log_error(logger,"Fallo al recibir el bloque para el map");
+		resultado=1;
 	}
 
 	/*En el mensaje recibio el bloque a donde aplicar mapper*/
 	printf("Se aplicará la rutina mapper en el bloque %d\n",*bloque);
 
 	/*Recibe el nombre del archivo temporal a donde guardar el mapper*/
-	if(recv(*socketMapper,nomArchTemp,sizeof(nomArchTemp),MSG_WAITALL)==-1){
+	if(recv(*sckMap,nomArchTemp,sizeof(nomArchTemp),MSG_WAITALL)==-1){
 		perror("recv");
 		log_error(logger,"Fallo al recibir el nombre del archivo temporal donde guardar el Map");
-		exit(-1);
+		resultado=1;
 	}
 //	printf("Se guardará el resultado del mapper en el archivo temporal %s\n",nomArchTemp);
 
 	//Recibirá la rutina mapper
 
-	if(recv(*socketMapper,rutinaMapper,MAPPER_SIZE,MSG_WAITALL)==-1){
+	if(recv(*sckMap,rutinaMapper,MAPPER_SIZE,MSG_WAITALL)==-1){
 		perror("recv");
 		log_error(logger,"Fallo al recibir la rutina mapper");
-		exit(1);
+		resultado=1;
 	}
 //	printf("se recibió la rutina mapper:\n%s",rutinaMapper);
 
@@ -694,19 +699,27 @@ void* rutinaMap(int* socketMapper){
 	string_append(&pathNuevoMap,nombreNuevoMap);
 	//Genero nombre para el resultado temporal (luego a este se debera aplicar sort)
 	string_append(&resultadoTemporal,"/tmp/map.result.");
+// Si cada nodo tiene su tmp en otra carpeta -->	string_append(&resultadoTemporal,config_get_string_value(configurador,"DIR_TEMP"));
+//Si cada nodo tiene su tmp en otra carpeta -->	string_append(&resultadoTemporal,"/map.result.");
 	string_append(&resultadoTemporal,tiempo);
 	string_append(&resultadoTemporal,".tmp");
+//	//Meto al nombre map final el ddirectorio temporal
+//Si cada nodo tiene su tmp en otra carpeta -->	string_append(&nombreMapFinal,config_get_string_value(configurador,"DIR_TEMP"));
+//Si cada nodo tiene su tmp en otra carpeta -->	string_append(&nombreMapFinal,"/");
+//Si cada nodo tiene su tmp en otra carpeta -->	string_append(&nombreMapFinal,nomArchTemp);
 
 //	printf("Hora:%s\n",tiempo);
 //	printf("Nombre del nuevo map:%s\n",nombreNuevoMap);
 //	printf("Path completo del nuevo map:%s\n",pathNuevoMap);
 	printf("Nombre del map temporal(antes del sort):%s\n",resultadoTemporal);
 	printf("Nombre del map ordenado(luego del sort):%s\n",nomArchTemp);
+//Si cada nodo tiene su tmp en otra carpeta -->	printf("Nombre del map ordenado(luego del sort):%s\n",nombreMapFinal);
+
 
 	if((scriptMap=fopen(pathNuevoMap,"w+"))==NULL){ //path donde guardara el script
 		perror("fopen");
 		log_error(logger,"Fallo al crear el script del mapper");
-		exit(1);
+		resultado=1;
 	}
 	fputs(rutinaMapper,scriptMap);
 
@@ -714,7 +727,7 @@ void* rutinaMap(int* socketMapper){
 	if(chmod(pathNuevoMap,S_IRWXU|S_IRWXG|S_IROTH|S_IXOTH)==-1){
 		perror("chmod");
 		log_error(logger,"Fallo el cambio de permisos para el script de map");
-		exit(1);
+		resultado=1;
 	}
 	fclose(scriptMap); //cierro el file
 
@@ -724,6 +737,17 @@ void* rutinaMap(int* socketMapper){
 	*/
 	ejecutarMapper(nombreNuevoMap,*bloque,resultadoTemporal);
 	ordenarMapper(resultadoTemporal,nomArchTemp);
+//Si cada nodo tiene su tmp en otra carpeta -->	ordenarMapper(resultadoTemporal,nombreMapFinal);
+
+
+	resultado=0;
+
+	if(send(*sckMap,&resultado,sizeof(int),MSG_WAITALL)==-1){
+		perror("send");
+		log_error(logger,"Fallo el envío del resultado al map");
+	}
+
+	printf("Se envío el resultado:%d \n",resultado);
 
 //	FD_SET(*socketMapper,&master); //Vuelvo a agregar el socket al master para que lo considere el select
 //
@@ -738,7 +762,7 @@ void* rutinaMap(int* socketMapper){
 	free(tiempo);
 	free(pathNuevoMap);
 
-	close(*socketMapper);
+	//close(*sckMap);
 
 	pthread_exit((void*)0);
 
