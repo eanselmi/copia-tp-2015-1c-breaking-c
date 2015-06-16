@@ -443,7 +443,7 @@ void *connection_handler_escucha(void) {
 						log_error(logger, "FALLO el ACCEPT");
 						exit(-1);
 					} else { //llego una nueva conexion, se acepto y ahora tengo que tratarla
-						if ((read_size = recv(newfd, identificacion,sizeof(identificacion), 0)) <= MSG_WAITALL) { //si entra aca es porque hubo un error, no considero desconexion porque es nuevo
+						if ((read_size = recv(newfd, identificacion,sizeof(identificacion), MSG_WAITALL)) <= 0) { //si entra aca es porque hubo un error, no considero desconexion porque es nuevo
 							perror("recv");
 							log_error(logger, "FALLO el Recv");
 							exit(-1);
