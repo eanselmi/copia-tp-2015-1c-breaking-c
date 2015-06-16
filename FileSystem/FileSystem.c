@@ -1058,7 +1058,6 @@ int copiar_lista_de_archivos(t_list* destino, t_list* origen){
 	}
 	return 0;
 }
-
 int copiar_lista_de_nodos(t_list* destino, t_list* origen){
 	int i,k;
 	for (i=0;i<list_size(origen);i++){
@@ -1318,6 +1317,15 @@ int CopiarArchivoAMDFS(){
     		return -1;
     	}
     	list_destroy(nodos_temporales);
+
+    	//Si llego aca es porque tod0 salio bien y actualizo la lista de archivos
+    	//list_destroy(archivos);
+    	//archivos=list_create();
+    	//if (copiar_lista_de_archivos(archivos,archivos_temporales)){
+    	//	printf ("No se pudo crear la copia de la lista de archivos\n");
+    	//	return -1;
+    	//}
+    	//list_destroy(archivos_temporales);
     	return 0;
 }
 
