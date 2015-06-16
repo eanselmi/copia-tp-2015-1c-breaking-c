@@ -1054,29 +1054,20 @@ int copiar_lista_de_nodos(t_list* destino, t_list* origen){
 				bitarray_clean_bit(copia->bloques_del_nodo, k);
 			else bitarray_set_bit(copia->bloques_del_nodo, k);
 		list_add(destino,copia);
-		//free(original);
-		//free(copia);
+
 	}
 	return 0;
 }
 
 int CopiarArchivoAMDFS(){
 
-	// Entiendo que se deberia hacer tambien una copia de la lista de nodos, en caso de que se empiecen a repartir los bloques
-	// pero no se lleguen a repartir todos, y la operacion no sea exitosa, no se estan actualizando igual en la lista de nodos
-	// los bloques ocupados ? (bitarray)
-	// a lo mejor se usa semaforo para las 2 listas, de archivos y de nodos, como para hasta no saber si la operacion es exitosa
-	// o no, nadie mas las pueda modificar
-
 	printf("Eligió Copiar un archivo local al MDFS\n");
     FILE * archivoLocal;
-
     nodos_temporales=list_create();
     if (copiar_lista_de_nodos(nodos_temporales,nodos)){
     	printf ("No se pudo crear la copia de la lista de nodos\n");
     	return -1;
     }
-    //listar_nodos_conectados(nodos_temporales);
     t_nodo *nodo_temporal;
     char handshake[15]="copiar_archivo";
 	char* path=string_new();
@@ -1084,16 +1075,13 @@ int CopiarArchivoAMDFS(){
 	t_bloque bloque_temporal;
 	char ruta[100];
 	memset(ruta,'\0',100);
-	int *resultado=malloc(sizeof(int));
 	int indice=0;
-	//char* pathMDFS;
-	//path = string_new();
-	//pathMDFS = string_new();
+	char* pathMDFS;
+	path = string_new();
+	pathMDFS = string_new();
 	uint32_t cantBytes=0;
 	int pos=0;
 	int total_enviado;
-	//int k=0;
-	int n=0;
 	int corte=0;
 	//char car;
     //memset(bufBloque,'\0',BLOCK_SIZE); //inicializo el buffer
@@ -1108,7 +1096,7 @@ int CopiarArchivoAMDFS(){
     	perror("fopen");
     	Menu();
     }
-    /*printf("Ingrese el path del archivo destino \n");
+    printf("Ingrese el path del archivo destino \n");
     scanf("%s", pathMDFS);
     //Buscar Directorio. Si existe se muestra mensaje de error
     uint32_t idPadre = BuscarPadre(pathMDFS);
@@ -1123,15 +1111,12 @@ int CopiarArchivoAMDFS(){
      Menu();
     }
     //Se debe crear un nuevo archivo con el nombre ingresado, cuyo padre sea "idPadre"
-    */
-    int leido=0;
     int n_copia=0;
     int bandera;
     memset(combo.buf_20mb,0,sizeof(combo.buf_20mb));
     while (fread(&combo.buf_20mb,sizeof(char),sizeof(combo.buf_20mb),archivoLocal) == BLOCK_SIZE){
     		cantBytes+=BLOCK_SIZE;
     		n_copia++;
-
     		if (combo.buf_20mb[BLOCK_SIZE-1]=='\n'){
     			//obtenerNodosMasLibres();
     			list_sort(nodos_temporales, (void*)nodos_mas_libres);
@@ -1184,7 +1169,6 @@ int CopiarArchivoAMDFS(){
     				}
     			}
     			for(j=pos+1;j<BLOCK_SIZE;j++) combo.buf_20mb[j]=0;
-    			//obtenerNodosMasLibres();
     			list_sort(nodos_temporales,(void*)nodos_mas_libres);
     			//Copiar el contenido del Buffer en los nodos mas vacios por triplicado
     			bandera=0;
@@ -1240,7 +1224,6 @@ int CopiarArchivoAMDFS(){
     		//aca va el fin
     		//si leyo menos lo mando de una porque seguro temina en \n y esta relleno de 0
     		n_copia++;
-    		//obtenerNodosMasLibres();
     		list_sort(nodos_temporales, (void*)nodos_mas_libres);
     		//Copiar el contenido del Buffer en los nodos mas vacios por triplicado
     		bandera=0;
@@ -1278,7 +1261,6 @@ int CopiarArchivoAMDFS(){
     				//list_add(bloque_temporal.copias,agregar_copia_a_lista(nodosMasLibres[indice].nodo_id,indice_bitarray,obtener_md5(bufBloque)));
     			}
     			//list_add(archivo_temporal.bloques,agregar_bloque_a_lista(bloque_temporal));
-    			//memset(bufBloque,'\0',BLOCK_SIZE); //Vaciar el Buffer
     		}
 
     	}
@@ -1295,6 +1277,8 @@ int CopiarArchivoAMDFS(){
     	archivo_temporal.tamanio=0; //para mi este campo esta al pedo
     	//list_add(archivos,agregar_archivos_a_lista(archivo_temporal));
     	fclose(archivoLocal);
+
+    	//Si llego hasta aca salio tod0 bien, actualizo la lista real de nodos
     	list_destroy(nodos);
     	nodos=list_create();
     	if (copiar_lista_de_nodos(nodos,nodos_temporales)){
@@ -1305,49 +1289,6 @@ int CopiarArchivoAMDFS(){
     	return 0;
 }
 
-
-/*void obtenerNodosMasLibres() {  //carga con vector con los 3 nodos mas libres
-	int i,k, j = 0;
-	t_nodo *nodoAEvaluar;
-
-	bool nodos_mas_libres(t_nodo *vacio, t_nodo *mas_vacio) {
-		return vacio->bloques_libres > mas_vacio->bloques_libres;
-	}
-	list_sort(nodos, (void*) nodos_mas_libres);
-	for (i = 0; i < 3; i++) {
-		nodoAEvaluar = list_get(nodos, i);
-		if (nodoAEvaluar->estado_red == 1 && nodoAEvaluar->estado == 1 && nodoAEvaluar->bloques_libres > 0) {
-
-			memset(nodosMasLibres[i].nodo_id, '\0', 6);
-			strcpy(nodosMasLibres[i].nodo_id, nodoAEvaluar->nodo_id);
-			nodosMasLibres[i].socket = nodoAEvaluar->socket;
-			nodosMasLibres[i].estado = nodoAEvaluar->estado;
-			nodosMasLibres[i].estado_red = nodoAEvaluar->estado_red;
-			nodosMasLibres[i].ip = strdup(nodoAEvaluar->ip);
-			nodosMasLibres[i].puerto = nodoAEvaluar->puerto;
-			nodosMasLibres[i].bloques_libres = nodoAEvaluar->bloques_libres;
-			nodosMasLibres[i].bloques_totales = nodoAEvaluar->bloques_totales;
-			nodosMasLibres[i].puerto_escucha_nodo = nodoAEvaluar->puerto_escucha_nodo;
-
-			//Creo e inicializo el bitarray del nodo, 0 es bloque libre, 1 es blloque ocupado
-			//Como recien se esta conectadno el nodo, todos sus bloques son libres
-			for (k = 8; k < nodoAEvaluar->bloques_totales; k += 8);
-			nodosMasLibres[i].bloques_bitarray = malloc(i / 8);
-			nodosMasLibres[i].bloques_del_nodo = bitarray_create(nodosMasLibres[i].bloques_bitarray, i / 8);
-			for (k = 0; k < nodosMasLibres[i].bloques_totales; k++)
-				if (!bitarray_test_bit(nodoAEvaluar->bloques_del_nodo, k))
-					bitarray_clean_bit(nodosMasLibres[i].bloques_del_nodo, k);
-				else bitarray_set_bit(nodosMasLibres[i].bloques_del_nodo, k);
-
-			//nodosMasLibres[i] = *nodoAEvaluar; asi no me servia
-			j++;
-		}
-	}
-	if (j < 3) {
-		printf("No hay 3 nodos disponibles\n");
-		exit(-1);
-	}
-}*/
 void CopiarArchivoDelMDFS() {
 	printf("Eligió Copiar un archivo del MDFS al filesystem local\n");
 }
