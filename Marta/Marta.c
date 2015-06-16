@@ -169,7 +169,7 @@ void *connection_handler_jobs(){
 							 * FS le deverá devolver: nodo(ip,puerto)-bloque
 							 * Buscará la combinación que maximice la distribución de las tareas en los nodos e
 							 * irá indicando al Job cada Hilo Mapper que deberá iniciar y qué NodoBloque debe
-							 * procesar hasta que la rutina de Mapping haya sido aplicada en todo el set de datos.
+							 * procesar hasta que la rutina de Mapping haya sido aplicada en tod0 el set de datos.
 							 */
 
 							t_mapper datosMapper;

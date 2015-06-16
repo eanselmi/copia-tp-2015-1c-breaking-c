@@ -267,30 +267,6 @@ int Menu(void) {
 	return 0;
 }
 
-static t_copias *agregar_copia_a_lista(char *id,int bloque,char *md5) {
-	t_copias *copia_temporal = malloc(sizeof(t_copias));
-	strcpy(copia_temporal->nodo,id);
-	copia_temporal->bloqueNodo=bloque;
-	strcpy(copia_temporal->md5,md5);
-	return copia_temporal;
-}
-
-static t_bloque *agregar_bloque_a_lista(t_bloque bloque_temporal){
-	t_bloque *copia_temporal = malloc(sizeof(t_bloque));
-    copia_temporal->copias = bloque_temporal.copias;
-    return copia_temporal;
-}
-
-static t_archivo *agregar_archivos_a_lista(t_archivo archivo_temporal){
-	t_archivo *copia_temporal = malloc(sizeof(t_archivo));
-	copia_temporal->bloques=archivo_temporal.bloques;
-	copia_temporal->estado=archivo_temporal.estado;
-	copia_temporal->nombre=archivo_temporal.nombre;
-	copia_temporal->padre=archivo_temporal.padre;
-	copia_temporal->tamanio=archivo_temporal.tamanio;
-	return copia_temporal;
-}
-
 static t_nodo *agregar_nodo_a_lista(char nodo_id[6], int socket, int est, int est_red, char *ip, int port, int puerto_escucha, int bloques_lib,int bloques_tot) {
 	t_nodo *nodo_temporal = malloc(sizeof(t_nodo));
 	int i;
@@ -652,7 +628,7 @@ uint32_t BuscarArchivoPorNombre(const char *path, uint32_t idPadre) {
 		posicionArchivo=-1;
 		return posicionArchivo;
 	}
-}
+} //todo agregar valor de retorno
 
 int BuscarMenorIndiceLibre(char indiceDirectorios[]) {
 	//Tengo un vector donde guardo los indices para ver cuales tengo libres ya que no puedo superar 1024
@@ -1113,9 +1089,15 @@ int CopiarArchivoAMDFS(){
 	 	return -1;
 	}
     t_nodo *nodo_temporal;
+    t_archivo *archivo_temporal;
+
+    archivos_temporales=list_create();
+    if (copiar_lista_de_archivos(archivos_temporales,archivos)){
+    	printf ("No se pudo crear la copia de la lista de nodos\n");
+    	return -1;
+    }
+
     char handshake[15]="copiar_archivo";
-	t_archivo archivo_temporal;
-	t_bloque bloque_temporal;
 	char ruta[100];
 	memset(ruta,'\0',100);
 	int indice=0;
@@ -1124,10 +1106,7 @@ int CopiarArchivoAMDFS(){
 	int total_enviado;
 	int corte=0;
 	//char car;
-    //memset(bufBloque,'\0',BLOCK_SIZE); //inicializo el buffer
-	int j;
-	archivo_temporal.bloques=list_create(); //inicializo las listas ficticias
-	bloque_temporal.copias=list_create(); //inicializo las listas ficticias
+    int j;
 	printf("Ingrese el path del archivo local desde raíz, por ejemplo /home/tp/nombreArchivo \n");
 	scanf("%99s", path);
 	//Validacion de si existe el archivo en el filesystem local
@@ -1160,9 +1139,13 @@ int CopiarArchivoAMDFS(){
     int n_copia=0;
     int bandera;
     memset(combo.buf_20mb,0,sizeof(combo.buf_20mb));
+    archivo_temporal=malloc(sizeof(t_archivo));
+    archivo_temporal->bloques=list_create();
     while (fread(&combo.buf_20mb,sizeof(char),sizeof(combo.buf_20mb),archivoLocal) == BLOCK_SIZE){
     		cantBytes+=BLOCK_SIZE;
     		n_copia++;
+    		t_bloque *bloque_temporal=malloc(sizeof(t_bloque));
+    		bloque_temporal->copias=list_create();
     		if (combo.buf_20mb[BLOCK_SIZE-1]=='\n'){
     			//obtenerNodosMasLibres();
     			list_sort(nodos_temporales, (void*)nodos_mas_libres);
@@ -1174,7 +1157,7 @@ int CopiarArchivoAMDFS(){
     				if (nodo_temporal->estado == 1 && nodo_temporal->bloques_libres > 0){  //controlo que el nodo tenga espacio y este habilitado
     					bandera++;
     					if (send(nodo_temporal->socket, handshake, sizeof(handshake), MSG_WAITALL) == -1) {
-							perror("send handshake en funcion subir archivo");
+    						perror("send handshake en funcion subir archivo");
 							log_error(logger, "FALLO el envio del aviso de obtener bloque ");
 							exit(-1);
 						}
@@ -1197,14 +1180,25 @@ int CopiarArchivoAMDFS(){
 						}
 						bitarray_set_bit(nodo_temporal->bloques_del_nodo,combo.n_bloque);
 						nodo_temporal->bloques_libres--;
-						//		list_add(bloque_temporal.copias,agregar_copia_a_lista(nodosMasLibres[indice].nodo_id,indice_bitarray,obtener_md5(bufBloque)));
+
+						//Agrego la copia del bloque a la lista de copias de este bloque particular
+						t_copias *copia_temporal=malloc(sizeof(t_copias));
+						copia_temporal->bloqueNodo=combo.n_bloque;
+						strcpy(copia_temporal->md5,obtener_md5(combo.buf_20mb));
+						copia_temporal->nodo=strdup(nodo_temporal->nodo_id);
+						list_add(bloque_temporal->copias,copia_temporal);
+
+
+
+
+
     				}
     			}
     			if (bandera!=3){
     				printf ("No hay suficientes nodos disponibles con espacio libre\n");
     				return -1;
     			}
-    			//list_add(archivo_temporal.bloques,agregar_bloque_a_lista(bloque_temporal));
+
 
     		}else{ //Caso en que el bloque no termina en "\n"
     			int p,aux;
@@ -1250,7 +1244,17 @@ int CopiarArchivoAMDFS(){
     					printf ("Quiero enviar %d y envie %d\n",sizeof(combo),total_enviado);
     					nodo_temporal->bloques_libres--;
     					bitarray_set_bit(nodo_temporal->bloques_del_nodo,combo.n_bloque);
-    					//list_add(bloque_temporal.copias,agregar_copia_a_lista(nodosMasLibres[indice].nodo_id,indice_bitarray,obtener_md5(bufBloque)));
+
+
+    					//Agrego la copia del bloque a la lista de copias de este bloque particular
+    					t_copias *copia_temporal=malloc(sizeof(t_copias));
+    					copia_temporal->bloqueNodo=combo.n_bloque;
+    					strcpy(copia_temporal->md5,obtener_md5(combo.buf_20mb));
+    					copia_temporal->nodo=strdup(nodo_temporal->nodo_id);
+    					list_add(bloque_temporal->copias,copia_temporal);
+
+
+
     				}
     			}
     			if (bandera!=3){
@@ -1263,12 +1267,15 @@ int CopiarArchivoAMDFS(){
     			fseek(archivoLocal,cantBytes,SEEK_SET);
 
     		}
+    		list_add(archivo_temporal->bloques,bloque_temporal);
     	}
     	//FIN DEL WHILE
     	if (feof(archivoLocal))
     	{
     		//aca va el fin
     		//si leyo menos lo mando de una porque seguro temina en \n y esta relleno de 0
+    		t_bloque *bloque_temporal=malloc(sizeof(t_bloque));
+    		bloque_temporal->copias=list_create();
     		n_copia++;
     		list_sort(nodos_temporales, (void*)nodos_mas_libres);
     		//Copiar el contenido del Buffer en los nodos mas vacios por triplicado
@@ -1304,11 +1311,22 @@ int CopiarArchivoAMDFS(){
     				printf ("Esto es lo que quedo, Quiero enviar %d y envie %d\n",sizeof(combo),total_enviado);
     				nodo_temporal->bloques_libres--;
     				bitarray_set_bit(nodo_temporal->bloques_del_nodo,combo.n_bloque);
-    				//list_add(bloque_temporal.copias,agregar_copia_a_lista(nodosMasLibres[indice].nodo_id,indice_bitarray,obtener_md5(bufBloque)));
-    			}
-    			//list_add(archivo_temporal.bloques,agregar_bloque_a_lista(bloque_temporal));
-    		}
+					//Agrego la copia del bloque a la lista de copias de este bloque particular
+					t_copias *copia_temporal=malloc(sizeof(t_copias));
+					copia_temporal->bloqueNodo=combo.n_bloque;
+					strcpy(copia_temporal->md5,obtener_md5(combo.buf_20mb));
+					copia_temporal->nodo=strdup(nodo_temporal->nodo_id);
+					list_add(bloque_temporal->copias,copia_temporal);
 
+
+    			}
+
+    		}
+    		if (bandera!=3){
+    			printf ("No hay suficientes nodos disponibles con espacio libre\n");
+    			return -1;
+    		}
+    		list_add(archivo_temporal->bloques,bloque_temporal);
     	}
     	strcpy(ruta,path);
     	char *nombre_del_archivo;
@@ -1317,11 +1335,11 @@ int CopiarArchivoAMDFS(){
     	for (aux1=0;aux1<strlen(ruta);aux1++) if (ruta[aux1]=='/') aux2++;
     	nombre_del_archivo = strtok_r(ruta,"/",&saveptr);
     	for (aux1=0;aux1<aux2-1;aux1++) nombre_del_archivo = strtok_r(NULL,"/",&saveptr);
-    	//strcpy(archivo_temporal.nombre,nombre_del_archivo);
-    	//archivo_temporal.estado=1;
-    	//archivo_temporal.padre=BuscarPadre(path);
-    	//archivo_temporal.tamanio=0; //para mi este campo esta al pedo
-    	//list_add(archivos,agregar_archivos_a_lista(archivo_temporal));
+    	archivo_temporal->nombre=string_new();
+    	strcpy(archivo_temporal->nombre,nombre_del_archivo);
+    	archivo_temporal->estado=1;
+    	archivo_temporal->padre=BuscarPadre(path);
+    	archivo_temporal->tamanio=0; //para mi este campo esta al pedo
     	fclose(archivoLocal);
 
     	//Si llego hasta aca salio tod0 bien, actualizo la lista real de nodos
@@ -1334,13 +1352,14 @@ int CopiarArchivoAMDFS(){
     	list_destroy(nodos_temporales);
 
     	//Si llego aca es porque tod0 salio bien y actualizo la lista de archivos
-    	//list_destroy(archivos);
-    	//archivos=list_create();
-    	//if (copiar_lista_de_archivos(archivos,archivos_temporales)){
-    	//	printf ("No se pudo crear la copia de la lista de archivos\n");
-    	//	return -1;
-    	//}
-    	//list_destroy(archivos_temporales);
+    	list_add(archivos_temporales,archivo_temporal);
+    	list_destroy(archivos);
+    	archivos=list_create();
+    	if (copiar_lista_de_archivos(archivos,archivos_temporales)){
+    		printf ("No se pudo crear la copia de la lista de archivos\n");
+    		return -1;
+    	}
+    	list_destroy(archivos_temporales);
     	return 0;
 }
 
