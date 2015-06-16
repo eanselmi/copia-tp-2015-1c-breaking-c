@@ -357,19 +357,12 @@ void *manejador_de_escuchas(){
 						close(socketModificado);
 						FD_CLR(socketModificado,&master);
 //						log_info(logger,"Se fue un mapper");
-//						if(socketModificado=fdmax){
-//							fdmax-=1;
-//						}
 					}
 					else{
 						/* -- el mapper envío un mensaje a tratar -- */
 						if(strncmp(mensaje,"Ejecuta map",11)==0){
 							socketMap=socketModificado;
-							FD_CLR(socketModificado,&master); //saco el socket momentaneamente del master (hasta que termine el map)
-
-							if(socketModificado==fdmax){
-								fdmax-=1; //¿Estara bien así?
-							}
+							FD_CLR(socketMap,&master); //saco el socket momentaneamente del master (hasta que termine el map)
 
 							if(pthread_create(&mapper,NULL,rutinaMap,&socketMap)!=0){
 								perror("pthread_create");
