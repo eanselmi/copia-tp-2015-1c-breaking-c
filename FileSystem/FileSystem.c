@@ -589,7 +589,7 @@ void *connection_handler_escucha(void) {
 uint32_t BuscarPadre(char* path) {
 	t_dir* dir;
 	int directorioPadre = 0,tamanio; //seteo a raíz
-	if (( tamanio = list_size(directorios))==0 | string_is_empty(path) | strcmp(path,"/")==0){ //No hay directorios
+	if (( tamanio = list_size(directorios))==0 || string_is_empty(path) || strcmp(path,"/")==0){ //No hay directorios
 		//printf("No se encontró el directorio\n");
 		directorioPadre = -1;
 		return directorioPadre;
@@ -716,7 +716,7 @@ static void eliminar_bloques(t_copias *bloque) {
 
 void EliminarArchivo() {
 	printf("Eligió  Eliminar archivo\n");
-	char* path = malloc(1);
+	char* path = string_new();
 	int i, j;
 	printf("Ingrese el path del archivo \n");
 	scanf("%s", path);
@@ -738,8 +738,8 @@ void EliminarArchivo() {
 
 void RenombrarArchivo() {
 	printf("Eligió Renombrar archivos\n");
-	char* path = malloc(1);
-	char* nuevoNombre = malloc(1);
+	char* path = string_new();
+	char* nuevoNombre = string_new();
 	printf("Ingrese el path del archivo \n");
 	scanf("%s", path);
 	uint32_t idPadre = BuscarPadre(path);
@@ -753,8 +753,8 @@ void RenombrarArchivo() {
 
 void MoverArchivo() {
 	printf("Eligió Mover archivos\n");
-	char* path = malloc(1);
-	char* nuevoPath = malloc(1);
+	char* path = string_new();
+	char* nuevoPath = string_new();
 	printf("Ingrese el path del archivo \n");
 	scanf("%s", path);
 	uint32_t idPadre = BuscarPadre(path);
@@ -850,7 +850,7 @@ static void directorio_destroy(t_dir* self) {
 
 void EliminarDirectorio() {
 	//printf("Eligió Eliminar directorios\n");
-	char* pathAEliminar = malloc(1);
+	char* pathAEliminar =  string_new();
 	char** vectorpathAEliminar;
 	t_dir* elementoDeMiListaDir;
 	elementoDeMiListaDir = malloc(sizeof(t_dir));
@@ -924,9 +924,9 @@ void EliminarDirectorio() {
 
 void RenombrarDirectorio() {
 	//printf("Eligió Renombrar directorios\n");
-	char* pathOriginal = malloc(1);
+	char* pathOriginal = string_new();
 	char** vectorPathOriginal;
-	char* pathNuevo = malloc(1);
+	char* pathNuevo = string_new();
 	t_dir* elementoDeMiLista;
 	elementoDeMiLista = malloc(sizeof(t_dir));
 	int tamanioLista = list_size(directorios);
@@ -966,11 +966,11 @@ void RenombrarDirectorio() {
 
 void MoverDirectorio() {
 	//printf("Eligió Mover directorios\n");
-	char* pathOriginal = malloc(1);
+	char* pathOriginal = string_new();
 	char** vectorPathOriginal;
-	char* pathNuevo = malloc(1);
+	char* pathNuevo = string_new();
 	char** vectorPathNuevo;
-	char* nombreDirAMover = malloc(1);
+	char* nombreDirAMover = string_new();
 	t_dir* elementoDeMiLista;
 	elementoDeMiLista = malloc(sizeof(t_dir));
 	int tamanioLista = list_size(directorios);
@@ -1128,7 +1128,7 @@ int CopiarArchivoAMDFS(){
 	int j;
 	archivo_temporal.bloques=list_create(); //inicializo las listas ficticias
 	bloque_temporal.copias=list_create(); //inicializo las listas ficticias
-	printf("Ingrese el path del archivo local \n");
+	printf("Ingrese el path del archivo local desde raíz, por ejemplo /home/tp/nombreArchivo \n");
 	scanf("%99s", path);
 	//Validacion de si existe el archivo en el filesystem local
     if((archivoLocal = fopen(path,"r"))==NULL){
@@ -1317,10 +1317,10 @@ int CopiarArchivoAMDFS(){
     	for (aux1=0;aux1<strlen(ruta);aux1++) if (ruta[aux1]=='/') aux2++;
     	nombre_del_archivo = strtok_r(ruta,"/",&saveptr);
     	for (aux1=0;aux1<aux2-1;aux1++) nombre_del_archivo = strtok_r(NULL,"/",&saveptr);
-    	strcpy(archivo_temporal.nombre,nombre_del_archivo);
-    	archivo_temporal.estado=1;
-    	archivo_temporal.padre=BuscarPadre(path);
-    	archivo_temporal.tamanio=0; //para mi este campo esta al pedo
+    	//strcpy(archivo_temporal.nombre,nombre_del_archivo);
+    	//archivo_temporal.estado=1;
+    	//archivo_temporal.padre=BuscarPadre(path);
+    	//archivo_temporal.tamanio=0; //para mi este campo esta al pedo
     	//list_add(archivos,agregar_archivos_a_lista(archivo_temporal));
     	fclose(archivoLocal);
 
@@ -1412,7 +1412,7 @@ void AgregarNodo(){
 	int i,cantNodos, nodoEncontrado;
 	nodoEncontrado =0; //0 no lo encontró, 1 lo encontró
 	t_nodo* nodoAEvaluar;
-	char* nodoID = malloc(1);
+	char* nodoID = string_new();;
 	cantNodos= list_size(nodos);
 	for (i=0;i<cantNodos;i++){
 		nodoAEvaluar = list_get(nodos,i);
@@ -1446,7 +1446,7 @@ void EliminarNodo(){
 	int i,cantNodos, nodoEncontrado;
 	nodoEncontrado =0; //0 no lo encontró, 1 lo encontró
 	t_nodo* nodoAEvaluar;
-	char* nodoID = malloc(1);
+	char* nodoID = string_new();;
 	cantNodos= list_size(nodos);
 	for (i=0;i<cantNodos;i++){
 		nodoAEvaluar = list_get(nodos,i);
