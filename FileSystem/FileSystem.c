@@ -1076,7 +1076,7 @@ int CopiarArchivoAMDFS(){
     	printf ("No se pudo crear la copia de la lista de nodos\n");
     	return -1;
     }
-    listar_nodos_conectados(nodos_temporales);
+    //listar_nodos_conectados(nodos_temporales);
     t_nodo *nodo_temporal;
     char handshake[15]="copiar_archivo";
 	char* path=string_new();
@@ -1295,8 +1295,15 @@ int CopiarArchivoAMDFS(){
     	archivo_temporal.tamanio=0; //para mi este campo esta al pedo
     	//list_add(archivos,agregar_archivos_a_lista(archivo_temporal));
     	fclose(archivoLocal);
+    	list_destroy(nodos);
+    	nodos=list_create();
+    	if (copiar_lista_de_nodos(nodos,nodos_temporales)){
+    		printf ("No se pudo crear la copia de la lista de nodos\n");
+    		return -1;
+    	}
+    	list_destroy(nodos_temporales);
     	return 0;
-    }
+}
 
 
 /*void obtenerNodosMasLibres() {  //carga con vector con los 3 nodos mas libres
