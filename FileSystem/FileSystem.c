@@ -595,7 +595,7 @@ uint32_t BuscarPadre(char* path) {
 }
 
 //Buscar la posición del nodo de un archivo de la lista t_archivo por el nombre del archivo y el id del padre
-uint32_t BuscarArchivoPorNombre(const char *path, uint32_t idPadre) {
+int BuscarArchivoPorNombre(const char *path, uint32_t idPadre) {
 	unArchivo = malloc(sizeof(t_archivo));
 	int i, posicionArchivo;
 	char* nombreArchivo;
@@ -622,13 +622,13 @@ uint32_t BuscarArchivoPorNombre(const char *path, uint32_t idPadre) {
 				}
 			}
 		}
-		return posicionArchivo;
 	}
 	if(tam==0){
 		posicionArchivo=-1;
 		return posicionArchivo;
 	}
-} //todo agregar valor de retorno
+	return posicionArchivo;
+}
 
 int BuscarMenorIndiceLibre(char indiceDirectorios[]) {
 	//Tengo un vector donde guardo los indices para ver cuales tengo libres ya que no puedo superar 1024
