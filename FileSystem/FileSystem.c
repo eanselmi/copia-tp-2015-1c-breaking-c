@@ -218,10 +218,13 @@ void DibujarMenu(void) {
 }
 
 int Menu(void) {
-	char opchar[20];
+	char opchar[2];
+	memset(opchar, '\0', 2);
 	int opcion = 0;
 	while (opcion != 17) {
 		sleep(1);
+		opcion = 0;
+		memset(opchar, '\0', 2);
 		DibujarMenu();
 		printf("Ingrese opción: ");
 		scanf("%s", opchar);
@@ -260,7 +263,9 @@ int Menu(void) {
 		case 16:
 			EliminarNodo();	break;
 			//case 17: printf("Eligió Salir\n"); break;
-		case 17: listar_nodos_conectados(nodos); break;
+
+		//case 17: listar_nodos_conectados(nodos); break;
+		case 17: listar_archivos_subidos(archivos); break;
 		default: printf("Opción incorrecta. Por favor ingrese una opción del 1 al 17\n"); break;
 		}
 	}
@@ -398,8 +403,33 @@ void listar_nodos_conectados(t_list *nodos) {
 		for (j = 0; j < elemento->bloques_totales; j++)
 			printf("%d", bitarray_test_bit(elemento->bloques_del_nodo, j));
 	}
-	printf ("\n\nBye... Bye...\n\n");
 }
+void listar_archivos_subidos(t_list *archivos) {
+	int i,j,k,cantidad_archivos,cantidad_bloques,cantidad_copias;
+	t_archivo *elemento;
+	t_bloque *bloque;
+	t_copias *copia;
+	cantidad_archivos = list_size(archivos);
+	for (i = 0; i < cantidad_archivos; i++) {
+		elemento = list_get(archivos, i);
+		printf("\n\n");
+		printf("Archivo: %s\nPadre: %d\nTam: %d\nEstado: %d\n",elemento->nombre,elemento->padre,elemento->tamanio,elemento->estado);
+		printf("\n");
+		cantidad_bloques=list_size(elemento->bloques);
+		for (j = 0; j < cantidad_bloques; j++){
+			bloque=list_get(elemento->bloques,j);
+			printf ("Numero de bloque: %d\n",j);
+			cantidad_copias=list_size(bloque->copias);
+			for (k=0;k<cantidad_copias;k++){
+				copia=list_get(bloque->copias,k);
+				printf ("Copia %d del bloque %d\n",k,j);
+				printf ("Nodo: %s\nBloque: %d\nMD5: %s\n\n",copia->nodo,copia->bloqueNodo,copia->md5);
+			}
+		}
+	}
+}
+
+
 void *connection_handler_escucha(void) {
 	int i, newfd, addrlen;
 	while (1) {
@@ -1147,7 +1177,6 @@ int CopiarArchivoAMDFS(){
     		t_bloque *bloque_temporal=malloc(sizeof(t_bloque));
     		bloque_temporal->copias=list_create();
     		if (combo.buf_20mb[BLOCK_SIZE-1]=='\n'){
-    			//obtenerNodosMasLibres();
     			list_sort(nodos_temporales, (void*)nodos_mas_libres);
     			//Copiar el contenido del Buffer en los nodos mas vacios por triplicado
     			bandera=0;
@@ -1184,22 +1213,18 @@ int CopiarArchivoAMDFS(){
 						//Agrego la copia del bloque a la lista de copias de este bloque particular
 						t_copias *copia_temporal=malloc(sizeof(t_copias));
 						copia_temporal->bloqueNodo=combo.n_bloque;
-						strcpy(copia_temporal->md5,obtener_md5(combo.buf_20mb));
+						char *cadena_para_md5=malloc(20971520);
+						strcpy(cadena_para_md5,combo.buf_20mb);
+						strcpy(copia_temporal->md5,obtener_md5(cadena_para_md5));
 						copia_temporal->nodo=strdup(nodo_temporal->nodo_id);
 						list_add(bloque_temporal->copias,copia_temporal);
-
-
-
-
-
+						free(cadena_para_md5);
     				}
     			}
     			if (bandera!=3){
     				printf ("No hay suficientes nodos disponibles con espacio libre\n");
     				return -1;
     			}
-
-
     		}else{ //Caso en que el bloque no termina en "\n"
     			int p,aux;
     			for (p=BLOCK_SIZE-1,aux=0;p>=0;p--,aux++){
@@ -1249,9 +1274,12 @@ int CopiarArchivoAMDFS(){
     					//Agrego la copia del bloque a la lista de copias de este bloque particular
     					t_copias *copia_temporal=malloc(sizeof(t_copias));
     					copia_temporal->bloqueNodo=combo.n_bloque;
-    					strcpy(copia_temporal->md5,obtener_md5(combo.buf_20mb));
+    					char *cadena_para_md5=malloc(20971520);
+    					strcpy(cadena_para_md5,combo.buf_20mb);
+						strcpy(copia_temporal->md5,obtener_md5(cadena_para_md5));
     					copia_temporal->nodo=strdup(nodo_temporal->nodo_id);
     					list_add(bloque_temporal->copias,copia_temporal);
+    					free(cadena_para_md5);
 
 
 
@@ -1314,9 +1342,12 @@ int CopiarArchivoAMDFS(){
 					//Agrego la copia del bloque a la lista de copias de este bloque particular
 					t_copias *copia_temporal=malloc(sizeof(t_copias));
 					copia_temporal->bloqueNodo=combo.n_bloque;
-					strcpy(copia_temporal->md5,obtener_md5(combo.buf_20mb));
+					char *cadena_para_md5=malloc(20971520);
+					strcpy(cadena_para_md5,combo.buf_20mb);
+					strcpy(copia_temporal->md5,obtener_md5(cadena_para_md5));
 					copia_temporal->nodo=strdup(nodo_temporal->nodo_id);
 					list_add(bloque_temporal->copias,copia_temporal);
+					free(cadena_para_md5);
 
 
     			}

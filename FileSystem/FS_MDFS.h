@@ -51,6 +51,7 @@ typedef struct estructura_directorio{
 //Prototipos de Funciones
 int Menu();
 void DibujarMenu();
+void listar_archivos_subidos(t_list *archivos);
 void obtenerNodosMasLibres(void);
 int copiar_lista_de_nodos(t_list *destino,t_list* origen);
 int copiar_lista_de_archivos(t_list* destino, t_list* origen);
