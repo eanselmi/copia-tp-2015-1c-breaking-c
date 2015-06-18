@@ -423,7 +423,8 @@ void listar_archivos_subidos(t_list *archivos) {
 			for (k=0;k<cantidad_copias;k++){
 				copia=list_get(bloque->copias,k);
 				printf ("Copia %d del bloque %d\n",k,j);
-				printf ("Nodo: %s\nBloque: %d\nMD5: %s\n\n",copia->nodo,copia->bloqueNodo,copia->md5);
+				printf ("----------------------\n");
+				printf ("	Nodo: %s\n	Bloque: %d\n	MD5: %s\n\n",copia->nodo,copia->bloqueNodo,copia->md5);
 			}
 		}
 	}
