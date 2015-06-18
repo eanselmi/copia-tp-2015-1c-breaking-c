@@ -476,8 +476,8 @@ void ejecutarMapper(char *script,int bloque,char *resultado){
 	close(outfd[0]); /* innecesarios para el hijo */
 	close(outfd[1]);
 	path=string_new();
-	string_append(&path,PATHTP);
-	string_append(&path,"/tp-2015-1c-breaking-c/Nodo/RutinasMap/");
+	string_append(&path,config_get_string_value(configurador,"PATHMAPPERS"));
+	string_append(&path,"/");
 	string_append(&path,script);
 	execlp(path,script,NULL); //Ejecuto el script
 	sem_post(&terminoElMap);
@@ -670,7 +670,8 @@ void* rutinaMap(int* sckMap){
 	string_append(&tiempo,arrayTiempo[3]);//Agrego milisegundos
 	string_append(&nombreNuevoMap,tiempo); //Concateno la fecha en formato hhmmssmmmm al nombre map
 	string_append(&nombreNuevoMap,".sh"); //agrego la extensión
-	string_append(&pathNuevoMap,PATHMAPPERS);
+	string_append(&pathNuevoMap,config_get_string_value(configurador,"PATHMAPPERS"));
+	string_append(&pathNuevoMap,"/");
 	string_append(&pathNuevoMap,nombreNuevoMap);
 	//Genero nombre para el resultado temporal (luego a este se debera aplicar sort)
 	string_append(&resultadoTemporal,"/tmp/map.result.");
