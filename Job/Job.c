@@ -217,7 +217,7 @@ void* hilo_mapper(t_mapper* mapperStruct){
 	}
 
 	strcpy(identificacion,"soy mapper");
-	if(send(nodo_sock,identificacion,sizeof(identificacion),0)==-1){
+	if(send(nodo_sock,identificacion,sizeof(identificacion),MSG_WAITALL)==-1){
 		perror("send");
 		log_error(logger,"Fallo el envío de identificación mapper-nodo");
 		resultado=1;
@@ -229,7 +229,7 @@ void* hilo_mapper(t_mapper* mapperStruct){
 	log_info(logger,"Hilo mapper conectado al Nodo con IP: %s,en el Puerto: %d",mapperStruct->ip_nodo,mapperStruct->puerto_nodo);
 
 	//Envio al nodo de los datos del Map
-	if(send(nodo_sock,&datosParaNodo,sizeof(t_datosMap),0)==-1){
+	if(send(nodo_sock,&datosParaNodo,sizeof(t_datosMap),MSG_WAITALL)==-1){
 		perror("send");
 		log_error(logger,"Fallo el envio de los datos del map hacia el Nodo");
 		resultado=1;
@@ -238,7 +238,7 @@ void* hilo_mapper(t_mapper* mapperStruct){
 		pthread_exit((void*)0);
 	}
 
-	if(recv(nodo_sock,&resultado,sizeof(int),0)==-1){
+	if(recv(nodo_sock,&resultado,sizeof(int),MSG_WAITALL)==-1){
 		perror("recv");
 		log_error(logger,"Fallo el recibo del resultado de parte del Nodo");
 		resultado=1;

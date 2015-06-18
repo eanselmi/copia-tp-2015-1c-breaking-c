@@ -238,7 +238,7 @@ void *manejador_de_escuchas(){
 						log_error(logger,"FALLO el ACCEPT");
 						exit(-1);
 					} else {//llego una nueva conexion, se acepto y ahora tengo que tratarla
-						if((nbytes=recv(newfd,mensaje,sizeof(mensaje),0))<=0){ //error
+						if((nbytes=recv(newfd,mensaje,sizeof(mensaje),MSG_WAITALL))<=0){ //error
 							perror("recive");
 							log_error(logger,"Falló el receive");
 							exit(-1);
@@ -648,7 +648,7 @@ void* rutinaMap(int* sckMap){
 	char *pathNuevoMap=string_new();//El path completo del nuevo Map
 	FILE* scriptMap;
 
-	if(recv(*sckMap,&datosParaElMap,sizeof(t_datosMap),0)==-1){
+	if(recv(*sckMap,&datosParaElMap,sizeof(t_datosMap),MSG_WAITALL)==-1){
 		perror("recv");
 		log_error(logger,"Fallo al recibir los datos para el map");
 		pthread_exit((void*)0);
@@ -709,7 +709,7 @@ void* rutinaMap(int* sckMap){
 	ordenarMapper(resultadoTemporal,datosParaElMap.nomArchTemp);
 	pthread_mutex_unlock(&mutexSort);
 
-	if(send(*sckMap,&resultado,sizeof(int),0)==-1){
+	if(send(*sckMap,&resultado,sizeof(int),MSG_WAITALL)==-1){
 		perror("send");
 		log_error(logger,"Fallo el envío del resultado al map");
 		pthread_exit((void*)0);
