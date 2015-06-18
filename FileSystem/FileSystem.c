@@ -1369,7 +1369,7 @@ int CopiarArchivoAMDFS(){
     	archivo_temporal->nombre=string_new();
     	strcpy(archivo_temporal->nombre,nombre_del_archivo);
     	archivo_temporal->estado=1;
-    	archivo_temporal->padre=BuscarPadre(pathMDFS); //modifico al path del archivo en el MDFS
+    	archivo_temporal->padre=idPadre; //modifico al path del archivo en el MDFS
     	archivo_temporal->tamanio=0; //para mi este campo esta al pedo
     	fclose(archivoLocal);
 
