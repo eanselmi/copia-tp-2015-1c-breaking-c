@@ -423,7 +423,8 @@ void listar_archivos_subidos(t_list *archivos) {
 			for (k=0;k<cantidad_copias;k++){
 				copia=list_get(bloque->copias,k);
 				printf ("Copia %d del bloque %d\n",k,j);
-				printf ("Nodo: %s\nBloque: %d\nMD5: %s\n\n",copia->nodo,copia->bloqueNodo,copia->md5);
+				printf ("----------------------\n");
+				printf ("	Nodo: %s\n	Bloque: %d\n	MD5: %s\n\n",copia->nodo,copia->bloqueNodo,copia->md5);
 			}
 		}
 	}
@@ -1369,7 +1370,7 @@ int CopiarArchivoAMDFS(){
     	archivo_temporal->nombre=string_new();
     	strcpy(archivo_temporal->nombre,nombre_del_archivo);
     	archivo_temporal->estado=1;
-    	archivo_temporal->padre=BuscarPadre(pathMDFS); //modifico al path del archivo en el MDFS
+    	archivo_temporal->padre=idPadre; //modifico al path del archivo en el MDFS
     	archivo_temporal->tamanio=0; //para mi este campo esta al pedo
     	fclose(archivoLocal);
 
