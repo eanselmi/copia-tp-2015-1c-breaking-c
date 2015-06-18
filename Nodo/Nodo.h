@@ -1,6 +1,6 @@
 #define BLOCK_SIZE 20971520 //block size 20MB
 #define BUF_SIZE 15
-#define MAPPER_SIZE 4096
+#define MAPPER_SIZE 1024
 #define PATHMAPPERS "./RutinasMap/" //Donde guardará las rutinas Map que lleguen
 #define PATHTP "/home/utnso/TP" //Donde se hace el git clone
 
@@ -8,6 +8,13 @@ typedef struct datos_y_bloque{
 	uint32_t n_bloque;
 	char buf_20mb[BLOCK_SIZE];
 } t_datos_y_bloque;
+
+typedef struct datos_para_map{
+	uint32_t bloque;
+	char nomArchTemp[50];
+	char rutinaMap[MAPPER_SIZE];
+} __attribute__((packed)) t_datosMap;
+
 
 //Declaración de funciones
 char* mapearFileDeDatos();

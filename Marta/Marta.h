@@ -16,7 +16,7 @@ typedef struct estructura_mapper {
 	char ip_nodo[20];
 	int puerto_nodo;
 	int bloque;
-	char nombreArchivoTemporal[100];
+	char nombreArchivoTemporal[50];
 } __attribute__((packed)) t_mapper;
 
 //Prototipos de funciones

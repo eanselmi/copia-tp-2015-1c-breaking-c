@@ -1,13 +1,20 @@
 #define BUF_SIZE 15
 #define BUF_ARCH 4096
-#define MAPPER_SIZE 4096
+#define MAPPER_SIZE 1024
 
 typedef struct estructura_mapper {
 	char ip_nodo[20];
 	int puerto_nodo;
 	int bloque;
-	char nombreArchivoTemporal[100];
+	char nombreArchivoTemporal[50];
 } __attribute__((packed)) t_mapper;
+
+typedef struct datos_para_map{
+	uint32_t bloque;
+	char nomArchTemp[50];
+	char rutinaMap[MAPPER_SIZE];
+} __attribute__((packed)) t_datosMap;
+
 
 typedef struct estructura_reduce {
 	char* ip_nodoPpal;
