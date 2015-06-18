@@ -25,6 +25,7 @@ t_log* logger;
 char bufGetArchivo[MAPPER_SIZE];
 sem_t obtenerRutinaMap;
 
+
 int main(void){
 	configurador= config_create("resources/jobConfig.conf"); //se asigna el archivo de configuración especificado en la ruta
 	logger = log_create("./jobLog.log", "Job", true, LOG_LEVEL_INFO); //se crea la instancia de log, que tambien imprimira en pantalla
@@ -39,7 +40,6 @@ int main(void){
 	t_mapper datosMapper; // Datos para lanzar un hilo Map
 	sem_init(&obtenerRutinaMap,0,1);
 	/* Se conecta a MaRTA */
-
 	if((marta_sock=socket(AF_INET,SOCK_STREAM,0))==-1){ //si función socket devuelve -1 es error
 	       perror("socket");
 	       log_error(logger,"Fallo la creación del socket");
@@ -95,40 +95,51 @@ int main(void){
 		exit(-1);
 	}
 
-	t_mapper* punteroMapper;
-	punteroMapper=malloc(sizeof(t_mapper));
 
-	memset(punteroMapper->nombreArchivoTemporal,'\0',100);
+	pthread_t mapperThread2;
+	pthread_t mapperThread3;
+
+	t_mapper* punteroMapper;
+	t_mapper* punteroMapper2;
+	t_mapper* punteroMapper3;
+
+	punteroMapper=malloc(sizeof(t_mapper));
+	punteroMapper2=malloc(sizeof(t_mapper));
+	punteroMapper3=malloc(sizeof(t_mapper));
+
+	memset(punteroMapper->nombreArchivoTemporal,'\0',50);
 	memset(punteroMapper->ip_nodo,'\0',20);
 	strcpy(punteroMapper->ip_nodo,datosMapper.ip_nodo);
 	punteroMapper->bloque=datosMapper.bloque;
 	punteroMapper->puerto_nodo=datosMapper.puerto_nodo;
 	strcpy(punteroMapper->nombreArchivoTemporal,datosMapper.nombreArchivoTemporal);
 
-
+//		t_mapper* punteroMapper;
+//		punteroMapper=malloc(sizeof(t_mapper));
+//
+//		memset(punteroMapper->nombreArchivoTemporal,'\0',50);
+//		memset(punteroMapper->ip_nodo,'\0',20);
+//		strcpy(punteroMapper->ip_nodo,"127.0.0.1");
+//		punteroMapper->bloque=1;
+//		punteroMapper->puerto_nodo=6500;
+//		strcpy(punteroMapper->nombreArchivoTemporal,"/tmp/mapBloque1.txt");
 	/* Mas Maps Falsos Para probar Job desde acá*/
 
-	pthread_t mapperThread2;
-	pthread_t mapperThread3;
 
-	t_mapper* punteroMapper2;
-	t_mapper* punteroMapper3;
-	punteroMapper2=malloc(sizeof(t_mapper));
-	punteroMapper3=malloc(sizeof(t_mapper));
 
-	memset(punteroMapper2->nombreArchivoTemporal,'\0',100);
+	memset(punteroMapper2->nombreArchivoTemporal,'\0',50);
 	memset(punteroMapper2->ip_nodo,'\0',20);
 	strcpy(punteroMapper2->ip_nodo,"127.0.0.1");
 	punteroMapper2->bloque=0;
 	punteroMapper2->puerto_nodo=6500;
-	strcpy(punteroMapper2->nombreArchivoTemporal,"/tmp/jacinto.txt");
+	strcpy(punteroMapper2->nombreArchivoTemporal,"/tmp/mapBloque0.txt");
 
-	memset(punteroMapper3->nombreArchivoTemporal,'\0',100);
+	memset(punteroMapper3->nombreArchivoTemporal,'\0',50);
 	memset(punteroMapper3->ip_nodo,'\0',20);
 	strcpy(punteroMapper3->ip_nodo,"127.0.0.1");
 	punteroMapper3->bloque=2;
 	punteroMapper3->puerto_nodo=6500;
-	strcpy(punteroMapper3->nombreArchivoTemporal,"/tmp/mapbloque2.txt");
+	strcpy(punteroMapper3->nombreArchivoTemporal,"/tmp/mapBloque2.txt");
 
 	/* Hasta Acá */
 
@@ -137,13 +148,13 @@ int main(void){
 		log_error(logger,"Fallo la creación del hilo rutina mapper");
 		return 1;
 	}
-	sleep(3); //descanso - Map Falso abajo
+	//sleep(2); //descanso - Map Falso abajo
 	if(pthread_create(&mapperThread2,NULL,(void*)hilo_mapper,punteroMapper2)!=0){
 		perror("pthread_create");
 		log_error(logger,"Fallo la creación del hilo rutina mapper");
 		return 1;
 	}
-	sleep(3); //descanso - Map falso abajo
+	//sleep(2); //descanso - Map falso abajo
 
 	if(pthread_create(&mapperThread3,NULL,(void*)hilo_mapper,punteroMapper3)!=0){
 			perror("pthread_create");
@@ -164,6 +175,7 @@ int main(void){
 
 
 void* hilo_mapper(t_mapper* mapperStruct){
+
 	printf("Se conectara al nodo con ip: %s\n",(char*)mapperStruct->ip_nodo);
 	printf("En el puerto %d\n", mapperStruct->puerto_nodo);
 	printf("Ejecutará la rutina mapper en el bloque %d\n",mapperStruct->bloque);
@@ -174,11 +186,12 @@ void* hilo_mapper(t_mapper* mapperStruct){
 	int nodo_sock;
 	int resultado;
 	char identificacion[BUF_SIZE];
-	char accion[BUF_SIZE];
+	t_datosMap datosParaNodo;
 	memset(identificacion,'\0',BUF_SIZE);
-	memset(accion,'\0',BUF_SIZE);
 
-
+	datosParaNodo.bloque=mapperStruct->bloque;
+	strcpy(datosParaNodo.nomArchTemp,mapperStruct->nombreArchivoTemporal);
+	strcpy(datosParaNodo.rutinaMap,getFileContent(config_get_string_value(configurador,"MAPPER")));
 
 	if((nodo_sock=socket(AF_INET,SOCK_STREAM,0))==-1){ //si función socket devuelve -1 es error
 		perror("socket");
@@ -204,7 +217,7 @@ void* hilo_mapper(t_mapper* mapperStruct){
 	}
 
 	strcpy(identificacion,"soy mapper");
-	if(send(nodo_sock,identificacion,sizeof(identificacion),MSG_WAITALL)==-1){
+	if(send(nodo_sock,identificacion,sizeof(identificacion),0)==-1){
 		perror("send");
 		log_error(logger,"Fallo el envío de identificación mapper-nodo");
 		resultado=1;
@@ -215,50 +228,17 @@ void* hilo_mapper(t_mapper* mapperStruct){
 	/*Conexión mapper-nodo establecida*/
 	log_info(logger,"Hilo mapper conectado al Nodo con IP: %s,en el Puerto: %d",mapperStruct->ip_nodo,mapperStruct->puerto_nodo);
 
-	//Envio al Nodo que tendrá que ejecutar una rutina map
-	strcpy(accion,"Ejecuta map");
-	if(send(nodo_sock,accion,sizeof(accion),MSG_WAITALL)==-1){
+	//Envio al nodo de los datos del Map
+	if(send(nodo_sock,&datosParaNodo,sizeof(t_datosMap),0)==-1){
 		perror("send");
-		log_error(logger,"Fallo el envío de la accion mapper-nodo");
+		log_error(logger,"Fallo el envio de los datos del map hacia el Nodo");
 		resultado=1;
 		printf("Resultado:%d\n",resultado);
 		//envío a marta el resultado
 		pthread_exit((void*)0);
 	}
 
-	//Envio al nodo el bloque donde deberá ejecutar el map
-	if(send(nodo_sock,&(mapperStruct->bloque),sizeof(int),MSG_WAITALL)==-1){
-		perror("send");
-		log_error(logger,"Fallo el envio del bloque a mapear hacia el Nodo");
-		resultado=1;
-		printf("Resultado:%d\n",resultado);
-		//envío a marta el resultado
-		pthread_exit((void*)0);
-	}
-
-	//Envio al nodo donde debera guardar la rutina Map
-	if(send(nodo_sock,&(mapperStruct->nombreArchivoTemporal),100,MSG_WAITALL)==-1){
-		perror("send");
-		log_error(logger,"Fallo el envio del nombre del archivo temporal a guardar el Map");
-		resultado=1;
-		printf("Resultado:%d\n",resultado);
-		//envío a marta el resultado
-		pthread_exit((void*)0);
-	}
-
-	//envío la rutina mapper
-	sem_wait(&obtenerRutinaMap);
-	if(send(nodo_sock,getFileContent(config_get_string_value(configurador,"MAPPER")),MAPPER_SIZE,MSG_WAITALL)==-1){
-		perror("send");
-		log_error(logger,"Fallo el envio de la rutina mapper");
-		resultado=1;
-		printf("Resultado:%d\n",resultado);
-		//envío a marta el resultado
-		pthread_exit((void*)0);
-	}
-	sem_post(&obtenerRutinaMap);
-
-	if(recv(nodo_sock,&resultado,sizeof(resultado),MSG_WAITALL)==-1){
+	if(recv(nodo_sock,&resultado,sizeof(int),0)==-1){
 		perror("recv");
 		log_error(logger,"Fallo el recibo del resultado de parte del Nodo");
 		resultado=1;
@@ -271,6 +251,7 @@ void* hilo_mapper(t_mapper* mapperStruct){
 
 	//Se envía el resultado de la operacion Map a Marta//
 
+	//close(nodo_sock);
 	pthread_exit((void*)0);
 
 }

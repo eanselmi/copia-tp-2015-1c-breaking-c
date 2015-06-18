@@ -176,7 +176,7 @@ void *connection_handler_jobs(){
 							strcpy(datosMapper.ip_nodo,"127.0.0.1");
 							datosMapper.puerto_nodo=6500;
 							datosMapper.bloque=1;
-							strcpy(datosMapper.nombreArchivoTemporal,"/tmp/map3tmp.txt");
+							strcpy(datosMapper.nombreArchivoTemporal,"/tmp/mapBloque1.txt");
 
 							if(send(newfd,&datosMapper,sizeof(t_mapper),MSG_WAITALL)==-1){
 								perror("send");
