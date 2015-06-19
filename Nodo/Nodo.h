@@ -14,6 +14,12 @@ typedef struct datos_para_map{
 	char rutinaMap[MAPPER_SIZE];
 } __attribute__((packed)) t_datosMap;
 
+typedef struct lista_nodos_reduce{
+	char* ip_nodo;
+	int puerto_nodo;
+	char* archivoAAplicarReduce;
+} __attribute__((packed)) t_archivosReduce;
+
 
 //Declaración de funciones
 char* mapearFileDeDatos();
@@ -27,6 +33,7 @@ int estaEnListaReducers(int socket);
 void ejecutarMapper(char *script,int bloque,char *resultado);
 void ordenarMapper(char *nombreMapperTemporal, char* nombreMapperOrdenado);
 void* rutinaMap(int *socketMap); //Hilo encargado de ejecutar una rutina Map
+void* rutinaReduce(int *socketReduce); //Hilo encargado de ejecutar una rutina Reduce
 char* crearBloqueFalso(); //Solo para uso interno, crea un bloque de 20MB
 char* crearBloqueAMediasFalso(); // Solo para uso interno, crea un bloque de 10MB
 void crearArchivoFalso();//Solo para uso interno, crea un archivo de 50MB en /tmp/archivoPrueba.txt (se puede regular el tamaño en multiplos de 10MB)

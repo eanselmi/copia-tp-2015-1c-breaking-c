@@ -203,7 +203,8 @@ int main(int argc , char *argv[]){
 }
 
 void *manejador_de_escuchas(){
-	pthread_t mapper;
+	pthread_t mapperThread;
+	pthread_t reducerThread;
 	int socketModificado,nbytes,newfd,addrlen,read_size;
 	struct sockaddr_in remote_client; //Direccion del cliente que se conectará
 
@@ -261,7 +262,7 @@ void *manejador_de_escuchas(){
 
 								log_info(logger,"Se conectó un hilo mapper desde %s",inet_ntoa(remote_client.sin_addr));
 
-								if(pthread_create(&mapper,NULL,(void*)rutinaMap,socketMapper)!=0){
+								if(pthread_create(&mapperThread,NULL,(void*)rutinaMap,socketMapper)!=0){
 									perror("pthread_create");
 									log_error(logger,"Fallo la creación del hilo manejador de escuchas");
 								}
@@ -270,12 +271,13 @@ void *manejador_de_escuchas(){
 							if(nbytes>0 && strncmp(mensaje,"soy reducer",12)==0){
 								//se conectó un hilo reducer
 								*socketReducer=newfd;
-								list_add(listaReducersConectados,socketReducer); //agrego el nuevo socket a la lista de Reducers conectados
-								FD_SET(newfd,&master); //añadir al conjunto maestro
-								if(newfd>fdmax){ //actualizar el máximo
-									fdmax=newfd;
-								}
+
 								log_info(logger,"Se conectó un hilo reducer desde %s",inet_ntoa(remote_client.sin_addr));
+
+								if(pthread_create(&reducerThread,NULL,(void*)rutinaReduce,socketReducer)!=0){
+									perror("pthread_create");
+									log_error(logger,"Fallo la creación del hilo manejador de escuchas");
+								}
 							}
 						}
 					}
@@ -726,6 +728,23 @@ void* rutinaMap(int* sckMap){
 	pthread_exit((void*)0);
 
 }
+
+void* rutinaReduce (int* sckReduce){
+	pthread_detach(pthread_self());
+//	t_datosReduce datosParaElReduce;
+
+//	if(recv(*sckMap,&datosParaElReduce,sizeof(t_datosReduce),MSG_WAITALL)==-1){
+//		perror("recv");
+//		log_error(logger,"Fallo al recibir los datos para el map");
+//		pthread_exit((void*)0);
+//	}
+
+
+
+	pthread_exit((void*)0);
+}
+
+
 
 
 //char* crearBloqueFalso(){
