@@ -1,32 +1,33 @@
 #define BUF_SIZE 15
 #define BUF_ARCH 4096
 #define MAPPER_SIZE 1024
+#define TAM_NOMFINAL 60
 
 typedef struct estructura_mapper {
 	char ip_nodo[20];
 	int puerto_nodo;
 	int bloque;
-	char nombreArchivoTemporal[50];
+	char nombreArchivoTemporal[TAM_NOMFINAL];
 } __attribute__((packed)) t_mapper;
 
 typedef struct datos_para_map{
 	uint32_t bloque;
-	char nomArchTemp[50];
+	char nomArchTemp[TAM_NOMFINAL];
 	char rutinaMap[MAPPER_SIZE];
 } __attribute__((packed)) t_datosMap;
 
 
 typedef struct estructura_reduce {
-	char* ip_nodoPpal;
+	char ip_nodoPpal[20];
 	int puerto_nodoPpal;
-	t_list* listaNodos; //una lista que tenga los otros nodos y archivos a donde aplicar reduce (lista de t_reduce_otrosnodos)
-	char* nombreArchivoFinal;
-} t_reduce;
+//	t_list* listaNodos; //una lista que tenga los otros nodos y archivos a donde aplicar reduce (lista de t_reduce_otrosnodos)
+	char nombreArchivoFinal[TAM_NOMFINAL];
+} __attribute__((packed)) t_reduce;
 
 typedef struct lista_nodos_reduce{
-	char* ip_nodo;
+	char ip_nodo[20];
 	int puerto_nodo;
-	char* archivoAAplicarReduce;
+	char archivoAAplicarReduce[TAM_NOMFINAL];
 } __attribute__((packed)) t_archivosReduce;
 
 

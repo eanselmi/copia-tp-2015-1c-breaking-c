@@ -1,6 +1,7 @@
 #define BLOCK_SIZE 20971520 //block size 20MB
 #define BUF_SIZE 15
 #define MAPPER_SIZE 1024
+#define TAM_NOMFINAL 60
 
 
 typedef struct datos_y_bloque{
@@ -10,7 +11,7 @@ typedef struct datos_y_bloque{
 
 typedef struct datos_para_map{
 	uint32_t bloque;
-	char nomArchTemp[50];
+	char nomArchTemp[TAM_NOMFINAL];
 	char rutinaMap[MAPPER_SIZE];
 } __attribute__((packed)) t_datosMap;
 

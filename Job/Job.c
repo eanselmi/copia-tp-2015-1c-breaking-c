@@ -107,7 +107,7 @@ int main(void){
 	punteroMapper2=malloc(sizeof(t_mapper));
 	punteroMapper3=malloc(sizeof(t_mapper));
 
-	memset(punteroMapper->nombreArchivoTemporal,'\0',50);
+	memset(punteroMapper->nombreArchivoTemporal,'\0',TAM_NOMFINAL);
 	memset(punteroMapper->ip_nodo,'\0',20);
 	strcpy(punteroMapper->ip_nodo,datosMapper.ip_nodo);
 	punteroMapper->bloque=datosMapper.bloque;
@@ -117,7 +117,7 @@ int main(void){
 //		t_mapper* punteroMapper;
 //		punteroMapper=malloc(sizeof(t_mapper));
 //
-//		memset(punteroMapper->nombreArchivoTemporal,'\0',50);
+//		memset(punteroMapper->nombreArchivoTemporal,'\0',TAM_NOMFINAL);
 //		memset(punteroMapper->ip_nodo,'\0',20);
 //		strcpy(punteroMapper->ip_nodo,"127.0.0.1");
 //		punteroMapper->bloque=1;
@@ -127,14 +127,14 @@ int main(void){
 
 
 
-	memset(punteroMapper2->nombreArchivoTemporal,'\0',50);
+	memset(punteroMapper2->nombreArchivoTemporal,'\0',TAM_NOMFINAL);
 	memset(punteroMapper2->ip_nodo,'\0',20);
 	strcpy(punteroMapper2->ip_nodo,"127.0.0.1");
 	punteroMapper2->bloque=0;
 	punteroMapper2->puerto_nodo=6500;
 	strcpy(punteroMapper2->nombreArchivoTemporal,"/tmp/mapBloque0.txt");
 
-	memset(punteroMapper3->nombreArchivoTemporal,'\0',50);
+	memset(punteroMapper3->nombreArchivoTemporal,'\0',TAM_NOMFINAL);
 	memset(punteroMapper3->ip_nodo,'\0',20);
 	strcpy(punteroMapper3->ip_nodo,"127.0.0.1");
 	punteroMapper3->bloque=2;
@@ -162,17 +162,72 @@ int main(void){
 			return 1;
 	}
 
+
+	pthread_t reduceThread;
+	t_reduce* reduceDeMarta;
+	reduceDeMarta=malloc(sizeof(t_reduce));
+	memset(reduceDeMarta->ip_nodoPpal,'\0',20);
+	memset(reduceDeMarta->nombreArchivoFinal,'\0',TAM_NOMFINAL);
+	strcpy(reduceDeMarta->ip_nodoPpal,"127.0.0.1");
+	reduceDeMarta->puerto_nodoPpal=6500;
+	strcpy(reduceDeMarta->nombreArchivoFinal,"/tmp/reduceBloques12y3.txt");
+
 	pthread_join(mapperThread,NULL);
 	pthread_join(mapperThread2,NULL); //map falso
 	pthread_join(mapperThread3,NULL); //map falso
 
 	printf("Terminaron los 3 map\n");
 
+	//Recibira la orden "ejecuta reduce" de marta, luego tirará un hilo reduce
+
+	if(pthread_create(&reduceThread,NULL,(void*)hilo_reduce,reduceDeMarta)!=0){
+			perror("pthread_create");
+			log_error(logger,"Fallo la creación del hilo rutina mapper");
+			return 1;
+	}
+
+	pthread_join(reduceThread,NULL); //map falso
+
+	printf("Termino el reduce\n");
+
+
 	log_destroy(logger); //se elimina la instancia de log
 	config_destroy(configurador);
 	return 0;
 }
 
+void* hilo_reduce(t_reduce* reduceStruct){
+	printf("El reduce se va a conectar al nodo con ip:%s\n",reduceStruct->ip_nodoPpal);
+	printf("En el puerto %d\n", reduceStruct->puerto_nodoPpal);
+	int indice;
+// ACA MARTA ENVÍA LA CANTIDAD DE ARCHIVOS QUE DEBE ESPERAR
+// ACA RECIBIRIA UNO POR UNO "N" t_archivosReduce DE MARTA
+		int cantArchivos = 3; //lo envia marta en realidad
+		t_archivosReduce archivos[cantArchivos];
+		for(indice=0;indice<cantArchivos;indice++){
+			memset(archivos[indice].ip_nodo,'\0',20);
+			memset(archivos[indice].archivoAAplicarReduce,'\0',TAM_NOMFINAL);
+		}
+		strcpy(archivos[0].ip_nodo,"127.0.0.1");
+		archivos[0].puerto_nodo=6500;
+		strcpy(archivos[0].archivoAAplicarReduce,"/tmp/mapBloque0.txt");
+		strcpy(archivos[1].ip_nodo,"127.0.0.1");
+		archivos[1].puerto_nodo=6500;
+		strcpy(archivos[1].archivoAAplicarReduce,"/tmp/mapBloque1.txt");
+		strcpy(archivos[2].ip_nodo,"127.0.0.1");
+		archivos[2].puerto_nodo=6500;
+		strcpy(archivos[2].archivoAAplicarReduce,"/tmp/mapBloque2.txt");
+
+	printf("Se aplicará reduce en los archivos:\n");
+	for(indice=0;indice<cantArchivos;indice++){
+		printf("\tIP Nodo: %s\n",archivos[indice].ip_nodo);
+		printf("\tEn el puerto: %d\n", archivos[indice].puerto_nodo);
+		printf("\tArchivo: %s\n", archivos[indice].archivoAAplicarReduce);
+	}
+
+
+	pthread_exit((void*)0);
+}
 
 void* hilo_mapper(t_mapper* mapperStruct){
 

@@ -1,5 +1,6 @@
 #define BUF_SIZE 15
 #define MENSAJE_SIZE 4096
+#define TAM_NOMFINAL 60
 
 //Estructura para manejar los Jobs
 
@@ -16,7 +17,7 @@ typedef struct estructura_mapper {
 	char ip_nodo[20];
 	int puerto_nodo;
 	int bloque;
-	char nombreArchivoTemporal[50];
+	char nombreArchivoTemporal[TAM_NOMFINAL];
 } __attribute__((packed)) t_mapper;
 
 //Prototipos de funciones
