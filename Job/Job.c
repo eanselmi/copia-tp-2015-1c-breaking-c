@@ -172,6 +172,16 @@ int main(void){
 	reduceDeMarta->puerto_nodoPpal=6500;
 	strcpy(reduceDeMarta->nombreArchivoFinal,"/tmp/reduceBloques12y3.txt");
 
+	pthread_t reduceThread2;
+	t_reduce* reduceDeMarta2;
+	reduceDeMarta2=malloc(sizeof(t_reduce));
+	memset(reduceDeMarta2->ip_nodoPpal,'\0',20);
+	memset(reduceDeMarta2->nombreArchivoFinal,'\0',TAM_NOMFINAL);
+	strcpy(reduceDeMarta2->ip_nodoPpal,"127.0.0.1");
+	reduceDeMarta2->puerto_nodoPpal=6500;
+	strcpy(reduceDeMarta2->nombreArchivoFinal,"/tmp/reduceFinal2.txt");
+
+
 	pthread_join(mapperThread,NULL);
 	pthread_join(mapperThread2,NULL); //map falso
 	pthread_join(mapperThread3,NULL); //map falso
@@ -186,9 +196,17 @@ int main(void){
 			return 1;
 	}
 
-	pthread_join(reduceThread,NULL); //map falso
 
-	printf("Termino el reduce\n");
+	if(pthread_create(&reduceThread2,NULL,(void*)hilo_reduce,reduceDeMarta2)!=0){
+			perror("pthread_create");
+			log_error(logger,"Fallo la creación del hilo rutina mapper");
+			return 1;
+	}
+
+	pthread_join(reduceThread,NULL); //map falso
+	pthread_join(reduceThread2,NULL); //map falso
+
+	printf("Terminaron los reduce\n");
 
 
 	log_destroy(logger); //se elimina la instancia de log
@@ -198,8 +216,13 @@ int main(void){
 
 void* hilo_reduce(t_reduce* reduceStruct){
 	printf("El reduce se va a conectar al nodo con ip:%s\n",reduceStruct->ip_nodoPpal);
-	printf("En el puerto %d\n", reduceStruct->puerto_nodoPpal);
+	printf("En el puerto %d\n", reduceStruct->puerto_nodoPpal);	struct sockaddr_in nodo_addr;
+	int nodo_sock;
+	int resultado;
+	char identificacion[BUF_SIZE];
+	memset(identificacion,'\0',BUF_SIZE);
 	int indice;
+
 // ACA MARTA ENVÍA LA CANTIDAD DE ARCHIVOS QUE DEBE ESPERAR
 // ACA RECIBIRIA UNO POR UNO "N" t_archivosReduce DE MARTA
 		int cantArchivos = 3; //lo envia marta en realidad
@@ -223,6 +246,50 @@ void* hilo_reduce(t_reduce* reduceStruct){
 		printf("\tIP Nodo: %s\n",archivos[indice].ip_nodo);
 		printf("\tEn el puerto: %d\n", archivos[indice].puerto_nodo);
 		printf("\tArchivo: %s\n", archivos[indice].archivoAAplicarReduce);
+	}
+
+	if((nodo_sock=socket(AF_INET,SOCK_STREAM,0))==-1){ //si función socket devuelve -1 es error
+		perror("socket");
+		log_error(logger,"Fallo la creación del socket (conexión mapper-nodo)");
+		resultado=1;
+		printf("Resultado:%d\n",resultado);
+		//envío a marta el resultado
+		pthread_exit((void*)0);
+	}
+
+	nodo_addr.sin_family=AF_INET;
+	nodo_addr.sin_port=htons(reduceStruct->puerto_nodoPpal);
+	nodo_addr.sin_addr.s_addr=inet_addr(reduceStruct->ip_nodoPpal);
+	memset(&(nodo_addr.sin_zero),'\0',8);
+
+	if((connect(nodo_sock,(struct sockaddr *)&nodo_addr,sizeof(struct sockaddr)))==-1){
+		perror("connect");
+		log_error(logger,"Fallo la conexión con el nodo");
+		resultado=1;
+		printf("Resultado:%d\n",resultado);
+		//envío a marta el resultado
+		pthread_exit((void*)0);
+	}
+
+	strcpy(identificacion,"soy reducer");
+	if(send(nodo_sock,identificacion,sizeof(identificacion),MSG_WAITALL)==-1){
+		perror("send");
+		log_error(logger,"Fallo el envío de identificación mapper-nodo");
+		resultado=1;
+		printf("Resultado:%d\n",resultado);
+		//envío a marta el resultado
+		pthread_exit((void*)0);
+	}
+	/*Conexión reduce-nodo establecida*/
+	log_info(logger,"Hilo reduce conectado al Nodo con IP: %s,en el Puerto: %d",reduceStruct->ip_nodoPpal,reduceStruct->puerto_nodoPpal);
+
+	if(send(nodo_sock,&reduceStruct->nombreArchivoFinal,TAM_NOMFINAL,MSG_WAITALL)==-1){
+		perror("send");
+		log_error(logger,"Fallo el envio del nombre del archivo del resultado del reduce al nodo");
+		resultado=1;
+		printf("Resultado:%d\n",resultado);
+		//envío a marta el resultado
+		pthread_exit((void*)0);
 	}
 
 
