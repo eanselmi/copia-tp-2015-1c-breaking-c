@@ -31,6 +31,10 @@ char mensaje[MENSAJE_SIZE];
 char mensajeCombiner[3]; //Dice si el Job acepta combiner (SI/NO)
 int read_size;
 t_list* jobs;
+t_list* listaNodos; //lista de nodos conectados al FS
+t_list* listaArchivos; //lista de archivos del FS
+
+
 
 int main(int argc, char**argv){
 
@@ -43,6 +47,13 @@ int main(int argc, char**argv){
 	filesystem.sin_family = AF_INET;
 	filesystem.sin_addr.s_addr = inet_addr(config_get_string_value(configurador,"IP_FS"));
 	filesystem.sin_port = htons(config_get_int_value(configurador,"PUERTO_FS"));
+	int nbytes;
+	int cantNodos;
+	int i;
+	char nodoId[6];
+	int estadoNodo;
+	char* ipNodo;
+	int puertoEscuchaNodo;
 
 	if ((socket_fs = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
 		perror ("socket");
@@ -63,7 +74,7 @@ int main(int argc, char**argv){
 		log_error(logger,"FALLO el envio del saludo al FS");
 	exit(-1);
 	}
-	int nbytes;
+	//int nbytes;  //AR los subi con el resto de las declaraciones, lo dejo comentado para revisarlo luego
 	if ((nbytes = recv(socket_fs, identificacion, sizeof(identificacion), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error, no considero desconexion porque es nuevo
 		perror("recv");
 		log_error(logger,"FALLO el Recv");
@@ -73,6 +84,53 @@ int main(int argc, char**argv){
 		exit(-1);
 	}
 	if (nbytes > 0 && strncmp(identificacion,"ok",2)==0)	log_info (logger,"Conexion con el FS exitosa");
+
+
+	listaNodos = list_create();
+	listaArchivos = list_create();
+
+	if ((nbytes = recv(socket_fs, &cantNodos, sizeof(int), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
+		perror("recv");
+		log_error(logger,"FALLO el Recv de cantidad de nodos");
+		exit(-1);
+	}
+	while (i < cantNodos){
+		t_nodo* nodoTemporal = malloc(sizeof(t_nodo));
+		if ((nbytes = recv(socket_fs, nodoId, sizeof(nodoId), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
+				perror("recv");
+				log_error(logger,"FALLO el Recv de nodoId");
+				exit(-1);
+		}
+		if ((nbytes = recv(socket_fs, &estadoNodo, sizeof(int), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
+						perror("recv");
+						log_error(logger,"FALLO el Recv del bloque del nodo");
+						exit(-1);
+		}
+		if ((nbytes = recv(socket_fs, ipNodo, sizeof(int), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
+							perror("recv");
+							log_error(logger,"FALLO el Recv del bloque del nodo");
+							exit(-1);
+		}
+		if ((nbytes = recv(socket_fs, &puertoEscuchaNodo, sizeof(int), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
+									perror("recv");
+									log_error(logger,"FALLO el Recv del bloque del nodo");
+									exit(-1);
+				}
+		//memset(nodoTemporal->nodo_id, '\0', 6); //AGR Ver si hace falta
+		strcpy(nodoTemporal->nodo_id, nodoId);
+		nodoTemporal->estado =estadoNodo;
+		nodoTemporal->ip = strdup(ipNodo);
+		nodoTemporal->puerto_escucha_nodo = puertoEscuchaNodo;
+		list_add(listaNodos, nodoTemporal);
+		i++;
+	}
+
+
+
+
+
+
+
 
 	jobs=list_create(); //creo la lista de jobs
 
