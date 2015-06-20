@@ -35,10 +35,12 @@ int main(void){
 	int marta_sock; //socket de conexión a MaRTA
 	struct sockaddr_in marta_addr;
 	char** archivosDelJob;
+	char handshake[BUF_SIZE];
 	int contMensajeArch; //contador para recorrer el array de archivos a los que se aplica el Job
 	char mensajeArchivos[BUF_ARCH]; //cadena de caracteres que enviara a MaRTA los archivos a donde se aplica el Job. Formato: ",archivo1,archivo2,archivo3,...,archivo_n"
 	t_mapper datosMapper; // Datos para lanzar un hilo Map
 	sem_init(&obtenerRutinaMap,0,1);
+	memset(handshake,'\0', BUF_SIZE);
 	/* Se conecta a MaRTA */
 	if((marta_sock=socket(AF_INET,SOCK_STREAM,0))==-1){ //si función socket devuelve -1 es error
 	       perror("socket");
@@ -59,6 +61,13 @@ int main(void){
 	/*Conexión con MaRTA establecida*/
 
 	log_info(logger,"Se conectó a MaRTA. IP: %s, Puerto: %d",config_get_string_value(configurador,"IP_MARTA"),config_get_int_value(configurador,"PUERTO_MARTA")); //se agrega al log en modo de informacion la conexión con MaRTA
+
+	strcpy(handshake,"soy job");
+	if(send(marta_sock,handshake, sizeof(handshake),MSG_WAITALL)==-1){
+		perror("send");
+		log_error(logger, "Fallo el envío de handshake a marta");
+		exit(-1);
+	}
 
 	/*Creo un char[] que tenga los nombres de los archivos a trabajar separados con "," (una "," tambien al principio)
 	 * De esta forma, del lado de marta voy a recibir el mensaje tod o seguido y lo voy a separar con un string_split (commons)
@@ -96,16 +105,16 @@ int main(void){
 	}
 
 
-	pthread_t mapperThread2;
-	pthread_t mapperThread3;
+//	pthread_t mapperThread2;
+//	pthread_t mapperThread3;
 
 	t_mapper* punteroMapper;
-	t_mapper* punteroMapper2;
-	t_mapper* punteroMapper3;
+//	t_mapper* punteroMapper2;
+//	t_mapper* punteroMapper3;
 
 	punteroMapper=malloc(sizeof(t_mapper));
-	punteroMapper2=malloc(sizeof(t_mapper));
-	punteroMapper3=malloc(sizeof(t_mapper));
+//	punteroMapper2=malloc(sizeof(t_mapper));
+//	punteroMapper3=malloc(sizeof(t_mapper));
 
 	memset(punteroMapper->nombreArchivoTemporal,'\0',TAM_NOMFINAL);
 	memset(punteroMapper->ip_nodo,'\0',20);
@@ -127,19 +136,19 @@ int main(void){
 
 
 
-	memset(punteroMapper2->nombreArchivoTemporal,'\0',TAM_NOMFINAL);
-	memset(punteroMapper2->ip_nodo,'\0',20);
-	strcpy(punteroMapper2->ip_nodo,"127.0.0.1");
-	punteroMapper2->bloque=0;
-	punteroMapper2->puerto_nodo=6500;
-	strcpy(punteroMapper2->nombreArchivoTemporal,"/tmp/mapBloque0.txt");
-
-	memset(punteroMapper3->nombreArchivoTemporal,'\0',TAM_NOMFINAL);
-	memset(punteroMapper3->ip_nodo,'\0',20);
-	strcpy(punteroMapper3->ip_nodo,"127.0.0.1");
-	punteroMapper3->bloque=2;
-	punteroMapper3->puerto_nodo=6500;
-	strcpy(punteroMapper3->nombreArchivoTemporal,"/tmp/mapBloque2.txt");
+//	memset(punteroMapper2->nombreArchivoTemporal,'\0',TAM_NOMFINAL);
+//	memset(punteroMapper2->ip_nodo,'\0',20);
+//	strcpy(punteroMapper2->ip_nodo,"127.0.0.1");
+//	punteroMapper2->bloque=0;
+//	punteroMapper2->puerto_nodo=6500;
+//	strcpy(punteroMapper2->nombreArchivoTemporal,"/tmp/mapBloque0.txt");
+//
+//	memset(punteroMapper3->nombreArchivoTemporal,'\0',TAM_NOMFINAL);
+//	memset(punteroMapper3->ip_nodo,'\0',20);
+//	strcpy(punteroMapper3->ip_nodo,"127.0.0.1");
+//	punteroMapper3->bloque=2;
+//	punteroMapper3->puerto_nodo=6500;
+//	strcpy(punteroMapper3->nombreArchivoTemporal,"/tmp/mapBloque2.txt");
 
 	/* Hasta Acá */
 
@@ -149,64 +158,64 @@ int main(void){
 		return 1;
 	}
 	//sleep(2); //descanso - Map Falso abajo
-	if(pthread_create(&mapperThread2,NULL,(void*)hilo_mapper,punteroMapper2)!=0){
-		perror("pthread_create");
-		log_error(logger,"Fallo la creación del hilo rutina mapper");
-		return 1;
-	}
-	//sleep(2); //descanso - Map falso abajo
-
-	if(pthread_create(&mapperThread3,NULL,(void*)hilo_mapper,punteroMapper3)!=0){
-			perror("pthread_create");
-			log_error(logger,"Fallo la creación del hilo rutina mapper");
-			return 1;
-	}
-
-
-	pthread_t reduceThread;
-	t_reduce* reduceDeMarta;
-	reduceDeMarta=malloc(sizeof(t_reduce));
-	memset(reduceDeMarta->ip_nodoPpal,'\0',20);
-	memset(reduceDeMarta->nombreArchivoFinal,'\0',TAM_NOMFINAL);
-	strcpy(reduceDeMarta->ip_nodoPpal,"127.0.0.1");
-	reduceDeMarta->puerto_nodoPpal=6500;
-	strcpy(reduceDeMarta->nombreArchivoFinal,"/tmp/reduceBloques12y3.txt");
-
-	pthread_t reduceThread2;
-	t_reduce* reduceDeMarta2;
-	reduceDeMarta2=malloc(sizeof(t_reduce));
-	memset(reduceDeMarta2->ip_nodoPpal,'\0',20);
-	memset(reduceDeMarta2->nombreArchivoFinal,'\0',TAM_NOMFINAL);
-	strcpy(reduceDeMarta2->ip_nodoPpal,"127.0.0.1");
-	reduceDeMarta2->puerto_nodoPpal=6500;
-	strcpy(reduceDeMarta2->nombreArchivoFinal,"/tmp/reduceFinal2.txt");
+//	if(pthread_create(&mapperThread2,NULL,(void*)hilo_mapper,punteroMapper2)!=0){
+//		perror("pthread_create");
+//		log_error(logger,"Fallo la creación del hilo rutina mapper");
+//		return 1;
+//	}
+//	//sleep(2); //descanso - Map falso abajo
+//
+//	if(pthread_create(&mapperThread3,NULL,(void*)hilo_mapper,punteroMapper3)!=0){
+//			perror("pthread_create");
+//			log_error(logger,"Fallo la creación del hilo rutina mapper");
+//			return 1;
+//	}
+//
+//
+//	pthread_t reduceThread;
+//	t_reduce* reduceDeMarta;
+//	reduceDeMarta=malloc(sizeof(t_reduce));
+//	memset(reduceDeMarta->ip_nodoPpal,'\0',20);
+//	memset(reduceDeMarta->nombreArchivoFinal,'\0',TAM_NOMFINAL);
+//	strcpy(reduceDeMarta->ip_nodoPpal,"127.0.0.1");
+//	reduceDeMarta->puerto_nodoPpal=6500;
+//	strcpy(reduceDeMarta->nombreArchivoFinal,"/tmp/reduceBloques12y3.txt");
+//
+//	pthread_t reduceThread2;
+//	t_reduce* reduceDeMarta2;
+//	reduceDeMarta2=malloc(sizeof(t_reduce));
+//	memset(reduceDeMarta2->ip_nodoPpal,'\0',20);
+//	memset(reduceDeMarta2->nombreArchivoFinal,'\0',TAM_NOMFINAL);
+//	strcpy(reduceDeMarta2->ip_nodoPpal,"127.0.0.1");
+//	reduceDeMarta2->puerto_nodoPpal=6500;
+//	strcpy(reduceDeMarta2->nombreArchivoFinal,"/tmp/reduceFinal2.txt");
 
 
 	pthread_join(mapperThread,NULL);
-	pthread_join(mapperThread2,NULL); //map falso
-	pthread_join(mapperThread3,NULL); //map falso
-
-	printf("Terminaron los 3 map\n");
-
-	//Recibira la orden "ejecuta reduce" de marta, luego tirará un hilo reduce
-
-	if(pthread_create(&reduceThread,NULL,(void*)hilo_reduce,reduceDeMarta)!=0){
-			perror("pthread_create");
-			log_error(logger,"Fallo la creación del hilo rutina mapper");
-			return 1;
-	}
-
-
-	if(pthread_create(&reduceThread2,NULL,(void*)hilo_reduce,reduceDeMarta2)!=0){
-			perror("pthread_create");
-			log_error(logger,"Fallo la creación del hilo rutina mapper");
-			return 1;
-	}
-
-	pthread_join(reduceThread,NULL); //map falso
-	pthread_join(reduceThread2,NULL); //map falso
-
-	printf("Terminaron los reduce\n");
+//	pthread_join(mapperThread2,NULL); //map falso
+//	pthread_join(mapperThread3,NULL); //map falso
+//
+//	printf("Terminaron los 3 map\n");
+//
+//	//Recibira la orden "ejecuta reduce" de marta, luego tirará un hilo reduce
+//
+////	if(pthread_create(&reduceThread,NULL,(void*)hilo_reduce,reduceDeMarta)!=0){
+////			perror("pthread_create");
+////			log_error(logger,"Fallo la creación del hilo rutina mapper");
+////			return 1;
+////	}
+////
+////
+////	if(pthread_create(&reduceThread2,NULL,(void*)hilo_reduce,reduceDeMarta2)!=0){
+////			perror("pthread_create");
+////			log_error(logger,"Fallo la creación del hilo rutina mapper");
+////			return 1;
+////	}
+//
+//	pthread_join(reduceThread,NULL); //map falso
+//	pthread_join(reduceThread2,NULL); //map falso
+//
+//	printf("Terminaron los reduce\n");
 
 
 	log_destroy(logger); //se elimina la instancia de log

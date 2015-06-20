@@ -26,9 +26,7 @@ int fdmax; // número máximo de descriptores de fichero
 int socket_fs;
 struct sockaddr_in filesystem; // dirección del servidor
 struct sockaddr_in remote_job; // dirección del cliente
-char identificacion[BUF_SIZE]; // buffer para datos del cliente
 char mensaje[MENSAJE_SIZE];
-char mensajeCombiner[3]; //Dice si el Job acepta combiner (SI/NO)
 int read_size;
 t_list* jobs;
 t_list* listaNodos; //lista de nodos conectados al FS
@@ -139,8 +137,11 @@ int main(int argc, char**argv){
 
 
 void *connection_handler_jobs(){
+	pthread_t hilojob;
 	int newfd,addrlen,i,yes=1;
 	int listener, nbytes;
+	int *socketJob;
+	char handshake[BUF_SIZE];
 	if ((listener = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
 		perror("socket");
 		log_info(logger,"FALLO la creacion del socket");
@@ -177,6 +178,8 @@ void *connection_handler_jobs(){
 			perror("select:");
 			exit(1);
 		}
+		memset(handshake, '\0', BUF_SIZE);
+		socketJob = malloc(sizeof(int));
 		for(i=0;i<=fdmax;i++){
 			if (FD_ISSET(i, &read_fds)) { // ¡¡tenemos datos!!
 				if (i == listener) {
@@ -185,56 +188,22 @@ void *connection_handler_jobs(){
 					if ((newfd = accept(listener, (struct sockaddr*)&remote_job,(socklen_t*)&addrlen)) == -1) {
 						perror("accept");
 						log_info(logger,"FALLO el ACCEPT");
-						exit(-1);
+						//exit(-1);
 					} else { //llego una nueva conexion, se acepto y ahora tengo que tratarla
-						if ((nbytes = recv(newfd, mensaje, sizeof(mensaje), MSG_WAITALL)) <= 0) { //si entra aca es porque hubo un error, no considero desconexion porque es nuevo
+						if ((nbytes = recv(newfd, handshake, sizeof(handshake), MSG_WAITALL)) <= 0) { //si entra aca es porque hubo un error, no considero desconexion porque es nuevo
 							perror("recv");
 							log_info(logger,"FALLO el Recv");
-							exit(-1);
+							//exit(-1);
 						} else {
-							// Se conecta un nuevo job, lo guardamos en el set master y actualizamos fdmax
-							log_info(logger,"Se conectó el Job con IP:%s",inet_ntoa(remote_job.sin_addr));
-							FD_SET(newfd,&master);
-							if(newfd>fdmax){
-								fdmax=newfd;
-							}
+							if (nbytes>0 && strncmp(handshake,"soy job",7)==0){
+								*socketJob = newfd;
+								log_info(logger,"Se conectó el Job con IP:%s",inet_ntoa(remote_job.sin_addr));
+								// Se conecta un nuevo job, lo guardamos en el set master y actualizamos fdmax
 
-							// Separo el mensaje que recibo con los archivos a trabajar (Job envía todos juntos separados con ,)
-							char** archivos =string_split((char*)mensaje,",");
-
-							//Lo siguiente es para probar que efectivamente se reciba la lista de archivos
-							int i;
-							for(i=0;archivos[i]!=NULL;i++){
-								printf("Se debe trabajar en el archivo:%s\n",archivos[i]);
-							}
-							//fin de la prueba
-
-							if(recv(newfd,mensajeCombiner,sizeof(mensajeCombiner),MSG_WAITALL)==-1){
-								perror("recv");
-								log_error(logger,"Fallo al recibir el atributo COMBINER");
-								exit(-1);
-							}
-							//Para probar que recibio el atributo
-							printf("El Job %s acepta combiner\n",(char*)mensajeCombiner);
-
-							/*
-							 * MaRTA le va a pedir al FS los bloques de los archivos involucrados
-							 * FS le deverá devolver: nodo(ip,puerto)-bloque
-							 * Buscará la combinación que maximice la distribución de las tareas en los nodos e
-							 * irá indicando al Job cada Hilo Mapper que deberá iniciar y qué NodoBloque debe
-							 * procesar hasta que la rutina de Mapping haya sido aplicada en tod0 el set de datos.
-							 */
-
-							t_mapper datosMapper;
-							strcpy(datosMapper.ip_nodo,"127.0.0.1");
-							datosMapper.puerto_nodo=6500;
-							datosMapper.bloque=1;
-							strcpy(datosMapper.nombreArchivoTemporal,"/tmp/mapBloque1.txt");
-
-							if(send(newfd,&datosMapper,sizeof(t_mapper),MSG_WAITALL)==-1){
-								perror("send");
-								log_error(logger,"Fallo el envio de los datos para el mapper");
-								exit(-1);
+								if(pthread_create(&hilojob, NULL, (void*)atenderJob, socketJob) != 0) {
+									perror("pthread_create");
+									log_error(logger,"Fallo la creacion del hilo Job");
+								}
 							}
 
 						}
@@ -243,27 +212,23 @@ void *connection_handler_jobs(){
 				//hasta aca, es el tratamiento de conexiones nuevas
 				//.................................................
 				} else {
-					// gestionar datos de un job o del fs
+					// gestionar datos  del fs
 					if ((nbytes = recv(i, mensaje, sizeof(mensaje), MSG_WAITALL)) <= 0) { //si entra aca es porque se desconecto o hubo un error
 						if (nbytes == 0) {
-							// Un job o el fs se desconecto, lo identifico
+							//  fs se desconecto, lo identifico
 							if (i==socket_fs){ //se desconecto el FS
 								close(i); // ¡Hasta luego!
 								FD_CLR(i, &master); // eliminar del conjunto maestro
 								log_info(logger,"Se desconectó el FileSystem.");
 								exit(1);
-							} else { //se desconecto un job
-								//haremos algo aca tambien
-								close(i); // ¡Hasta luego!
-								FD_CLR(i, &master); // eliminar del conjunto maestro
 							}
 						} else {
 							perror("recv");
 							log_info(logger,"FALLO el Recv");
 							exit(-1);
 							}
-					} else {
-						// tenemos datos de algún job o del fs
+					}else {
+						// tenemos datos del fs
 						// ...... Tratamiento del mensaje nuevo
 					}
 				}
@@ -271,4 +236,58 @@ void *connection_handler_jobs(){
 			}
 		}
 	}
+}
+
+void *atenderJob (int *socketJob) {
+	pthread_detach(pthread_self());
+	int posicionArchivo;
+	char mensajeCombiner[3];
+	char message[MENSAJE_SIZE];
+	memset(mensajeCombiner, '\0', 3);
+	memset(message, '\0', MENSAJE_SIZE);
+	if((recv(*socketJob, message, sizeof(message), MSG_WAITALL)) <= 0) {
+		perror("recv");
+		log_info(logger,"FALLO el Recv");
+		//exit(-1);
+	}
+	// Separo el mensaje que recibo con los archivos a trabajar (Job envía todos juntos separados con ,)
+	char** archivos =string_split((char*)message,",");
+
+	//Lo siguiente es para probar que efectivamente se reciba la lista de archivos
+
+	for(posicionArchivo=0;archivos[posicionArchivo]!=NULL;posicionArchivo++){
+		printf("Se debe trabajar en el archivo:%s\n",archivos[posicionArchivo]);
+	}
+	//fin de la prueba
+
+	if(recv(*socketJob,mensajeCombiner,sizeof(mensajeCombiner),MSG_WAITALL)==-1){
+		perror("recv");
+		log_error(logger,"Fallo al recibir el atributo COMBINER");
+		//exit(-1);
+	}
+	//Para probar que recibio el atributo
+	printf("El Job %s acepta combiner\n",(char*)mensajeCombiner);
+
+	/* PLANIFICACION
+	 * MaRTA le va a pedir al FS los bloques de los archivos involucrados
+	 * FS le deverá devolver: nodo(ip,puerto)-bloque
+	 * Buscará la combinación que maximice la distribución de las tareas en los nodos e
+	 * irá indicando al Job cada Hilo Mapper que deberá iniciar y qué NodoBloque debe
+	 * procesar hasta que la rutina de Mapping haya sido aplicada en tod0 el set de datos.
+	 */
+
+	t_mapper datosMapper;
+	strcpy(datosMapper.ip_nodo,"127.0.0.1");
+	datosMapper.puerto_nodo=6500;
+	datosMapper.bloque=1;
+	strcpy(datosMapper.nombreArchivoTemporal,"/tmp/mapBloque1.txt");
+
+	if(send(*socketJob,&datosMapper,sizeof(t_mapper),MSG_WAITALL)==-1){
+		perror("send");
+		log_error(logger,"Fallo el envio de los datos para el mapper");
+		exit(-1);
+	}
+
+	pthread_exit((void*)0);
+
 }
