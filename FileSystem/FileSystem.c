@@ -1049,6 +1049,7 @@ int copiar_lista_de_archivos(t_list* destino, t_list* origen){
 		copia->bloques=original->bloques;
 		copia->estado=original->estado;
 		copia->nombre=strdup(original->nombre);
+		copia->path=strdup(original->path);
 		copia->padre=original->padre;
 		copia->bloques=list_create();
 		for (j=0;j<list_size(original->bloques);j++){
@@ -1368,7 +1369,9 @@ int CopiarArchivoAMDFS(){
     	nombre_del_archivo = strtok_r(ruta,"/",&saveptr);
     	for (aux1=0;aux1<aux2-1;aux1++) nombre_del_archivo = strtok_r(NULL,"/",&saveptr);
     	archivo_temporal->nombre=string_new();
-    	strcpy(archivo_temporal->nombre,nombre_del_archivo);
+    	archivo_temporal->path=string_new();
+    	strcpy(archivo_temporal->path,pathMDFS);
+		strcpy(archivo_temporal->nombre,nombre_del_archivo);
     	archivo_temporal->estado=1;
     	archivo_temporal->padre=idPadre; //modifico al path del archivo en el MDFS
     	archivo_temporal->tamanio=0; //para mi este campo esta al pedo
@@ -1397,6 +1400,11 @@ int CopiarArchivoAMDFS(){
 
 void CopiarArchivoDelMDFS() {
 	printf("Eligió Copiar un archivo del MDFS al filesystem local\n");
+
+
+
+
+
 }
 
 void MD5DeArchivo() {
