@@ -51,3 +51,4 @@ typedef struct estructura_mapper {
 
 //Prototipos de funciones
 void *connection_handler_jobs(); // Esta funcion escucha continuamente si recibo nuevos mensajes
+void *atenderJob(int*);
