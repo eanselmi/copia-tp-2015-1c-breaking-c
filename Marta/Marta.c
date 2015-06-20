@@ -36,6 +36,7 @@ t_list* listaArchivos; //lista de archivos del FS
 
 
 
+
 int main(int argc, char**argv){
 
 	pthread_t escucha_jobs;
@@ -48,6 +49,12 @@ int main(int argc, char**argv){
 	filesystem.sin_addr.s_addr = inet_addr(config_get_string_value(configurador,"IP_FS"));
 	filesystem.sin_port = htons(config_get_int_value(configurador,"PUERTO_FS"));
 	int nbytes;
+	int cantNodos;
+	int i;
+	char nodoId[6];
+	int estadoNodo;
+	char* ipNodo;
+	int puertoEscuchaNodo;
 
 
 	if ((socket_fs = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
@@ -83,6 +90,42 @@ int main(int argc, char**argv){
 	listaNodos = list_create(); //creo la lista para los nodos que me pasa el FS
 	listaArchivos = list_create(); //creo la lista para los archivos que me pasa el FS
 
+	if ((nbytes = recv(socket_fs, &cantNodos, sizeof(int), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
+			perror("recv");
+			log_error(logger,"FALLO el Recv de cantidad de nodos");
+			exit(-1);
+	}
+	while (i < cantNodos){
+		t_nodo* nodoTemporal = malloc(sizeof(t_nodo));
+		if ((nbytes = recv(socket_fs, nodoId, sizeof(nodoId), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
+					perror("recv");
+					log_error(logger,"FALLO el Recv de nodoId");
+					exit(-1);
+			}
+			if ((nbytes = recv(socket_fs, &estadoNodo, sizeof(int), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
+							perror("recv");
+							log_error(logger,"FALLO el Recv del estado del nodo");
+							exit(-1);
+			}
+			if ((nbytes = recv(socket_fs, ipNodo, sizeof(int), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
+								perror("recv");
+								log_error(logger,"FALLO el Recv de la ip del nodo");
+								exit(-1);
+			}
+			if ((nbytes = recv(socket_fs, &puertoEscuchaNodo, sizeof(int), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
+										perror("recv");
+										log_error(logger,"FALLO el Recv del puerto escucha del nodo");
+										exit(-1);
+			}
+			//memset(nodoTemporal->nodo_id, '\0', 6); //AGR Ver si hace falta
+			strcpy(nodoTemporal->nodo_id, nodoId);
+			nodoTemporal->estado =estadoNodo;
+			nodoTemporal->ip = strdup(ipNodo);
+			nodoTemporal->puerto_escucha_nodo = puertoEscuchaNodo;
+			list_add(listaNodos, nodoTemporal);
+			i++;
+		}
+
 	jobs=list_create(); //creo la lista de jobs
 
 	if( pthread_create( &escucha_jobs , NULL , connection_handler_jobs , NULL) < 0){
@@ -92,52 +135,6 @@ int main(int argc, char**argv){
 
 	pthread_join(escucha_jobs,NULL);
 	return 0;
-}
-
-void actualizarNodoDeMDFS(){
-	int nbytes;
-	int cantNodos;
-	int i;
-	char nodoId[6];
-	int estadoNodo;
-	char* ipNodo;
-	int puertoEscuchaNodo;
-
-	if ((nbytes = recv(socket_fs, &cantNodos, sizeof(int), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
-		perror("recv");
-		log_error(logger,"FALLO el Recv de cantidad de nodos");
-		exit(-1);
-	}
-	while (i < cantNodos){
-		t_nodo* nodoTemporal = malloc(sizeof(t_nodo));
-		if ((nbytes = recv(socket_fs, nodoId, sizeof(nodoId), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
-				perror("recv");
-				log_error(logger,"FALLO el Recv de nodoId");
-				exit(-1);
-		}
-		if ((nbytes = recv(socket_fs, &estadoNodo, sizeof(int), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
-						perror("recv");
-						log_error(logger,"FALLO el Recv del estado del nodo");
-						exit(-1);
-		}
-		if ((nbytes = recv(socket_fs, ipNodo, sizeof(int), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
-							perror("recv");
-							log_error(logger,"FALLO el Recv de la ip del nodo");
-							exit(-1);
-		}
-		if ((nbytes = recv(socket_fs, &puertoEscuchaNodo, sizeof(int), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
-									perror("recv");
-									log_error(logger,"FALLO el Recv del puerto escucha del nodo");
-									exit(-1);
-		}
-		//memset(nodoTemporal->nodo_id, '\0', 6); //AGR Ver si hace falta
-		strcpy(nodoTemporal->nodo_id, nodoId);
-		nodoTemporal->estado =estadoNodo;
-		nodoTemporal->ip = strdup(ipNodo);
-		nodoTemporal->puerto_escucha_nodo = puertoEscuchaNodo;
-		list_add(listaNodos, nodoTemporal);
-		i++;
-	}
 }
 
 
