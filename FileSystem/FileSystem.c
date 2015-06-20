@@ -264,8 +264,8 @@ int Menu(void) {
 			EliminarNodo();	break;
 			//case 17: printf("Eligió Salir\n"); break;
 
-		//case 17: listar_nodos_conectados(nodos); break;
-		case 17: listar_archivos_subidos(archivos); break;
+		case 17: listar_nodos_conectados(nodos); break;
+//		case 17: listar_archivos_subidos(archivos); break;
 		default: printf("Opción incorrecta. Por favor ingrese una opción del 1 al 17\n"); break;
 		}
 	}
@@ -1627,22 +1627,24 @@ int VerBloque() {
 				printf("Esta queriendo ver un bloque vacio");
 				return -1;
 			}
-		}else {
-	socket_nodo =obtener_socket_de_nodo_con_id(nodo_id);
+
+			socket_nodo =obtener_socket_de_nodo_con_id(nodo_id);
 			if (socket_nodo == -1){
 				log_error(logger, "El nodo ingresado no es valido o no esta disponible\n");
 				printf("El nodo ingresado no es valido o no esta disponible\n");
 				Menu();
 			}
+			enviarNumeroDeBloqueANodo(socket_nodo, nroBloque);
+			bloqueParaVer = recibirBloque(socket_nodo);
+			archivoParaVerPath = fopen("./archBloqueParaVer.txt", "w");
+			fprintf(archivoParaVerPath, "%s", bloqueParaVer);
+			printf ("El md5 del bloque que traje es: %s\n",obtener_md5(bloqueParaVer));
+			printf("El bloque se copio en el archivo: ./archBloqueParaVer.txt\n");
+			fclose(archivoParaVerPath);
+			break;
 		}
-	enviarNumeroDeBloqueANodo(socket_nodo, nroBloque);
-	bloqueParaVer = recibirBloque(socket_nodo);
-	archivoParaVerPath = fopen("./archBloqueParaVer.txt", "w");
-	fprintf(archivoParaVerPath, "%s", bloqueParaVer);
-	printf("El bloque se copio en el archivo: ./archBloqueParaVer.txt\n");
-
-		}
-return 0;
+	}
+	return 0;
 }
 
 void enviarNumeroDeBloqueANodo( int socket_nodo, int bloque) {
