@@ -627,7 +627,8 @@ uint32_t BuscarPadre(char* path) {
 
 //Buscar la posición del nodo de un archivo de la lista t_archivo por el nombre del archivo y el id del padre
 int BuscarArchivoPorNombre(const char *path, uint32_t idPadre) {
-	unArchivo = malloc(sizeof(t_archivo));
+	t_archivo* archivo;
+	archivo = malloc(sizeof(t_archivo));
 	int i, posicionArchivo;
 	char* nombreArchivo;
 	int posArchivo = 0;
@@ -641,13 +642,13 @@ int BuscarArchivoPorNombre(const char *path, uint32_t idPadre) {
 	}
 	if(tam!=0){
 		for (posArchivo = 0; posArchivo < tam; posArchivo++) {
-			unArchivo = list_get(archivos, posArchivo);
-			if ((strcmp(unArchivo->nombre, nombreArchivo) == 0) && (unArchivo->padre == idPadre)) {
+			archivo = list_get(archivos, posArchivo);
+			if ((strcmp(archivo->nombre, nombreArchivo) == 0) && (archivo->padre == idPadre)) {
 				posicionArchivo = posArchivo;
 				break;
 			} else {
-				if (i == tam - 1) {
-					printf("No se encontró el archivo");
+				if (posArchivo == tam - 1) {
+					//printf("No se encontró el archivo");
 					posicionArchivo = -1;
 					return posicionArchivo;
 				}
@@ -722,6 +723,8 @@ static void eliminar_bloques(t_copias *bloque) {
 }
 
 void EliminarArchivo() {
+	t_archivo* archivo;
+	archivo=malloc(sizeof(t_archivo));
 	printf("Eligió  Eliminar archivo\n");
 	char* path = string_new();
 	int i, j;
@@ -729,10 +732,10 @@ void EliminarArchivo() {
 	scanf("%s", path);
 	uint32_t idPadre = BuscarPadre(path);
 	uint32_t posArchivo = BuscarArchivoPorNombre(path, idPadre);
-	unArchivo = list_get(archivos, posArchivo);
+	archivo = list_get(archivos, posArchivo);
 	//Eliminar bloques del archivo
-	for (i = 0; i < list_size(unArchivo->bloques); i++) {
-		unBloque = list_get(unArchivo->bloques, i);
+	for (i = 0; i < list_size(archivo->bloques); i++) {
+		unBloque = list_get(archivo->bloques, i);
 		for (j = 0; i < list_size(unBloque->copias); j++) {
 			list_destroy_and_destroy_elements(unBloque->copias,(void*) eliminar_bloques);
 		}
@@ -744,6 +747,8 @@ void EliminarArchivo() {
 }
 
 void RenombrarArchivo() {
+	t_archivo* archivo;
+	archivo=malloc(sizeof(t_archivo));
 	printf("Eligió Renombrar archivos\n");
 	char* path = string_new();
 	char* nuevoNombre = string_new();
@@ -751,14 +756,16 @@ void RenombrarArchivo() {
 	scanf("%s", path);
 	uint32_t idPadre = BuscarPadre(path);
 	uint32_t posArchivo = BuscarArchivoPorNombre(path, idPadre);
-	unArchivo = list_get(archivos, posArchivo);
+	archivo = list_get(archivos, posArchivo);
 	printf("Ingrese el nuevo nombre \n");
 	scanf("%s", nuevoNombre);
-	strcpy(unArchivo->nombre, nuevoNombre);
+	strcpy(archivo->nombre, nuevoNombre);
 
 }
 
 void MoverArchivo() {
+	t_archivo* archivo;
+	archivo=malloc(sizeof(t_archivo));
 	printf("Eligió Mover archivos\n");
 	char* path = string_new();
 	char* nuevoPath = string_new();
@@ -766,11 +773,11 @@ void MoverArchivo() {
 	scanf("%s", path);
 	uint32_t idPadre = BuscarPadre(path);
 	uint32_t posArchivo = BuscarArchivoPorNombre(path, idPadre);
-	unArchivo = list_get(archivos, posArchivo);
+	archivo = list_get(archivos, posArchivo);
 	printf("Ingrese el nuevo path \n");
 	scanf("%s", nuevoPath);
 	uint32_t idPadreNuevo = BuscarPadre(nuevoPath);
-	unArchivo->padre = idPadreNuevo;
+	archivo->padre = idPadreNuevo;
 }
 
 long ExisteEnLaLista(t_list* listaDirectorios, char* nombreDirectorioABuscar,uint32_t idPadre) {
