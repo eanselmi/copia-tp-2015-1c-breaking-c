@@ -48,12 +48,7 @@ int main(int argc, char**argv){
 	filesystem.sin_addr.s_addr = inet_addr(config_get_string_value(configurador,"IP_FS"));
 	filesystem.sin_port = htons(config_get_int_value(configurador,"PUERTO_FS"));
 	int nbytes;
-	int cantNodos;
-	int i;
-	char nodoId[6];
-	int estadoNodo;
-	char* ipNodo;
-	int puertoEscuchaNodo;
+
 
 	if ((socket_fs = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
 		perror ("socket");
@@ -85,9 +80,28 @@ int main(int argc, char**argv){
 	}
 	if (nbytes > 0 && strncmp(identificacion,"ok",2)==0)	log_info (logger,"Conexion con el FS exitosa");
 
+	listaNodos = list_create(); //creo la lista para los nodos que me pasa el FS
+	listaArchivos = list_create(); //creo la lista para los archivos que me pasa el FS
 
-	listaNodos = list_create();
-	listaArchivos = list_create();
+	jobs=list_create(); //creo la lista de jobs
+
+	if( pthread_create( &escucha_jobs , NULL , connection_handler_jobs , NULL) < 0){
+	    perror("could not create thread");
+	    return -1;
+	}
+
+	pthread_join(escucha_jobs,NULL);
+	return 0;
+}
+
+void actualizarNodoDeMDFS(){
+	int nbytes;
+	int cantNodos;
+	int i;
+	char nodoId[6];
+	int estadoNodo;
+	char* ipNodo;
+	int puertoEscuchaNodo;
 
 	if ((nbytes = recv(socket_fs, &cantNodos, sizeof(int), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
 		perror("recv");
@@ -103,19 +117,19 @@ int main(int argc, char**argv){
 		}
 		if ((nbytes = recv(socket_fs, &estadoNodo, sizeof(int), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
 						perror("recv");
-						log_error(logger,"FALLO el Recv del bloque del nodo");
+						log_error(logger,"FALLO el Recv del estado del nodo");
 						exit(-1);
 		}
 		if ((nbytes = recv(socket_fs, ipNodo, sizeof(int), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
 							perror("recv");
-							log_error(logger,"FALLO el Recv del bloque del nodo");
+							log_error(logger,"FALLO el Recv de la ip del nodo");
 							exit(-1);
 		}
 		if ((nbytes = recv(socket_fs, &puertoEscuchaNodo, sizeof(int), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
 									perror("recv");
-									log_error(logger,"FALLO el Recv del bloque del nodo");
+									log_error(logger,"FALLO el Recv del puerto escucha del nodo");
 									exit(-1);
-				}
+		}
 		//memset(nodoTemporal->nodo_id, '\0', 6); //AGR Ver si hace falta
 		strcpy(nodoTemporal->nodo_id, nodoId);
 		nodoTemporal->estado =estadoNodo;
@@ -124,24 +138,8 @@ int main(int argc, char**argv){
 		list_add(listaNodos, nodoTemporal);
 		i++;
 	}
-
-
-
-
-
-
-
-
-	jobs=list_create(); //creo la lista de jobs
-
-	if( pthread_create( &escucha_jobs , NULL , connection_handler_jobs , NULL) < 0){
-	    perror("could not create thread");
-	    return -1;
-	}
-
-	pthread_join(escucha_jobs,NULL);
-	return 0;
 }
+
 
 void *connection_handler_jobs(){
 	int newfd,addrlen,i,yes=1;
