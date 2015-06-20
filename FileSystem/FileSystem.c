@@ -410,10 +410,14 @@ void listar_archivos_subidos(t_list *archivos) {
 	t_bloque *bloque;
 	t_copias *copia;
 	cantidad_archivos = list_size(archivos);
+	if (cantidad_archivos==0){
+		printf ("No hay archivos cargados en MDFS\n");
+		exit(1);
+	}
 	for (i = 0; i < cantidad_archivos; i++) {
 		elemento = list_get(archivos, i);
 		printf("\n\n");
-		printf("Archivo: %s\nPadre: %d\nTam: %d\nEstado: %d\n",elemento->nombre,elemento->padre,elemento->tamanio,elemento->estado);
+		printf("Archivo: %s\nPadre: %d\nTam: %d\nEstado: %d\nPath En MDFS: %s\n",elemento->nombre,elemento->padre,elemento->tamanio,elemento->estado,elemento->path);
 		printf("\n");
 		cantidad_bloques=list_size(elemento->bloques);
 		for (j = 0; j < cantidad_bloques; j++){
@@ -627,7 +631,8 @@ uint32_t BuscarPadre(char* path) {
 
 //Buscar la posición del nodo de un archivo de la lista t_archivo por el nombre del archivo y el id del padre
 int BuscarArchivoPorNombre(const char *path, uint32_t idPadre) {
-	unArchivo = malloc(sizeof(t_archivo));
+	t_archivo* archivo;
+	archivo = malloc(sizeof(t_archivo));
 	int i, posicionArchivo;
 	char* nombreArchivo;
 	int posArchivo = 0;
@@ -641,13 +646,13 @@ int BuscarArchivoPorNombre(const char *path, uint32_t idPadre) {
 	}
 	if(tam!=0){
 		for (posArchivo = 0; posArchivo < tam; posArchivo++) {
-			unArchivo = list_get(archivos, posArchivo);
-			if ((strcmp(unArchivo->nombre, nombreArchivo) == 0) && (unArchivo->padre == idPadre)) {
+			archivo = list_get(archivos, posArchivo);
+			if ((strcmp(archivo->nombre, nombreArchivo) == 0) && (archivo->padre == idPadre)) {
 				posicionArchivo = posArchivo;
 				break;
 			} else {
-				if (i == tam - 1) {
-					printf("No se encontró el archivo");
+				if (posArchivo == tam - 1) {
+					//printf("No se encontró el archivo");
 					posicionArchivo = -1;
 					return posicionArchivo;
 				}
@@ -695,20 +700,70 @@ void modificar_estado_nodo(char nodo_id[6], int socket, int port, int estado, in
 		}
 	}
 }
-void formatear_nodos() {
-	int i;
-	for (i = 0; i < list_size(nodos); i++)
-		list_remove(nodos, i);
+
+static void eliminar_lista_de_copias (t_copias *self){
+	free(self->nodo);
+	free(self);
+}
+static void eliminar_lista_de_bloques(t_bloque *self){
+	list_destroy(self->copias);
+	free(self);
+}
+
+static void eliminar_lista_de_archivos (t_archivo *self){
+	free(self->nombre);
+	free(self->path);
+	list_destroy(self->bloques);
+	free(self);
+}
+static void eliminar_lista_de_directorio(t_dir *self){
+	free(self->nombre);
+	free(self);
 }
 
 void FormatearFilesystem() {
+	int i,j,k;
 	printf("Eligió  Formatear el MDFS\n");
-	if (archivos != NULL) {
-		if (unArchivo->bloques != NULL) {
-			list_clean(unArchivo->bloques);
+	//=====================================================================
+	//======================= FORMATEO PARTE 1 ============================
+	//==================ELIMINO LA LISTA DE ARCHIVOS=======================
+	//=====================================================================
+	t_archivo *archi=malloc(sizeof(t_archivo));
+	t_bloque *bloq=malloc(sizeof(t_bloque));
+
+	for (i=0;i<list_size(archivos);i++){
+		archi=list_get(archivos,i);
+		for (j=0;j<list_size(archi->bloques);j++){
+			bloq=list_get(archi->bloques,j);
+			for (k=0;k<list_size(bloq->copias);k++){
+				list_remove_and_destroy_element(bloq->copias,k,(void*)eliminar_lista_de_copias);
+			}
+			list_remove_and_destroy_element(archi->bloques,j,(void*)eliminar_lista_de_bloques);
 		}
-		list_clean(archivos);
+		list_remove_and_destroy_element(archivos,i,(void*)eliminar_lista_de_archivos);
 	}
+
+	//=====================================================================
+	//======================= FORMATEO PARTE 2 ============================
+	//================= VACIO LOS NODOS PARA QUEDE 0KM ====================
+	//=====================================================================
+
+	t_nodo *unNodo;
+	for (i=0;i<list_size(nodos);i++){
+		unNodo=list_get(nodos,i);
+		unNodo->estado=0;    //PONGO EL ESTADO EN NO DISPONIBLE
+		unNodo->bloques_libres=unNodo->bloques_totales;  //PONGO QUE TODOS LOS BLOQUES ESTAN DISPONIBLES
+		for (k = 0; k < unNodo->bloques_totales; k++)
+			bitarray_clean_bit(unNodo->bloques_del_nodo, k);   //MARCO EN TODOS LOS BITS DEL BITARRAY QUE LOS BLOQUES ESTAN DISPONIBLES
+	}
+
+	//=====================================================================
+	//======================= FORMATEO PARTE 3 ============================
+	//==================ELIMINO LA LISTA DE DIRECTORIOS====================
+	//=====================================================================
+
+	list_clean_and_destroy_elements(directorios,(void*)eliminar_lista_de_directorio);
+
 }
 
 static void archivo_destroy(t_archivo* self) {
@@ -722,6 +777,8 @@ static void eliminar_bloques(t_copias *bloque) {
 }
 
 void EliminarArchivo() {
+	t_archivo* archivo;
+	archivo=malloc(sizeof(t_archivo));
 	printf("Eligió  Eliminar archivo\n");
 	char* path = string_new();
 	int i, j;
@@ -729,10 +786,10 @@ void EliminarArchivo() {
 	scanf("%s", path);
 	uint32_t idPadre = BuscarPadre(path);
 	uint32_t posArchivo = BuscarArchivoPorNombre(path, idPadre);
-	unArchivo = list_get(archivos, posArchivo);
+	archivo = list_get(archivos, posArchivo);
 	//Eliminar bloques del archivo
-	for (i = 0; i < list_size(unArchivo->bloques); i++) {
-		unBloque = list_get(unArchivo->bloques, i);
+	for (i = 0; i < list_size(archivo->bloques); i++) {
+		unBloque = list_get(archivo->bloques, i);
 		for (j = 0; i < list_size(unBloque->copias); j++) {
 			list_destroy_and_destroy_elements(unBloque->copias,(void*) eliminar_bloques);
 		}
@@ -744,6 +801,8 @@ void EliminarArchivo() {
 }
 
 void RenombrarArchivo() {
+	t_archivo* archivo;
+	archivo=malloc(sizeof(t_archivo));
 	printf("Eligió Renombrar archivos\n");
 	char* path = string_new();
 	char* nuevoNombre = string_new();
@@ -751,14 +810,16 @@ void RenombrarArchivo() {
 	scanf("%s", path);
 	uint32_t idPadre = BuscarPadre(path);
 	uint32_t posArchivo = BuscarArchivoPorNombre(path, idPadre);
-	unArchivo = list_get(archivos, posArchivo);
+	archivo = list_get(archivos, posArchivo);
 	printf("Ingrese el nuevo nombre \n");
 	scanf("%s", nuevoNombre);
-	strcpy(unArchivo->nombre, nuevoNombre);
+	strcpy(archivo->nombre, nuevoNombre);
 
 }
 
 void MoverArchivo() {
+	t_archivo* archivo;
+	archivo=malloc(sizeof(t_archivo));
 	printf("Eligió Mover archivos\n");
 	char* path = string_new();
 	char* nuevoPath = string_new();
@@ -766,11 +827,11 @@ void MoverArchivo() {
 	scanf("%s", path);
 	uint32_t idPadre = BuscarPadre(path);
 	uint32_t posArchivo = BuscarArchivoPorNombre(path, idPadre);
-	unArchivo = list_get(archivos, posArchivo);
+	archivo = list_get(archivos, posArchivo);
 	printf("Ingrese el nuevo path \n");
 	scanf("%s", nuevoPath);
 	uint32_t idPadreNuevo = BuscarPadre(nuevoPath);
-	unArchivo->padre = idPadreNuevo;
+	archivo->padre = idPadreNuevo;
 }
 
 long ExisteEnLaLista(t_list* listaDirectorios, char* nombreDirectorioABuscar,uint32_t idPadre) {

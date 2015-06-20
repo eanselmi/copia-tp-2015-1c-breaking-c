@@ -57,6 +57,10 @@ void obtenerNodosMasLibres(void);
 int copiar_lista_de_nodos(t_list *destino,t_list* origen);
 int copiar_lista_de_archivos(t_list* destino, t_list* origen);
 bool nodos_mas_libres(t_nodo *vacio, t_nodo *mas_vacio);
+static void eliminar_lista_de_copias (t_copias *self);
+static void eliminar_lista_de_bloques(t_bloque *self);
+static void eliminar_lista_de_archivos (t_archivo *self);
+static void eliminar_lista_de_directorio(t_dir *self);
 void *connection_handler_escucha(); // Esta funcion escucha continuamente si recibo nuevos mensajes
 static t_nodo *agregar_nodo_a_lista(char nodo_id[6],int socket,int est,int estado_red,char *ip, int port,int puerto_escucha, int bloques_lib, int bloques_tot);
 void modificar_estado_nodo (char nodo_id[6],int socket,int port,int estado,int estado_red);
