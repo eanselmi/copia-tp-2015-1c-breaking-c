@@ -491,7 +491,7 @@ void ejecutarMapper(char *script,int bloque,char *resultado){
 //	string_append(&datoos,"WBAN,Date,Time,StationType,SkyCondition,SkyConditionFlag,Visibility,VisibilityFlag,WeatherType,WeatherTypeFlag,DryBulbFarenheit,DryBulbFarenheitFlag,DryBulbCelsius,DryBulbCelsiusFlag,WetBulbFarenheit,WetBulbFarenheitFlag,WetBulbCelsius,WetBulbCelsiusFlag,DewPointFarenheit,DewPointFarenheitFlag,DewPointCelsius,DewPointCelsiusFlag,RelativeHumidity,RelativeHumidityFlag,WindSpeed,WindSpeedFlag,WindDirection,WindDirectionFlag,ValueForWindCharacter,ValueForWindCharacterFlag,StationPressure,StationPressureFlag,PressureTendency,PressureTendencyFlag,PressureChange,PressureChangeFlag,SeaLevelPressure,SeaLevelPressureFlag,RecordType,RecordTypeFlag,HourlyPrecip,HourlyPrecipFlag,Altimeter,AltimeterFlag\n03011,20130101,0000,0,OVC, , 5.00, , , ,M, ,M, ,M, ,M, ,M, ,M, ,M, , 5, ,120, , , ,M, , , , , ,M, ,AA, , , ,29.93, \n03011,20130101,0015,0,SCT011 SCT020, , 7.00, ,-SN, ,M, ,M, ,M, ,M, ,M, ,M, ,M, , 6, ,120, , , ,21.33, , , , , ,M, ,AA, , , ,29.93, \n03011,20130101,0035,0,CLR, ,10.00, , , ,M, ,M, ,M, ,M, ,M, ,M, ,M, , 6, ,120, , , ,21.33, , , , , ,M, ,AA, , , ,29.93, \n03011,20130101,0055,0,CLR, ,10.00, , , ,M, ,M, ,M, ,M, ,M, ,M, ,M, , 5, ,120, , , ,21.33, , , , , ,M, ,AA, , , ,29.93, \n");
 //	write(outfd[1],datoos,strlen(datoos));/* Escribe en el stdin del hijo el contenido del bloque*/
 	bloqueAMapear=getBloque(bloque);
-	write(outfd[1],bloqueAMapear,BLOCK_SIZE);/* Escribe en el stdin del hijo el contenido del bloque*/
+	write(outfd[1],bloqueAMapear,strlen(bloqueAMapear));/* Escribe en el stdin del hijo el contenido del bloque*/
 	close(outfd[1]);
 	dup2(bak,STDOUT_FILENO);
 	sem_wait(&terminoElMap);
@@ -731,15 +731,17 @@ void* rutinaMap(int* sckMap){
 
 void* rutinaReduce (int* sckReduce){
 	pthread_detach(pthread_self());
+	char nombreFinalReduce[TAM_NOMFINAL];
+	memset(nombreFinalReduce,'\0',TAM_NOMFINAL);
 //	t_datosReduce datosParaElReduce;
 
-//	if(recv(*sckMap,&datosParaElReduce,sizeof(t_datosReduce),MSG_WAITALL)==-1){
-//		perror("recv");
-//		log_error(logger,"Fallo al recibir los datos para el map");
-//		pthread_exit((void*)0);
-//	}
+	if(recv(*sckReduce,&nombreFinalReduce,TAM_NOMFINAL,MSG_WAITALL)==-1){
+		perror("recv");
+		log_error(logger,"Fallo al recibir los datos para el map");
+		pthread_exit((void*)0);
+	}
 
-
+	printf("El resultado del reduce se guardará en: %s\n",nombreFinalReduce);
 
 	pthread_exit((void*)0);
 }
