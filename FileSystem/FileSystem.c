@@ -1471,7 +1471,7 @@ void AgregarNodo(){
 	int i,cantNodos, nodoEncontrado;
 	nodoEncontrado =0; //0 no lo encontró, 1 lo encontró
 	t_nodo* nodoAEvaluar;
-	char* nodoID = string_new();;
+	char* nodoID = string_new();
 	cantNodos= list_size(nodos);
 	for (i=0;i<cantNodos;i++){
 		nodoAEvaluar = list_get(nodos,i);
@@ -1505,7 +1505,7 @@ void EliminarNodo(){
 	int i,cantNodos, nodoEncontrado;
 	nodoEncontrado =0; //0 no lo encontró, 1 lo encontró
 	t_nodo* nodoAEvaluar;
-	char* nodoID = string_new();;
+	char* nodoID = string_new();
 	cantNodos= list_size(nodos);
 	for (i=0;i<cantNodos;i++){
 		nodoAEvaluar = list_get(nodos,i);
