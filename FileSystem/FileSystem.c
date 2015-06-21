@@ -1456,7 +1456,7 @@ int CopiarArchivoAMDFS(){
     		}
     		list_add(archivo_temporal->bloques,bloque_temporal);
     	}
-    	strcpy(ruta,path);
+    	strcpy(ruta,pathMDFS);
     	char *nombre_del_archivo;
     	int aux1,aux2=0;
     	char *saveptr;
