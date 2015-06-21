@@ -736,6 +736,7 @@ void* rutinaReduce (int* sckReduce){
 	pthread_detach(pthread_self());
 	char nombreFinalReduce[TAM_NOMFINAL];
 	char rutinaReduce[REDUCE_SIZE];
+	int cantidadArchivos;
 	memset(nombreFinalReduce,'\0',TAM_NOMFINAL);
 	memset(rutinaReduce,'\0',REDUCE_SIZE);
 
@@ -756,6 +757,14 @@ void* rutinaReduce (int* sckReduce){
 	}
 
 	printf("Se recibio la rutina reduce:%s\n",rutinaReduce);
+
+	if(recv(*sckReduce,&cantidadArchivos,sizeof(int),MSG_WAITALL)==-1){
+		perror("recv");
+		log_error(logger,"Fallo al recibir la cantidad de archivos a aplicar reduce");
+		pthread_exit((void*)0);
+	}
+
+	printf("Se debe aplicar reduce en %d archivos\n",cantidadArchivos);
 
 	pthread_exit((void*)0);
 }

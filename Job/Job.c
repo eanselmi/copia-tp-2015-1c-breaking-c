@@ -441,6 +441,7 @@ void* hilo_reduce(t_reduce* reduceStruct){
 	/*Conexión reduce-nodo establecida*/
 	log_info(logger,"Hilo reduce conectado al Nodo con IP: %s,en el Puerto: %d",reduceStruct->ip_nodoPpal,reduceStruct->puerto_nodoPpal);
 
+	//Envio el nombre donde el nodo deberá guardar el resultado
 	if(send(nodo_sock,&reduceStruct->nombreArchivoFinal,TAM_NOMFINAL,MSG_WAITALL)==-1){
 		perror("send");
 		log_error(logger,"Fallo el envio del nombre del archivo del resultado del reduce al nodo");
@@ -450,6 +451,7 @@ void* hilo_reduce(t_reduce* reduceStruct){
 		pthread_exit((void*)0);
 	}
 
+	//envio el contenido de la rutina reduce al nodo
 	contReduce=getFileContent(config_get_string_value(configurador,"REDUCE"));
 	strcpy(rutinaReduce,contReduce);
 	if(send(nodo_sock,rutinaReduce,sizeof(rutinaReduce),MSG_WAITALL)==-1){
@@ -461,6 +463,15 @@ void* hilo_reduce(t_reduce* reduceStruct){
 		pthread_exit((void*)0);
 	}
 
+	//Envio la cantidad de archivos a aplicar reduce para que el nodo sepa cuantos esperar
+	if(send(nodo_sock,&cantArchivos,sizeof(int),MSG_WAITALL)==-1){
+		perror("send");
+		log_error(logger,"Fallo el envío de la cantidad de archivos a aplicar reduce al nodo");
+		resultado=1;
+		printf("Resultado:%d\n",resultado);
+		//envio a marta el resultado
+		pthread_exit((void*)0);
+	}
 
 	pthread_exit((void*)0);
 }
