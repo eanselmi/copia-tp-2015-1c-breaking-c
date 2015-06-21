@@ -47,8 +47,13 @@ typedef struct estructura_mapper {
 	int puerto_nodo;
 	int bloque;
 	char nombreArchivoTemporal[TAM_NOMFINAL];
+	int bloqueArchivo;
 } __attribute__((packed)) t_mapper;
 
 //Prototipos de funciones
 void *connection_handler_jobs(); // Esta funcion escucha continuamente si recibo nuevos mensajes
 void *atenderJob(int*);
+t_list *buscarBuscarBloques (char*);
+void asignarMap(t_list *bloques,int socketJob);
+t_nodo* buscarCopiaEnNodos(t_copias *copia);
+bool ordenarSegunMapYReduce (t_nodo* menorCarga,t_nodo* mayorCarga);

@@ -361,25 +361,118 @@ void *atenderJob (int *socketJob) {
 
 	// Separo el mensaje que recibo con los archivos a trabajar (Job envía todos juntos separados con ,)
 	char** archivos =string_split((char*)archivosDelJob,",");
-
+	t_list *bloques;
 	//Lo siguiente es para probar que efectivamente se reciba la lista de archivos
 
 	for(posicionArchivo=0;archivos[posicionArchivo]!=NULL;posicionArchivo++){
 		printf("Se debe trabajar en el archivo:%s\n",archivos[posicionArchivo]);
+		bloques=buscarBuscarBloques(archivos[posicionArchivo]);
+		asignarMap(bloques,*socketJob);
 	}
-
-	t_mapper datosMapper;
-	strcpy(datosMapper.ip_nodo,"127.0.0.1");
-	datosMapper.puerto_nodo=6500;
-	datosMapper.bloque=1;
-	strcpy(datosMapper.nombreArchivoTemporal,"/tmp/mapBloque1.txt");
-
-	if(send(*socketJob,&datosMapper,sizeof(t_mapper),MSG_WAITALL)==-1){
-		perror("send");
-		log_error(logger,"Fallo el envio de los datos para el mapper");
-		exit(-1);
-	}
+//
+//	t_mapper datosMapper;
+//	strcpy(datosMapper.ip_nodo,"127.0.0.1");
+//	datosMapper.puerto_nodo=6500;
+//	datosMapper.bloque=1;
+//	strcpy(datosMapper.nombreArchivoTemporal,"/tmp/mapBloque1.txt");
+////Falta numero de bloque del archivo
+//	if(send(*socketJob,&datosMapper,sizeof(t_mapper),MSG_WAITALL)==-1){
+//		perror("send");
+//		log_error(logger,"Fallo el envio de los datos para el mapper");
+//		exit(-1);
+//	}
 
 	pthread_exit((void*)0);
 
+}
+
+
+t_list* buscarBuscarBloques (char *unArchivo){
+	t_archivo *archivoAux;
+	t_list *bloques;
+	int i;
+	for(i=0; i < list_size(listaArchivos); i++){
+		archivoAux = list_get(listaArchivos,i);
+		if (strcmp(unArchivo, archivoAux->path) ==0){
+			bloques = archivoAux->bloques;
+
+		}
+	}
+	return bloques;
+}
+
+void asignarMap (t_list*bloques,int socketJob){
+	int cantBloques;
+	int i;
+	int j;
+	t_nodo *nodo;
+	int cantCopias;
+	char accion[BUF_SIZE];
+	t_copias *copia;
+	t_bloque *bloque;
+	t_list *copiasNodo;
+	t_nodo *nodoAux;
+	memset(accion,'\0',BUF_SIZE);
+	copiasNodo=list_create();
+	cantBloques = list_size(bloques);
+	for(i=0; i<cantBloques; i++){
+		bloque = list_get(bloques,i);
+		cantCopias = list_size(bloque->copias);
+		for(j=0;j<cantCopias;j++){
+			copia = list_get(bloque->copias,j);
+			nodo= buscarCopiaEnNodos(copia);
+			list_add(copiasNodo,nodo);
+		}
+		list_sort(copiasNodo, (void*) ordenarSegunMapYReduce);
+		nodoAux = list_get(copiasNodo,0);
+		t_mapper datosMapper;
+		strcpy(datosMapper.ip_nodo,nodoAux->ip);
+		datosMapper.puerto_nodo= nodoAux->puerto_escucha_nodo;
+		datosMapper.bloqueArchivo=i;
+		for(j=0;j<cantCopias;j++){
+			copia = list_get(bloque->copias,j);
+			if(strcmp(copia->nodo,nodoAux->nodo_id)==0){
+				datosMapper.bloque=copia->bloqueNodo;
+			}
+		}
+		strcpy(datosMapper.nombreArchivoTemporal,"/tmp/mapBloque1.txt"); //Falta generar un nombre
+
+		strcpy(accion,"ejecuta map");
+		if(send(socketJob,accion,sizeof(accion),MSG_WAITALL)==-1){
+			perror("send");
+			log_error(logger,"Fallo el envio de los datos para el mapper");
+			exit(-1);
+		}
+		if(send(socketJob,&datosMapper,sizeof(t_mapper),MSG_WAITALL)==-1){
+			perror("send");
+			log_error(logger,"Fallo el envio de los datos para el mapper");
+			exit(-1);
+		}
+		nodo->cantMappers ++;
+	}
+}
+
+
+t_nodo* buscarCopiaEnNodos(t_copias *copia){
+	int i;
+	int cantNodos;
+	t_nodo *nodo;
+	t_nodo *nodoAux;
+	cantNodos = list_size(listaNodos);
+	for(i=0; i<cantNodos; i++){
+		nodo = list_get(listaNodos,i);
+		if(strcmp(nodo->nodo_id, copia->nodo)==0){
+			nodoAux = nodo;
+			break;
+		}
+	}
+	return nodoAux;
+}
+
+bool ordenarSegunMapYReduce(t_nodo *menosCarga, t_nodo* mayorCarga){
+	int resultado1;
+	int resultado2;
+	resultado1 = menosCarga->cantMappers + (menosCarga->cantReducers * 5);
+	resultado2 = mayorCarga->cantMappers + (mayorCarga->cantReducers * 5);
+	return resultado1<resultado2;
 }
