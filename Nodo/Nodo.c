@@ -32,13 +32,9 @@ fd_set read_fds; // conjunto temporal de descriptores de fichero para select()
 int fdmax;//Numero maximo de descriptores de fichero
 int conectorFS; //socket para conectarse al FS
 int listener; //socket encargado de escuchar nuevas conexiones
-char mensaje[BUF_SIZE]; //Mensaje que recivirá de los clientes
 t_list* listaNodosConectados; //Lista con los nodos conectados
 t_list* listaMappersConectados; //Lista con los mappers conectados
 t_list* listaReducersConectados; //lista con los reducers conectados
-int* socketNodo; //para identificar los que son nodos conectados
-int* socketMapper; //para identificar los que son mappers conectados
-int* socketReducer; //para identificar los que son reducers conectados
 char nodo_id[6];
 char bufGetArchivo[BLOCK_SIZE]; //Buffer para la funcion getFileContent
 //char buffer[BLOCK_SIZE]; //Buffer que tiene un bloque que llega del filesystem
@@ -85,7 +81,6 @@ int main(int argc , char *argv[]){
 		sem_init(&semBloques[semBloque],0,1);
 	}
 	sem_init(&semSort,0,1);
-
 
 	//Estructura para conexion con FS
 	filesystem.sin_family = AF_INET;
@@ -205,10 +200,13 @@ int main(int argc , char *argv[]){
 void *manejador_de_escuchas(){
 	pthread_t mapperThread;
 	pthread_t reducerThread;
+	char mensaje[BUF_SIZE]; //Mensaje que recivirá de los clientes
 	int socketModificado,nbytes,newfd,addrlen,read_size;
 	struct sockaddr_in remote_client; //Direccion del cliente que se conectará
-
-	int* bloque=malloc(sizeof(int));
+	int* socketNodo; //para identificar los que son nodos conectados
+	int* socketMapper; //para identificar los que son mappers conectados
+	int* socketReducer; //para identificar los que son reducers conectados
+	int* bloqueParaFS;
 
 
 	printf("Nodo en la espera de conexiones/solicitudes del FS\n");
@@ -220,9 +218,10 @@ void *manejador_de_escuchas(){
 			exit(-1);
 		}
 		memset(mensaje,'\0',BUF_SIZE);
-		socketMapper=malloc(sizeof(int));
-		socketReducer=malloc(sizeof(int));
-		socketNodo=malloc(sizeof(int));
+//		socketMapper=malloc(sizeof(int));
+//		socketReducer=malloc(sizeof(int));
+//		socketNodo=malloc(sizeof(int));
+		memset(combo.buf_20mb,'\0',BLOCK_SIZE);
 
 		//memset(buffer,'\0',BLOCK_SIZE);
 
@@ -248,8 +247,8 @@ void *manejador_de_escuchas(){
 							// el nuevo conectado me manda algo, se identifica como mapper, reducer o nodo
 							if(nbytes>0 && strncmp(mensaje,"soy nodo",9)==0){
 								//se conectó un nodo
-								*socketNodo=newfd;
-								list_add(listaNodosConectados,socketNodo); //agrego el nuevo socket a la lista de Nodos conectados
+								//*socketNodo=newfd;
+							//	list_add(listaNodosConectados,socketNodo); //agrego el nuevo socket a la lista de Nodos conectados
 								FD_SET(newfd,&master); //añadir al conjunto maestro
 								if(newfd>fdmax){ //actualizar el máximo
 									fdmax=newfd;
@@ -258,6 +257,7 @@ void *manejador_de_escuchas(){
 							}
 							if(nbytes>0 && strncmp(mensaje,"soy mapper",11)==0){
 								//se conectó un hilo mapper
+								socketMapper=malloc(sizeof(int));
 								*socketMapper=newfd;
 
 								log_info(logger,"Se conectó un hilo mapper desde %s",inet_ntoa(remote_client.sin_addr));
@@ -270,6 +270,7 @@ void *manejador_de_escuchas(){
 							}
 							if(nbytes>0 && strncmp(mensaje,"soy reducer",12)==0){
 								//se conectó un hilo reducer
+								socketReducer=malloc(sizeof(int));
 								*socketReducer=newfd;
 
 								log_info(logger,"Se conectó un hilo reducer desde %s",inet_ntoa(remote_client.sin_addr));
@@ -314,20 +315,22 @@ void *manejador_de_escuchas(){
 						}
 						if(strncmp(mensaje,"obtener bloque", 14) == 0){
 							//Recibo un numero de bloque del FS
+							bloqueParaFS=malloc(sizeof(int));
 							mensaje[14]=0;
-							if ((read_size = recv(conectorFS, bloque, sizeof(int),0)) <= 0) {
+							if ((read_size = recv(conectorFS, bloqueParaFS, sizeof(int),0)) <= 0) {
 								perror("recv");
 								log_error(logger, "FALLO el Recv de bloque");
 								exit(-1);
 							}
-							printf("Voy a obtener el bloque:%d\n",*bloque);
+							printf("Voy a obtener el bloque:%d\n",*bloqueParaFS);
 
 							// Envio el contenido del bloque que me pidio el FS
-							if (send(conectorFS, getBloque(*bloque),BLOCK_SIZE, 0) == -1) {
+							if (send(conectorFS, getBloque(*bloqueParaFS),BLOCK_SIZE, 0) == -1) {
 								perror("send");
 								log_error(logger, "FALLO el envio del bloque ");
 								exit(-1);
 							}
+							free(bloqueParaFS);
 						}
 					}
 				}
@@ -413,7 +416,7 @@ void ordenarMapper(char* pathMapperTemporal, char* nombreMapperOrdenado){
 	// si cada nodo tiene su tmp en una carpeta distinta --> string_append(&nombreMapperTemporal,pathMapperSeparado[2]); // le agrega al nombre mapper lo que hay dps de /tmp/nombredir
 	pipe(outfd);
 	if((pid=fork())==-1){
-		perror("fork");
+		perror("fork sort");
 	}
 	else if(pid==0)
 	{
@@ -448,7 +451,6 @@ void ordenarMapper(char* pathMapperTemporal, char* nombreMapperOrdenado){
 		dup2(bak,STDOUT_FILENO);
 		sem_wait(&terminoSort);
 		sem_post(&semSort);
-
 	}
 }
 
@@ -463,7 +465,7 @@ void ejecutarMapper(char *script,int bloque,char *resultado){
 	sem_init(&terminoElMap,0,1);
 	pipe(outfd); /* Donde escribe el padre */
 	if((pid=fork())==-1){
-		perror("fork");
+		perror("fork mapper");
 	}
 	else if(pid==0)
 	{
@@ -495,6 +497,7 @@ void ejecutarMapper(char *script,int bloque,char *resultado){
 	close(outfd[1]);
 	dup2(bak,STDOUT_FILENO);
 	sem_wait(&terminoElMap);
+
 	}
 }
 
@@ -547,7 +550,7 @@ void setBloque(uint32_t numBloque,char* datosAEscribir){
 	sem_wait(&semBloques[numBloque]);
 
 	char *ubicacionEnElFile;
-	ubicacionEnElFile=malloc(BLOCK_SIZE);
+	//ubicacionEnElFile=malloc(BLOCK_SIZE);
 	ubicacionEnElFile=fileDeDatos+(BLOCK_SIZE*(numBloque));
 	memcpy(ubicacionEnElFile,datosAEscribir,BLOCK_SIZE); //Copia el valor de BLOCK_SIZE bytes desde la direccion de memoria apuntada por datos a la direccion de memoria apuntada por fileDeDatos
 	log_info(logger_archivo,"Se escribió el bloque %d",numBloque);
@@ -567,7 +570,7 @@ char* getBloque(int numBloque){
 	char* datosLeidos;
 	char *ubicacionEnElFile;
 	datosLeidos=malloc(BLOCK_SIZE);
-	ubicacionEnElFile=malloc(BLOCK_SIZE);
+	//ubicacionEnElFile=malloc(BLOCK_SIZE);
 	ubicacionEnElFile=fileDeDatos+(BLOCK_SIZE*(numBloque));
 	memcpy(datosLeidos,ubicacionEnElFile,BLOCK_SIZE); //Copia el valor de BLOCK_SIZE bytes desde la direccion de memoria apuntada por fileDeDatos a la direccion de memoria apuntada por datosLeidos
 	log_info(logger_archivo,"Se leyó el bloque %d",numBloque);
