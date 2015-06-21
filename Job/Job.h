@@ -9,6 +9,7 @@ typedef struct estructura_mapper {
 	int puerto_nodo;
 	int bloque;
 	char nombreArchivoTemporal[TAM_NOMFINAL];
+	int bloqueArchivo;
 } __attribute__((packed)) t_mapper;
 
 typedef struct datos_para_map{
