@@ -264,8 +264,8 @@ int Menu(void) {
 			EliminarNodo();	break;
 			//case 17: printf("Eligió Salir\n"); break;
 
-		case 17: listar_nodos_conectados(nodos); break;
-//		case 17: listar_archivos_subidos(archivos); break;
+	//	case 17: listar_nodos_conectados(nodos); break;
+		case 17: listar_archivos_subidos(archivos); break;
 		default: printf("Opción incorrecta. Por favor ingrese una opción del 1 al 17\n"); break;
 		}
 	}
@@ -807,10 +807,13 @@ void FormatearFilesystem() {
 void EliminarArchivo() {
 	t_archivo* archivo=malloc(sizeof(t_archivo));
 	t_bloque* bloque=malloc(sizeof(t_bloque));
+	t_copias* copia=malloc(sizeof(t_copias));
+	t_nodo* nodoBuscado=malloc(sizeof(t_nodo));
 	printf("Eligió  Eliminar archivo\n");
+	int nodoEncontrado=0;
 	char* path = string_new();
 	char* directorio;
-	int i, j,posicionDirectorio=0;
+	int i,j,m,posicionDirectorio=0;
 	char ** directoriosPorSeparado;
 	directorio=string_new();
 	printf("Ingrese el path del archivo \n");
@@ -822,13 +825,33 @@ void EliminarArchivo() {
     	posicionDirectorio++;
     }
 	uint32_t idPadre = BuscarPadre(directorio);
+	if (idPadre==-1){
+		printf("El archivo no existe\n");
+		Menu();
+	}
 	uint32_t posArchivo = BuscarArchivoPorNombre(path, idPadre);
 	archivo = list_get(archivos, posArchivo);
 	for (i=0;i<list_size(archivo->bloques);i++){
-		bloque=list_get(archivo->bloques,j);
+		bloque=list_get(archivo->bloques,i);
+		for (j=0;j<list_size(bloque->copias);j++){
+
+			copia=list_get(bloque->copias,j);
+
+			for (m=0;m<list_size(nodos);m++){
+				nodoBuscado = list_get(nodos,m);
+				if (strcmp(nodoBuscado->nodo_id, copia->nodo)==0) {
+					nodoBuscado->bloques_libres++;
+					bitarray_clean_bit(nodoBuscado->bloques_del_nodo, copia->bloqueNodo);
+					//break;
+				}
+			}
+		}
+
 		for (j=0;j<list_size(bloque->copias);j++){
 			list_remove_and_destroy_element(bloque->copias,j,(void*)eliminar_lista_de_copias);
 		}
+	}
+	for (i=0;i<list_size(archivo->bloques);i++){
 		list_remove_and_destroy_element(archivo->bloques,i,(void*)eliminar_lista_de_bloques);
 	}
 	list_remove_and_destroy_element(archivos,posArchivo,(void*)eliminar_lista_de_archivos);
