@@ -479,7 +479,45 @@ void *connection_handler_escucha(void) {
 										exit(-1);
 									}
 									printf("Se conectó el proceso Marta desde la ip %s\n",inet_ntoa(remote_client.sin_addr));
-										log_info(logger,"Se conectó el proceso Marta desde la ip %s",inet_ntoa(remote_client.sin_addr));
+									log_info(logger,"Se conectó el proceso Marta desde la ip %s",inet_ntoa(remote_client.sin_addr));
+
+
+
+									int cant_nodos;
+									cant_nodos=list_size(nodos);
+									if ((send(marta_sock, &cant_nodos,sizeof(int), MSG_WAITALL)) == -1) {
+										perror("send");
+										log_error(logger, "FALLO el envio del ok a Marta");
+										exit(-1);
+									}
+									for (cant_nodos=0;cant_nodos<list_size(nodos);cant_nodos++){
+										t_nodo *nodo_para_marta=malloc(sizeof(t_nodo));
+										nodo_para_marta=list_get(nodos,cant_nodos);
+										if ((send(marta_sock, nodo_para_marta->nodo_id,sizeof(nodo_para_marta->nodo_id), MSG_WAITALL)) == -1) {
+											perror("send");
+											log_error(logger, "FALLO el envio del ok a Marta");
+											exit(-1);
+										}
+										if ((send(marta_sock, &nodo_para_marta->estado,sizeof(int), MSG_WAITALL)) == -1) {
+											perror("send");
+											log_error(logger, "FALLO el envio del ok a Marta");
+											exit(-1);
+										}
+										printf ("%d\n",strlen(nodo_para_marta->ip));
+										if ((send(marta_sock, nodo_para_marta->ip,strlen(nodo_para_marta->ip), MSG_WAITALL)) == -1) {
+											perror("send");
+											log_error(logger, "FALLO el envio del ok a Marta");
+											exit(-1);
+										}
+										if ((send(marta_sock, &nodo_para_marta->puerto_escucha_nodo,sizeof(int), MSG_WAITALL)) == -1) {
+											perror("send");
+											log_error(logger, "FALLO el envio del ok a Marta");
+											exit(-1);
+										}
+									}
+
+
+
 								} else {
 									printf("Ya existe un proceso marta conectado, no puede haber más de 1\n");
 									log_warning(logger,"Ya existe un proceso marta conectado, no puede haber más de 1");
@@ -766,19 +804,9 @@ void FormatearFilesystem() {
 
 }
 
-static void archivo_destroy(t_archivo* self) {
-	free(self->nombre);
-	free(self);
-}
-
-static void eliminar_bloques(t_copias *bloque) {
-	free(bloque->nodo);
-	free(bloque);
-}
-
 void EliminarArchivo() {
-	t_archivo* archivo;
-	archivo=malloc(sizeof(t_archivo));
+	t_archivo* archivo=malloc(sizeof(t_archivo));
+	t_bloque* bloque=malloc(sizeof(t_bloque));
 	printf("Eligió  Eliminar archivo\n");
 	char* path = string_new();
 	char* directorio;
@@ -796,17 +824,14 @@ void EliminarArchivo() {
 	uint32_t idPadre = BuscarPadre(directorio);
 	uint32_t posArchivo = BuscarArchivoPorNombre(path, idPadre);
 	archivo = list_get(archivos, posArchivo);
-	//Eliminar bloques del archivo
-	for (i = 0; i < list_size(archivo->bloques); i++) {
-		unBloque = list_get(archivo->bloques, i);
-		for (j = 0; i < list_size(unBloque->copias); j++) {
-			list_destroy_and_destroy_elements(unBloque->copias,(void*) eliminar_bloques);
+	for (i=0;i<list_size(archivo->bloques);i++){
+		bloque=list_get(archivo->bloques,j);
+		for (j=0;j<list_size(bloque->copias);j++){
+			list_remove_and_destroy_element(bloque->copias,j,(void*)eliminar_lista_de_copias);
 		}
+		list_remove_and_destroy_element(archivo->bloques,i,(void*)eliminar_lista_de_bloques);
 	}
-
-	//Elimnar nodo del archivo t_arhivo
-	//list_remove_and_destroy_element(t_list *, int index, void(*element_destroyer)(void*));
-	list_remove_and_destroy_element(archivos, posArchivo,(void*) archivo_destroy);
+	list_remove_and_destroy_element(archivos,posArchivo,(void*)eliminar_lista_de_archivos);
 }
 
 void RenombrarArchivo() {
