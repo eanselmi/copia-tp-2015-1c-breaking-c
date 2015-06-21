@@ -781,10 +781,19 @@ void EliminarArchivo() {
 	archivo=malloc(sizeof(t_archivo));
 	printf("Eligió  Eliminar archivo\n");
 	char* path = string_new();
-	int i, j;
+	char* directorio;
+	int i, j,posicionDirectorio=0;
+	char ** directoriosPorSeparado;
+	directorio=string_new();
 	printf("Ingrese el path del archivo \n");
 	scanf("%s", path);
-	uint32_t idPadre = BuscarPadre(path);
+    directoriosPorSeparado=string_split(path,"/");
+    while(directoriosPorSeparado[posicionDirectorio+1]!=NULL){
+    	string_append(&directorio,"/");
+    	string_append(&directorio,directoriosPorSeparado[posicionDirectorio]);
+    	posicionDirectorio++;
+    }
+	uint32_t idPadre = BuscarPadre(directorio);
 	uint32_t posArchivo = BuscarArchivoPorNombre(path, idPadre);
 	archivo = list_get(archivos, posArchivo);
 	//Eliminar bloques del archivo
