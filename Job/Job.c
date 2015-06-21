@@ -37,7 +37,7 @@ int main(void){
 	char** archivosDelJob;
 	char handshake[BUF_SIZE];
 	int contMensajeArch; //contador para recorrer el array de archivos a los que se aplica el Job
-	char mensajeArchivos[BUF_ARCH]; //cadena de caracteres que enviara a MaRTA los archivos a donde se aplica el Job. Formato: ",archivo1,archivo2,archivo3,...,archivo_n"
+	char mensajeArchivos[MENSAJE_SIZE]; //cadena de caracteres que enviara a MaRTA los archivos a donde se aplica el Job. Formato: ",archivo1,archivo2,archivo3,...,archivo_n"
 	t_mapper datosMapper; // Datos para lanzar un hilo Map
 	sem_init(&obtenerRutinaMap,0,1);
 	memset(handshake,'\0', BUF_SIZE);
@@ -105,16 +105,52 @@ int main(void){
 	}
 
 
-//	pthread_t mapperThread2;
-//	pthread_t mapperThread3;
+	pthread_t mapperThread2;
+	pthread_t mapperThread3;
+	pthread_t mapperThread4;
+	pthread_t mapperThread5;
+	pthread_t mapperThread6;
+	pthread_t mapperThread7;
+	pthread_t mapperThread8;
+	pthread_t mapperThread9;
+	pthread_t mapperThread10;
+	pthread_t mapperThread11;
+	pthread_t mapperThread12;
+	pthread_t mapperThread13;
+	pthread_t mapperThread14;
+	pthread_t mapperThread15;
 
 	t_mapper* punteroMapper;
-//	t_mapper* punteroMapper2;
-//	t_mapper* punteroMapper3;
+	t_mapper* punteroMapper2;
+	t_mapper* punteroMapper3;
+	t_mapper* punteroMapper4;
+	t_mapper* punteroMapper5;
+	t_mapper* punteroMapper6;
+	t_mapper* punteroMapper7;
+	t_mapper* punteroMapper8;
+	t_mapper* punteroMapper9;
+	t_mapper* punteroMapper10;
+	t_mapper* punteroMapper11;
+	t_mapper* punteroMapper12;
+	t_mapper* punteroMapper13;
+	t_mapper* punteroMapper14;
+	t_mapper* punteroMapper15;
 
 	punteroMapper=malloc(sizeof(t_mapper));
-//	punteroMapper2=malloc(sizeof(t_mapper));
-//	punteroMapper3=malloc(sizeof(t_mapper));
+	punteroMapper2=malloc(sizeof(t_mapper));
+	punteroMapper3=malloc(sizeof(t_mapper));
+	punteroMapper4=malloc(sizeof(t_mapper));
+	punteroMapper5=malloc(sizeof(t_mapper));
+	punteroMapper6=malloc(sizeof(t_mapper));
+	punteroMapper7=malloc(sizeof(t_mapper));
+	punteroMapper8=malloc(sizeof(t_mapper));
+	punteroMapper9=malloc(sizeof(t_mapper));
+	punteroMapper10=malloc(sizeof(t_mapper));
+	punteroMapper11=malloc(sizeof(t_mapper));
+	punteroMapper12=malloc(sizeof(t_mapper));
+	punteroMapper13=malloc(sizeof(t_mapper));
+	punteroMapper14=malloc(sizeof(t_mapper));
+	punteroMapper15=malloc(sizeof(t_mapper));
 
 	memset(punteroMapper->nombreArchivoTemporal,'\0',TAM_NOMFINAL);
 	memset(punteroMapper->ip_nodo,'\0',20);
@@ -136,19 +172,104 @@ int main(void){
 
 
 
-//	memset(punteroMapper2->nombreArchivoTemporal,'\0',TAM_NOMFINAL);
-//	memset(punteroMapper2->ip_nodo,'\0',20);
-//	strcpy(punteroMapper2->ip_nodo,"127.0.0.1");
-//	punteroMapper2->bloque=0;
-//	punteroMapper2->puerto_nodo=6500;
-//	strcpy(punteroMapper2->nombreArchivoTemporal,"/tmp/mapBloque0.txt");
-//
-//	memset(punteroMapper3->nombreArchivoTemporal,'\0',TAM_NOMFINAL);
-//	memset(punteroMapper3->ip_nodo,'\0',20);
-//	strcpy(punteroMapper3->ip_nodo,"127.0.0.1");
-//	punteroMapper3->bloque=2;
-//	punteroMapper3->puerto_nodo=6500;
-//	strcpy(punteroMapper3->nombreArchivoTemporal,"/tmp/mapBloque2.txt");
+	memset(punteroMapper2->nombreArchivoTemporal,'\0',TAM_NOMFINAL);
+	memset(punteroMapper2->ip_nodo,'\0',20);
+	strcpy(punteroMapper2->ip_nodo,"127.0.0.1");
+	punteroMapper2->bloque=0;
+	punteroMapper2->puerto_nodo=6500;
+	strcpy(punteroMapper2->nombreArchivoTemporal,"/tmp/mapBloque0.txt");
+
+	memset(punteroMapper3->nombreArchivoTemporal,'\0',TAM_NOMFINAL);
+	memset(punteroMapper3->ip_nodo,'\0',20);
+	strcpy(punteroMapper3->ip_nodo,"127.0.0.1");
+	punteroMapper3->bloque=2;
+	punteroMapper3->puerto_nodo=6500;
+	strcpy(punteroMapper3->nombreArchivoTemporal,"/tmp/mapBloque2.txt");
+
+	memset(punteroMapper4->nombreArchivoTemporal,'\0',TAM_NOMFINAL);
+	memset(punteroMapper4->ip_nodo,'\0',20);
+	strcpy(punteroMapper4->ip_nodo,"127.0.0.1");
+	punteroMapper4->bloque=3;
+	punteroMapper4->puerto_nodo=6500;
+	strcpy(punteroMapper4->nombreArchivoTemporal,"/tmp/mapBloque3.txt");
+
+	memset(punteroMapper5->nombreArchivoTemporal,'\0',TAM_NOMFINAL);
+	memset(punteroMapper5->ip_nodo,'\0',20);
+	strcpy(punteroMapper5->ip_nodo,"127.0.0.1");
+	punteroMapper5->bloque=4;
+	punteroMapper5->puerto_nodo=6510;
+	strcpy(punteroMapper5->nombreArchivoTemporal,"/tmp/mapBloque4.txt");
+
+	memset(punteroMapper6->nombreArchivoTemporal,'\0',TAM_NOMFINAL);
+	memset(punteroMapper6->ip_nodo,'\0',20);
+	strcpy(punteroMapper6->ip_nodo,"127.0.0.1");
+	punteroMapper6->bloque=5;
+	punteroMapper6->puerto_nodo=6520;
+	strcpy(punteroMapper6->nombreArchivoTemporal,"/tmp/mapBloque5.txt");
+
+	memset(punteroMapper7->nombreArchivoTemporal,'\0',TAM_NOMFINAL);
+	memset(punteroMapper7->ip_nodo,'\0',20);
+	strcpy(punteroMapper7->ip_nodo,"127.0.0.1");
+	punteroMapper7->bloque=6;
+	punteroMapper7->puerto_nodo=6500;
+	strcpy(punteroMapper7->nombreArchivoTemporal,"/tmp/mapBloque6.txt");
+
+	memset(punteroMapper8->nombreArchivoTemporal,'\0',TAM_NOMFINAL);
+	memset(punteroMapper8->ip_nodo,'\0',20);
+	strcpy(punteroMapper8->ip_nodo,"127.0.0.1");
+	punteroMapper8->bloque=7;
+	punteroMapper8->puerto_nodo=6510;
+	strcpy(punteroMapper8->nombreArchivoTemporal,"/tmp/mapBloque7.txt");
+
+	memset(punteroMapper9->nombreArchivoTemporal,'\0',TAM_NOMFINAL);
+	memset(punteroMapper9->ip_nodo,'\0',20);
+	strcpy(punteroMapper9->ip_nodo,"127.0.0.1");
+	punteroMapper9->bloque=8;
+	punteroMapper9->puerto_nodo=6520;
+	strcpy(punteroMapper9->nombreArchivoTemporal,"/tmp/mapBloque8.txt");
+
+	memset(punteroMapper10->nombreArchivoTemporal,'\0',TAM_NOMFINAL);
+	memset(punteroMapper10->ip_nodo,'\0',20);
+	strcpy(punteroMapper10->ip_nodo,"127.0.0.1");
+	punteroMapper10->bloque=9;
+	punteroMapper10->puerto_nodo=6500;
+	strcpy(punteroMapper10->nombreArchivoTemporal,"/tmp/mapBloque9.txt");
+
+	memset(punteroMapper11->nombreArchivoTemporal,'\0',TAM_NOMFINAL);
+	memset(punteroMapper11->ip_nodo,'\0',20);
+	strcpy(punteroMapper11->ip_nodo,"127.0.0.1");
+	punteroMapper11->bloque=10;
+	punteroMapper11->puerto_nodo=6510;
+	strcpy(punteroMapper11->nombreArchivoTemporal,"/tmp/mapBloque10.txt");
+
+	memset(punteroMapper12->nombreArchivoTemporal,'\0',TAM_NOMFINAL);
+	memset(punteroMapper12->ip_nodo,'\0',20);
+	strcpy(punteroMapper12->ip_nodo,"127.0.0.1");
+	punteroMapper12->bloque=11;
+	punteroMapper12->puerto_nodo=6520;
+	strcpy(punteroMapper12->nombreArchivoTemporal,"/tmp/mapBloque11.txt");
+
+	memset(punteroMapper13->nombreArchivoTemporal,'\0',TAM_NOMFINAL);
+	memset(punteroMapper13->ip_nodo,'\0',20);
+	strcpy(punteroMapper13->ip_nodo,"127.0.0.1");
+	punteroMapper13->bloque=12;
+	punteroMapper13->puerto_nodo=6500;
+	strcpy(punteroMapper13->nombreArchivoTemporal,"/tmp/mapBloque12.txt");
+
+	memset(punteroMapper14->nombreArchivoTemporal,'\0',TAM_NOMFINAL);
+	memset(punteroMapper14->ip_nodo,'\0',20);
+	strcpy(punteroMapper14->ip_nodo,"127.0.0.1");
+	punteroMapper14->bloque=13;
+	punteroMapper14->puerto_nodo=6510;
+	strcpy(punteroMapper14->nombreArchivoTemporal,"/tmp/mapBloque13.txt");
+
+	memset(punteroMapper15->nombreArchivoTemporal,'\0',TAM_NOMFINAL);
+	memset(punteroMapper15->ip_nodo,'\0',20);
+	strcpy(punteroMapper15->ip_nodo,"127.0.0.1");
+	punteroMapper15->bloque=14;
+	punteroMapper15->puerto_nodo=6520;
+	strcpy(punteroMapper15->nombreArchivoTemporal,"/tmp/mapBloque14.txt");
+
 
 	/* Hasta Acá */
 
@@ -158,64 +279,89 @@ int main(void){
 		return 1;
 	}
 	//sleep(2); //descanso - Map Falso abajo
-//	if(pthread_create(&mapperThread2,NULL,(void*)hilo_mapper,punteroMapper2)!=0){
-//		perror("pthread_create");
-//		log_error(logger,"Fallo la creación del hilo rutina mapper");
-//		return 1;
-//	}
-//	//sleep(2); //descanso - Map falso abajo
-//
-//	if(pthread_create(&mapperThread3,NULL,(void*)hilo_mapper,punteroMapper3)!=0){
-//			perror("pthread_create");
-//			log_error(logger,"Fallo la creación del hilo rutina mapper");
-//			return 1;
-//	}
-//
-//
-//	pthread_t reduceThread;
-//	t_reduce* reduceDeMarta;
-//	reduceDeMarta=malloc(sizeof(t_reduce));
-//	memset(reduceDeMarta->ip_nodoPpal,'\0',20);
-//	memset(reduceDeMarta->nombreArchivoFinal,'\0',TAM_NOMFINAL);
-//	strcpy(reduceDeMarta->ip_nodoPpal,"127.0.0.1");
-//	reduceDeMarta->puerto_nodoPpal=6500;
-//	strcpy(reduceDeMarta->nombreArchivoFinal,"/tmp/reduceBloques12y3.txt");
-//
-//	pthread_t reduceThread2;
-//	t_reduce* reduceDeMarta2;
-//	reduceDeMarta2=malloc(sizeof(t_reduce));
-//	memset(reduceDeMarta2->ip_nodoPpal,'\0',20);
-//	memset(reduceDeMarta2->nombreArchivoFinal,'\0',TAM_NOMFINAL);
-//	strcpy(reduceDeMarta2->ip_nodoPpal,"127.0.0.1");
-//	reduceDeMarta2->puerto_nodoPpal=6500;
-//	strcpy(reduceDeMarta2->nombreArchivoFinal,"/tmp/reduceFinal2.txt");
+	if(pthread_create(&mapperThread2,NULL,(void*)hilo_mapper,punteroMapper2)!=0){
+		perror("pthread_create");
+		log_error(logger,"Fallo la creación del hilo rutina mapper");
+		return 1;
+	}
+	//sleep(2); //descanso - Map falso abajo
+
+	if(pthread_create(&mapperThread3,NULL,(void*)hilo_mapper,punteroMapper3)!=0){
+			perror("pthread_create");
+			log_error(logger,"Fallo la creación del hilo rutina mapper");
+			return 1;
+	}
+
+
+//	pthread_create(&mapperThread4,NULL,(void*)hilo_mapper,punteroMapper4);
+//	pthread_create(&mapperThread5,NULL,(void*)hilo_mapper,punteroMapper5);
+//	pthread_create(&mapperThread6,NULL,(void*)hilo_mapper,punteroMapper6);
+//	pthread_create(&mapperThread7,NULL,(void*)hilo_mapper,punteroMapper7);
+//	pthread_create(&mapperThread8,NULL,(void*)hilo_mapper,punteroMapper8);
+//	pthread_create(&mapperThread9,NULL,(void*)hilo_mapper,punteroMapper9);
+//	pthread_create(&mapperThread10,NULL,(void*)hilo_mapper,punteroMapper10);
+//	pthread_create(&mapperThread11,NULL,(void*)hilo_mapper,punteroMapper11);
+//	pthread_create(&mapperThread12,NULL,(void*)hilo_mapper,punteroMapper12);
+//	pthread_create(&mapperThread13,NULL,(void*)hilo_mapper,punteroMapper13);
+//	pthread_create(&mapperThread14,NULL,(void*)hilo_mapper,punteroMapper14);
+//	pthread_create(&mapperThread15,NULL,(void*)hilo_mapper,punteroMapper15);
+
+	pthread_t reduceThread;
+	t_reduce* reduceDeMarta;
+	reduceDeMarta=malloc(sizeof(t_reduce));
+	memset(reduceDeMarta->ip_nodoPpal,'\0',20);
+	memset(reduceDeMarta->nombreArchivoFinal,'\0',TAM_NOMFINAL);
+	strcpy(reduceDeMarta->ip_nodoPpal,"127.0.0.1");
+	reduceDeMarta->puerto_nodoPpal=6500;
+	strcpy(reduceDeMarta->nombreArchivoFinal,"/tmp/reduceBloques12y3.txt");
+
+	pthread_t reduceThread2;
+	t_reduce* reduceDeMarta2;
+	reduceDeMarta2=malloc(sizeof(t_reduce));
+	memset(reduceDeMarta2->ip_nodoPpal,'\0',20);
+	memset(reduceDeMarta2->nombreArchivoFinal,'\0',TAM_NOMFINAL);
+	strcpy(reduceDeMarta2->ip_nodoPpal,"127.0.0.1");
+	reduceDeMarta2->puerto_nodoPpal=6500;
+	strcpy(reduceDeMarta2->nombreArchivoFinal,"/tmp/reduceFinal2.txt");
 
 
 	pthread_join(mapperThread,NULL);
-//	pthread_join(mapperThread2,NULL); //map falso
-//	pthread_join(mapperThread3,NULL); //map falso
-//
-//	printf("Terminaron los 3 map\n");
-//
-//	//Recibira la orden "ejecuta reduce" de marta, luego tirará un hilo reduce
-//
-////	if(pthread_create(&reduceThread,NULL,(void*)hilo_reduce,reduceDeMarta)!=0){
-////			perror("pthread_create");
-////			log_error(logger,"Fallo la creación del hilo rutina mapper");
-////			return 1;
-////	}
-////
-////
-////	if(pthread_create(&reduceThread2,NULL,(void*)hilo_reduce,reduceDeMarta2)!=0){
-////			perror("pthread_create");
-////			log_error(logger,"Fallo la creación del hilo rutina mapper");
-////			return 1;
-////	}
-//
-//	pthread_join(reduceThread,NULL); //map falso
-//	pthread_join(reduceThread2,NULL); //map falso
-//
-//	printf("Terminaron los reduce\n");
+	pthread_join(mapperThread2,NULL); //map falso
+	pthread_join(mapperThread3,NULL); //map falso
+	pthread_join(mapperThread4,NULL); //map falso
+	pthread_join(mapperThread5,NULL); //map falso
+	pthread_join(mapperThread6,NULL); //map falso
+	pthread_join(mapperThread7,NULL); //map falso
+	pthread_join(mapperThread8,NULL); //map falso
+	pthread_join(mapperThread9,NULL); //map falso
+	pthread_join(mapperThread10,NULL); //map falso
+	pthread_join(mapperThread11,NULL); //map falso
+	pthread_join(mapperThread12,NULL); //map falso
+	pthread_join(mapperThread13,NULL); //map falso
+	pthread_join(mapperThread14,NULL); //map falso
+	pthread_join(mapperThread15,NULL); //map falso
+
+	printf("Terminaron los 3 map\n");
+
+	//Recibira la orden "ejecuta reduce" de marta, luego tirará un hilo reduce
+
+	if(pthread_create(&reduceThread,NULL,(void*)hilo_reduce,reduceDeMarta)!=0){
+			perror("pthread_create");
+			log_error(logger,"Fallo la creación del hilo rutina mapper");
+			return 1;
+	}
+
+
+	if(pthread_create(&reduceThread2,NULL,(void*)hilo_reduce,reduceDeMarta2)!=0){
+			perror("pthread_create");
+			log_error(logger,"Fallo la creación del hilo rutina mapper");
+			return 1;
+	}
+
+	pthread_join(reduceThread,NULL); //map falso
+	pthread_join(reduceThread2,NULL); //map falso
+
+	printf("Terminaron los reduce\n");
 
 
 	log_destroy(logger); //se elimina la instancia de log
@@ -229,7 +375,10 @@ void* hilo_reduce(t_reduce* reduceStruct){
 	int nodo_sock;
 	int resultado;
 	char identificacion[BUF_SIZE];
+	char rutinaReduce[REDUCE_SIZE];
+	char * contReduce;
 	memset(identificacion,'\0',BUF_SIZE);
+	memset(rutinaReduce,'\0',REDUCE_SIZE);
 	int indice;
 
 // ACA MARTA ENVÍA LA CANTIDAD DE ARCHIVOS QUE DEBE ESPERAR
@@ -298,6 +447,17 @@ void* hilo_reduce(t_reduce* reduceStruct){
 		resultado=1;
 		printf("Resultado:%d\n",resultado);
 		//envío a marta el resultado
+		pthread_exit((void*)0);
+	}
+
+	contReduce=getFileContent(config_get_string_value(configurador,"REDUCE"));
+	strcpy(rutinaReduce,contReduce);
+	if(send(nodo_sock,rutinaReduce,sizeof(rutinaReduce),MSG_WAITALL)==-1){
+		perror("send");
+		log_error(logger,"Fallo el envío de la rutina reduce al nodo");
+		resultado=1;
+		printf("Resultado:%d\n",resultado);
+		//envio a marta el resultado
 		pthread_exit((void*)0);
 	}
 

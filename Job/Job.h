@@ -1,6 +1,7 @@
 #define BUF_SIZE 15
-#define BUF_ARCH 4096
+#define REDUCE_SIZE 4096
 #define MAPPER_SIZE 1024
+#define MENSAJE_SIZE 4096
 #define TAM_NOMFINAL 60
 
 typedef struct estructura_mapper {

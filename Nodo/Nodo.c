@@ -735,16 +735,27 @@ void* rutinaMap(int* sckMap){
 void* rutinaReduce (int* sckReduce){
 	pthread_detach(pthread_self());
 	char nombreFinalReduce[TAM_NOMFINAL];
+	char rutinaReduce[REDUCE_SIZE];
 	memset(nombreFinalReduce,'\0',TAM_NOMFINAL);
+	memset(rutinaReduce,'\0',REDUCE_SIZE);
+
 //	t_datosReduce datosParaElReduce;
 
 	if(recv(*sckReduce,&nombreFinalReduce,TAM_NOMFINAL,MSG_WAITALL)==-1){
 		perror("recv");
-		log_error(logger,"Fallo al recibir los datos para el map");
+		log_error(logger,"Fallo al recibir el nombre del archivo final del reduce");
 		pthread_exit((void*)0);
 	}
 
 	printf("El resultado del reduce se guardará en: %s\n",nombreFinalReduce);
+
+	if(recv(*sckReduce,rutinaReduce,sizeof(rutinaReduce),MSG_WAITALL)==-1){
+		perror("recv");
+		log_error(logger,"Fallo al recibir la rutina reduce");
+		pthread_exit((void*)0);
+	}
+
+	printf("Se recibio la rutina reduce:%s\n",rutinaReduce);
 
 	pthread_exit((void*)0);
 }
