@@ -738,10 +738,15 @@ void* rutinaReduce (int* sckReduce){
 	char rutinaReduce[REDUCE_SIZE];
 	int cantidadArchivos;
 	int indice=0;
+	FILE* scriptReduce;
 	t_list* listaArchivosReduce;
 	memset(nombreFinalReduce,'\0',TAM_NOMFINAL);
 	memset(rutinaReduce,'\0',REDUCE_SIZE);
 	listaArchivosReduce=list_create();
+	char** arrayTiempo;
+	char *nombreNuevoReduce=string_new(); //será el nombre del nuevo map
+	char *tiempo=string_new(); //string que tendrá la hora
+	char *pathNuevoReduce=string_new();//El path completo del nuevo Map
 //	t_datosReduce datosParaElReduce;
 
 	if(recv(*sckReduce,&nombreFinalReduce,TAM_NOMFINAL,MSG_WAITALL)==-1){
@@ -758,7 +763,34 @@ void* rutinaReduce (int* sckReduce){
 		pthread_exit((void*)0);
 	}
 
-	printf("Se recibio la rutina reduce:%s\n",rutinaReduce);
+	//printf("Se recibio la rutina reduce:%s\n",rutinaReduce);
+	string_append(&nombreNuevoReduce,"reduceJob");
+	arrayTiempo=string_split(temporal_get_string_time(),":"); //creo array con hora minutos segundos y milisegundos separados
+	string_append(&tiempo,arrayTiempo[0]);//Agrego horas
+	string_append(&tiempo,arrayTiempo[1]);//Agrego minutos
+	string_append(&tiempo,arrayTiempo[2]);//Agrego segundos
+	string_append(&tiempo,arrayTiempo[3]);//Agrego milisegundos
+	string_append(&nombreNuevoReduce,tiempo); //Concateno la fecha en formato hhmmssmmmm al nombre map
+	string_append(&nombreNuevoReduce,".sh"); //agrego la extensión
+	string_append(&pathNuevoReduce,config_get_string_value(configurador,"PATHREDUCERS"));
+	string_append(&pathNuevoReduce,"/");
+	string_append(&pathNuevoReduce,nombreNuevoReduce);
+
+	if((scriptReduce=fopen(pathNuevoReduce,"w+"))==NULL){ //path donde guardara el script
+		perror("fopen");
+		log_error(logger,"Fallo al crear el script del mapper");
+		pthread_exit((void*)0);
+	}
+	fputs(rutinaReduce,scriptReduce);
+
+	printf("Nombre del nuevo reduce: %s\n",nombreNuevoReduce);
+	// agrego permisos de ejecucion
+	if(chmod(pathNuevoReduce,S_IRWXU|S_IRWXG|S_IROTH|S_IXOTH)==-1){
+		perror("chmod");
+		log_error(logger,"Fallo el cambio de permisos para el script de map");
+		pthread_exit((void*)0);
+	}
+	fclose(scriptReduce); //cierro el file
 
 	if(recv(*sckReduce,&cantidadArchivos,sizeof(int),MSG_WAITALL)==-1){
 		perror("recv");
