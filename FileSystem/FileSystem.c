@@ -1320,15 +1320,18 @@ int CopiarArchivoAMDFS(){
     //Se debe crear un nuevo archivo con el nombre ingresado, cuyo padre sea "idPadre"
     int n_copia=0;
     int bandera;
-    memset(combo.buf_20mb,0,sizeof(combo.buf_20mb));
+    //memset(combo.buf_20mb,0,sizeof(combo.buf_20mb));
+    memset(combo.buf_20mb,'\0',BLOCK_SIZE);
     archivo_temporal=malloc(sizeof(t_archivo));
     archivo_temporal->bloques=list_create();
+    FILE* auxiliar = fopen("/tmp/auxiliar","w");
     while (fread(&combo.buf_20mb,sizeof(char),sizeof(combo.buf_20mb),archivoLocal) == BLOCK_SIZE){
     		cantBytes+=BLOCK_SIZE;
     		n_copia++;
     		t_bloque *bloque_temporal=malloc(sizeof(t_bloque));
     		bloque_temporal->copias=list_create();
     		if (combo.buf_20mb[BLOCK_SIZE-1]=='\n'){
+    			fprintf(auxiliar,"%s",combo.buf_20mb);
     			list_sort(nodos_temporales, (void*)nodos_mas_libres);
     			//Copiar el contenido del Buffer en los nodos mas vacios por triplicado
     			bandera=0;
@@ -1377,6 +1380,7 @@ int CopiarArchivoAMDFS(){
     				printf ("No hay suficientes nodos disponibles con espacio libre\n");
     				return -1;
     			}
+    			memset(combo.buf_20mb,'\0',BLOCK_SIZE);
     		}else{ //Caso en que el bloque no termina en "\n"
     			int p,aux;
     			for (p=BLOCK_SIZE-1,aux=0;p>=0;p--,aux++){
@@ -1385,7 +1389,8 @@ int CopiarArchivoAMDFS(){
     					break;
     				}
     			}
-    			for(j=pos+1;j<BLOCK_SIZE;j++) combo.buf_20mb[j]=0;
+    			for(j=pos+1;j<BLOCK_SIZE;j++) combo.buf_20mb[j]='\0';
+    			fprintf(auxiliar,"%s",combo.buf_20mb);
     			list_sort(nodos_temporales,(void*)nodos_mas_libres);
     			//Copiar el contenido del Buffer en los nodos mas vacios por triplicado
     			bandera=0;
@@ -1412,7 +1417,6 @@ int CopiarArchivoAMDFS(){
     						return -1;
     					}
     					printf ("voy a mandar al nodo %s la copia %d del bloque %d y la guardara en el bloque %d\n",nodo_temporal->nodo_id,indice+1,n_copia,combo.n_bloque);
-
     					if ((total_enviado=send(nodo_temporal->socket, &combo, sizeof(combo), 0)) == -1) {
     						perror("send buffer en subir archivo");
     						log_error(logger, "FALLO el envio del aviso de obtener bloque ");
@@ -1445,6 +1449,7 @@ int CopiarArchivoAMDFS(){
     			pos = 0; //pos = 0;
     			cantBytes-=aux;
     			fseek(archivoLocal,cantBytes,SEEK_SET);
+    			memset(combo.buf_20mb,'\0',BLOCK_SIZE);
 
     		}
     		list_add(archivo_temporal->bloques,bloque_temporal);
@@ -1452,6 +1457,7 @@ int CopiarArchivoAMDFS(){
     	//FIN DEL WHILE
     	if (feof(archivoLocal))
     	{
+    		fprintf(auxiliar,"%s",combo.buf_20mb);
     		//aca va el fin
     		//si leyo menos lo mando de una porque seguro temina en \n y esta relleno de 0
     		t_bloque *bloque_temporal=malloc(sizeof(t_bloque));
@@ -1545,16 +1551,64 @@ int CopiarArchivoAMDFS(){
     		return -1;
     	}
     	list_destroy(archivos_temporales);
+    	fclose(auxiliar);
     	return 0;
 }
 
 void CopiarArchivoDelMDFS() {
+	char pathArchivo[100];
+	memset(pathArchivo,'\0',100);
+	FILE* copiaLocal;
+	copiaLocal = fopen("/tmp/archivoDelMDFS", "w");
+	t_archivo *archivo=malloc(sizeof(t_archivo));
+	t_bloque *bloque=malloc(sizeof(t_bloque));
+	t_copias *copia=malloc(sizeof(t_copias));
+	int i,j,k;
+	int bloqueDisponible;
+	int socket_nodo;
+	char* bloqueParaVer;
 	printf("Eligió Copiar un archivo del MDFS al filesystem local\n");
+	printf ("Ingrese el archivo a copiar con su path completo, ej. /directorio/archivo.ext\n");
+	scanf("%s",pathArchivo);
+	for (i=0;i<list_size(archivos);i++){
+		archivo=list_get(archivos,i);
+		if (strcmp(archivo->path,pathArchivo)==0){
+			for (j=0;j<list_size(archivo->bloques);j++){
+				bloque=list_get(archivo->bloques,j);
+				bloqueDisponible=0;
+				for (k=0;k<list_size(bloque->copias);k++){
+					copia=list_get(bloque->copias,k);
+					if(obtenerEstadoDelNodo(copia->nodo)){
+						bloqueDisponible=1;
+						socket_nodo =obtener_socket_de_nodo_con_id(copia->nodo);
+						if (socket_nodo == -1){
+							log_error(logger, "El nodo ingresado no es valido o no esta disponible\n");
+							printf("El nodo ingresado no es valido o no esta disponible\n");
+							Menu();
+						}
+						enviarNumeroDeBloqueANodo(socket_nodo, copia->bloqueNodo);
+						bloqueParaVer = recibirBloque(socket_nodo);
+						fprintf(copiaLocal,"%s",bloqueParaVer);
+						break;
+					}
+				}
+				if (bloqueDisponible==0){
+					printf ("El archivo no se puede recuperar, el bloque %d no esta disponible\n",j);
+					Menu();
+				}
+			}
+		}
+	}
+}
 
-
-
-
-
+int obtenerEstadoDelNodo(char* nodo){
+	t_nodo *unNodo=malloc(sizeof(t_nodo));
+	int i;
+	for (i=0;i<list_size(nodos);i++){
+		unNodo=list_get(nodos,i);
+		if ((strcmp(unNodo->nodo_id,nodo)==0) && (unNodo->estado_red==1) && (unNodo->estado=1)) return 1;
+	}
+	return 0;
 }
 
 void MD5DeArchivo() {
