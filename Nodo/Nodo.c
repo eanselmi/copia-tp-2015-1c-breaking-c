@@ -44,6 +44,7 @@ sem_t semSort; // Un sort a la vez porque llama a bash
 //char bufAMediasFalso[BLOCK_SIZE/2]; //Buffer si voy a crear medio bloque falso (para pruebas) 10MB
 pthread_mutex_t mutexMap=PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutexSort=PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutexReduce=PTHREAD_MUTEX_INITIALIZER;
 
 
 
@@ -828,10 +829,20 @@ void* rutinaReduce (int* sckReduce){
 		printf("\t Nombre archivo:%s\n",archivoPR->archivoAAplicarReduce);
 	}
 
+	pthread_mutex_lock(&mutexReduce);
+	ejecutarReduce(listaArchivosReduce,nombreFinalReduce);
+	pthread_mutex_unlock(&mutexReduce);
+
+
+
 	pthread_exit((void*)0);
 }
 
-
+void ejecutarReduce(t_list* listaArchivos,char* resultado){
+	int cantidadArch;
+	cantidadArch=list_size(listaArchivos);
+	printf("Se hará el reduce entre %d archivos\n",cantidadArch);
+}
 
 
 //char* crearBloqueFalso(){
