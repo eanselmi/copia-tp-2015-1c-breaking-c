@@ -737,9 +737,11 @@ void* rutinaReduce (int* sckReduce){
 	char nombreFinalReduce[TAM_NOMFINAL];
 	char rutinaReduce[REDUCE_SIZE];
 	int cantidadArchivos;
+	int indice=0;
+	t_list* listaArchivosReduce;
 	memset(nombreFinalReduce,'\0',TAM_NOMFINAL);
 	memset(rutinaReduce,'\0',REDUCE_SIZE);
-
+	listaArchivosReduce=list_create();
 //	t_datosReduce datosParaElReduce;
 
 	if(recv(*sckReduce,&nombreFinalReduce,TAM_NOMFINAL,MSG_WAITALL)==-1){
@@ -765,6 +767,34 @@ void* rutinaReduce (int* sckReduce){
 	}
 
 	printf("Se debe aplicar reduce en %d archivos\n",cantidadArchivos);
+
+	for(indice=0;indice<cantidadArchivos;indice++){
+		t_archivosReduce archivoQueRecibo;
+		t_archivosReduce *archivoParaReduce;
+		archivoParaReduce=malloc(sizeof(t_archivosReduce));
+
+		if(recv(*sckReduce,&archivoQueRecibo,sizeof(t_archivosReduce),MSG_WAITALL)==-1){
+			perror("recv");
+			log_error(logger,"Fallo al recibir los archivos a aplicar reduce");
+			pthread_exit((void*)0);
+		}
+
+		strcpy(archivoParaReduce->ip_nodo,archivoQueRecibo.ip_nodo);
+		archivoParaReduce->puerto_nodo=archivoQueRecibo.puerto_nodo;
+		strcpy(archivoParaReduce->archivoAAplicarReduce,archivoQueRecibo.archivoAAplicarReduce);
+
+		list_add(listaArchivosReduce,archivoParaReduce);
+	}
+
+	printf("Se aplicara reduce en los archivos:\n");
+
+	for(indice=0;indice<list_size(listaArchivosReduce);indice++){
+		t_archivosReduce *archivoPR;
+		archivoPR=list_get(listaArchivosReduce,indice);
+		printf("\t IP Nodo:%s\n",archivoPR->ip_nodo);
+		printf("\t Puerto Nodo:%d\n",archivoPR->puerto_nodo);
+		printf("\t Nombre archivo:%s\n",archivoPR->archivoAAplicarReduce);
+	}
 
 	pthread_exit((void*)0);
 }

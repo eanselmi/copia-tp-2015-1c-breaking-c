@@ -17,9 +17,9 @@ typedef struct datos_para_map{
 } __attribute__((packed)) t_datosMap;
 
 typedef struct lista_nodos_reduce{
-	char* ip_nodo;
+	char ip_nodo[20];
 	int puerto_nodo;
-	char* archivoAAplicarReduce;
+	char archivoAAplicarReduce[TAM_NOMFINAL];
 } __attribute__((packed)) t_archivosReduce;
 
 
