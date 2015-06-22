@@ -53,7 +53,7 @@ typedef struct estructura_mapper {
 //Prototipos de funciones
 void *connection_handler_jobs(); // Esta funcion escucha continuamente si recibo nuevos mensajes
 void *atenderJob(int*);
-t_list *buscarBuscarBloques (char*);
+t_list *buscarBloques (char*);
 void asignarMap(t_list *bloques,int socketJob);
 t_nodo* buscarCopiaEnNodos(t_copias *copia);
 bool ordenarSegunMapYReduce (t_nodo* menorCarga,t_nodo* mayorCarga);

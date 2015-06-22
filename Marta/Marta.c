@@ -70,6 +70,7 @@ int main(int argc, char**argv){
 	listaArchivos = list_create(); //creo la lista para los archivos que me pasa el FS
 	jobs=list_create(); //creo la lista de jobs
 
+
 //
 //	if ((socket_fs = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
 //		perror ("socket");
@@ -285,8 +286,7 @@ void *connection_handler_jobs(){
 							if (nbytes>0 && strncmp(handshake,"soy job",7)==0){
 								*socketJob = newfd;
 								log_info(logger,"Se conectó el Job con IP:%s",inet_ntoa(remote_job.sin_addr));
-								// Se conecta un nuevo job, lo guardamos en el set master y actualizamos fdmax
-
+								//Por cada Job que se conecta tiramos un hilo para atenderlo
 								if(pthread_create(&hilojob, NULL, (void*)atenderJob, socketJob) != 0) {
 									perror("pthread_create");
 									log_error(logger,"Fallo la creacion del hilo Job");
@@ -335,7 +335,7 @@ void *atenderJob (int *socketJob) {
 	memset(archivosDelJob, '\0', MENSAJE_SIZE);
 	memset(archivoResultado,'\0', TAM_NOMFINAL);
 
-
+	//Recibe mensaje de si es o no combiner
 	if(recv(*socketJob,mensajeCombiner,sizeof(mensajeCombiner),MSG_WAITALL)==-1){
 		perror("recv");
 		log_error(logger,"Fallo al recibir el atributo COMBINER");
@@ -344,6 +344,7 @@ void *atenderJob (int *socketJob) {
 	//Para probar que recibio el atributo
 	printf("El Job %s acepta combiner\n",(char*)mensajeCombiner);
 
+	//Recibe el archivo resultado del Job
 	if(recv(*socketJob,archivoResultado,sizeof(archivoResultado),MSG_WAITALL)==-1){
 	perror("recv");
 	log_error(logger,"Fallo al recibir el archivo resultado");
@@ -366,7 +367,9 @@ void *atenderJob (int *socketJob) {
 
 	for(posicionArchivo=0;archivos[posicionArchivo]!=NULL;posicionArchivo++){
 		printf("Se debe trabajar en el archivo:%s\n",archivos[posicionArchivo]);
-		bloques=buscarBuscarBloques(archivos[posicionArchivo]);
+	//De cada archivo que nos manda el Job buscamos y nos traemos los bloques
+		bloques=buscarBloques(archivos[posicionArchivo]);
+	//Enviamos rutina Map de cada bloque del archivo al Job que nos envio dicho archivo
 		asignarMap(bloques,*socketJob);
 	}
 //
@@ -386,14 +389,14 @@ void *atenderJob (int *socketJob) {
 
 }
 
-
-t_list* buscarBuscarBloques (char *unArchivo){
+//Busca y trae todos los bloques de un archivo
+t_list* buscarBloques (char *unArchivo){
 	t_archivo *archivoAux;
 	t_list *bloques;
 	int i;
-	for(i=0; i < list_size(listaArchivos); i++){
+	for(i=0; i < list_size(listaArchivos); i++){ //recorre la lista global de archivos
 		archivoAux = list_get(listaArchivos,i);
-		if (strcmp(unArchivo, archivoAux->path) ==0){
+		if (strcmp(unArchivo, archivoAux->path) ==0){ //compara el archivo del job con cada archivo de la lista global por el path
 			bloques = archivoAux->bloques;
 
 		}
@@ -401,6 +404,7 @@ t_list* buscarBuscarBloques (char *unArchivo){
 	return bloques;
 }
 
+//Le manda las rutinas de map al job
 void asignarMap (t_list*bloques,int socketJob){
 	int cantBloques;
 	int i;
@@ -415,16 +419,24 @@ void asignarMap (t_list*bloques,int socketJob){
 	memset(accion,'\0',BUF_SIZE);
 	copiasNodo=list_create();
 	cantBloques = list_size(bloques);
-	for(i=0; i<cantBloques; i++){
+	for(i=0; i<cantBloques; i++){ //recorremos los bloques del archivo que nos mando job
 		bloque = list_get(bloques,i);
 		cantCopias = list_size(bloque->copias);
-		for(j=0;j<cantCopias;j++){
+//*********************************************************************************************************************
+//	Por cada Bloque del archivo que nos mando el job que recorremos, esperamos un recv del job con el ok del map,
+//	de lo contrario a ese bloque hay que replanificarlo en otro nodo
+//
+//*********************************************************************************************************************
+		for(j=0;j<cantCopias;j++){ // Por cada bloque del archivo recorremos las copias de dicho archivo
 			copia = list_get(bloque->copias,j);
+			// Nos traemos cada nodo en donde esta cada una de las copias del archivo
 			nodo= buscarCopiaEnNodos(copia);
-			list_add(copiasNodo,nodo);
+			list_add(copiasNodo,nodo); // Creamos una sublista de la lista global de nodos con los nodos en los que esta cada copia del archivo
 		}
+		// Ordenamos la sublista segun la suma de la cantidad de map y reduce
 		list_sort(copiasNodo, (void*) ordenarSegunMapYReduce);
-		nodoAux = list_get(copiasNodo,0);
+		nodoAux = list_get(copiasNodo,0); // Nos traemos el nodo con menos carga
+		//Del nodo que nos trajimos agarramos los datos que necesitamos para mandarle al job
 		t_mapper datosMapper;
 		strcpy(datosMapper.ip_nodo,nodoAux->ip);
 		datosMapper.puerto_nodo= nodoAux->puerto_escucha_nodo;
@@ -435,33 +447,40 @@ void asignarMap (t_list*bloques,int socketJob){
 				datosMapper.bloque=copia->bloqueNodo;
 			}
 		}
+		//*************************************************************************************************
+		//Que marta rearme el archivo temporal con nombre con los milisegundos
+		//************************************************************************************************
 		strcpy(datosMapper.nombreArchivoTemporal,"/tmp/mapBloque1.txt"); //Falta generar un nombre
 
 		strcpy(accion,"ejecuta map");
+		//Le avisamos al job que vamos a mandarle rutina map
 		if(send(socketJob,accion,sizeof(accion),MSG_WAITALL)==-1){
 			perror("send");
 			log_error(logger,"Fallo el envio de los datos para el mapper");
 			exit(-1);
 		}
+		// Le mandamos los datos que necesita el job para aplicar map
 		if(send(socketJob,&datosMapper,sizeof(t_mapper),MSG_WAITALL)==-1){
 			perror("send");
 			log_error(logger,"Fallo el envio de los datos para el mapper");
 			exit(-1);
 		}
+		//Le sumamos 1 a la cantidad de mappers que tiene el nodo
 		nodo->cantMappers ++;
+		memset(copiasNodo, '\0', cantCopias);
 	}
 }
 
-
+//Buscamos los nodos de la lista global en los que esta cada copia
 t_nodo* buscarCopiaEnNodos(t_copias *copia){
 	int i;
 	int cantNodos;
 	t_nodo *nodo;
 	t_nodo *nodoAux;
 	cantNodos = list_size(listaNodos);
-	for(i=0; i<cantNodos; i++){
+	for(i=0; i<cantNodos; i++){ //Recorremos la lista de nodos global
 		nodo = list_get(listaNodos,i);
-		if(strcmp(nodo->nodo_id, copia->nodo)==0){
+		if(strcmp(nodo->nodo_id, copia->nodo)==0){ //Comparamos el nodo de la copia con cada nodo la lista global
 			nodoAux = nodo;
 			break;
 		}
