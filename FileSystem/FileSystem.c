@@ -815,7 +815,7 @@ void FormatearFilesystem() {
 	//=====================================================================
 
 	list_clean_and_destroy_elements(directorios,(void*)eliminar_lista_de_directorio);
-
+	//TODO: AVISAR A MARTA QUE VACIE SUS ESTRUCTURAS
 }
 
 void EliminarArchivo() {
@@ -868,6 +868,8 @@ void EliminarArchivo() {
 		list_remove_and_destroy_element(archivo->bloques,i,(void*)eliminar_lista_de_bloques);
 	}
 	list_remove_and_destroy_element(archivos,posArchivo,(void*)eliminar_lista_de_archivos);
+
+	//TODO: ACTUALIZAR EL ARCHIVO ELIMINADO A MARTA
 }
 
 void RenombrarArchivo() {
@@ -897,6 +899,11 @@ void RenombrarArchivo() {
 	printf("Ingrese el nuevo nombre \n");
 	scanf("%s", nuevoNombre);
 	strcpy(archivo->nombre, nuevoNombre);
+	strcpy(archivo->path,directorio);
+	strcat(archivo->path,"/");
+	strcat(archivo->path,nuevoNombre);
+
+	//TODO: ACTUALIZAR EL NUEVO NOMBRE A MARTA
 }
 
 void MoverArchivo() {
