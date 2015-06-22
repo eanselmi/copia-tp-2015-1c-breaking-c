@@ -91,11 +91,11 @@ void AgregarNodo();					//DESARROLLADA
 void EliminarNodo();  				//DESARROLLADA
 int BuscarArchivoPorNombre (); //DESARROLLADA
 uint32_t BuscarPadre (char* path);            //Devuelve el idPadre en caso de éxito, devuelve -1 si no lo encuentra
-static void eliminar_bloques(t_copias *bloque);
+//static void eliminar_bloques(t_copias *bloque);
 long ExisteEnLaLista(t_list* listaDirectorios, char* nombreDirectorioABuscar, uint32_t idPadre);
 int BuscarMenorIndiceLibre (char indiceDirectorios[]);
 static void directorio_destroy(t_dir* self);
-static void archivo_destroy(t_archivo* self);
+//static void archivo_destroy(t_archivo* self);
 int obtener_socket_de_nodo_con_id(char*id);
 void enviarNumeroDeBloqueANodo(int socket_nodo, int bloque);
 char *recibirBloque(int socket_nodo);//recibe un bloque de un nodo

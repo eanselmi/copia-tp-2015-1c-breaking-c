@@ -1324,14 +1324,12 @@ int CopiarArchivoAMDFS(){
     memset(combo.buf_20mb,'\0',BLOCK_SIZE);
     archivo_temporal=malloc(sizeof(t_archivo));
     archivo_temporal->bloques=list_create();
-    FILE* auxiliar = fopen("/tmp/auxiliar","w");
     while (fread(&combo.buf_20mb,sizeof(char),sizeof(combo.buf_20mb),archivoLocal) == BLOCK_SIZE){
     		cantBytes+=BLOCK_SIZE;
     		n_copia++;
     		t_bloque *bloque_temporal=malloc(sizeof(t_bloque));
     		bloque_temporal->copias=list_create();
     		if (combo.buf_20mb[BLOCK_SIZE-1]=='\n'){
-    			fprintf(auxiliar,"%s",combo.buf_20mb);
     			list_sort(nodos_temporales, (void*)nodos_mas_libres);
     			//Copiar el contenido del Buffer en los nodos mas vacios por triplicado
     			bandera=0;
@@ -1390,7 +1388,6 @@ int CopiarArchivoAMDFS(){
     				}
     			}
     			for(j=pos+1;j<BLOCK_SIZE;j++) combo.buf_20mb[j]='\0';
-    			fprintf(auxiliar,"%s",combo.buf_20mb);
     			list_sort(nodos_temporales,(void*)nodos_mas_libres);
     			//Copiar el contenido del Buffer en los nodos mas vacios por triplicado
     			bandera=0;
@@ -1457,7 +1454,6 @@ int CopiarArchivoAMDFS(){
     	//FIN DEL WHILE
     	if (feof(archivoLocal))
     	{
-    		fprintf(auxiliar,"%s",combo.buf_20mb);
     		//aca va el fin
     		//si leyo menos lo mando de una porque seguro temina en \n y esta relleno de 0
     		t_bloque *bloque_temporal=malloc(sizeof(t_bloque));
@@ -1551,7 +1547,6 @@ int CopiarArchivoAMDFS(){
     		return -1;
     	}
     	list_destroy(archivos_temporales);
-    	fclose(auxiliar);
     	return 0;
 }
 
