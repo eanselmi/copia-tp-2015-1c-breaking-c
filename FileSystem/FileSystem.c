@@ -266,10 +266,24 @@ int Menu(void) {
 
 	//	case 17: listar_nodos_conectados(nodos); break;
 		case 17: listar_archivos_subidos(archivos); break;
+		//case 17: listar_directorios(); break;
 		default: printf("Opción incorrecta. Por favor ingrese una opción del 1 al 17\n"); break;
 		}
 	}
 	return 0;
+}
+
+void listar_directorios(){
+	t_dir *dir=malloc(sizeof(t_dir));
+	int i;
+	if (list_size(directorios)==0){
+		printf ("No hay directorios cargados\n");
+		Menu();
+	}
+	for (i=0;i<list_size(directorios);i++){
+		dir=list_get(directorios,i);
+		printf ("ID: %d Nombre: %s Padre: %d\n",dir->id,dir->nombre,dir->padre);
+	}
 }
 
 static t_nodo *agregar_nodo_a_lista(char nodo_id[6], int socket, int est, int est_red, char *ip, int port, int puerto_escucha, int bloques_lib,int bloques_tot) {
@@ -801,7 +815,7 @@ void FormatearFilesystem() {
 	//=====================================================================
 
 	list_clean_and_destroy_elements(directorios,(void*)eliminar_lista_de_directorio);
-
+	//TODO: AVISAR A MARTA QUE VACIE SUS ESTRUCTURAS
 }
 
 void EliminarArchivo() {
@@ -810,7 +824,6 @@ void EliminarArchivo() {
 	t_copias* copia=malloc(sizeof(t_copias));
 	t_nodo* nodoBuscado=malloc(sizeof(t_nodo));
 	printf("Eligió  Eliminar archivo\n");
-	int nodoEncontrado=0;
 	char* path = string_new();
 	char* directorio;
 	int i,j,m,posicionDirectorio=0;
@@ -855,23 +868,42 @@ void EliminarArchivo() {
 		list_remove_and_destroy_element(archivo->bloques,i,(void*)eliminar_lista_de_bloques);
 	}
 	list_remove_and_destroy_element(archivos,posArchivo,(void*)eliminar_lista_de_archivos);
+
+	//TODO: ACTUALIZAR EL ARCHIVO ELIMINADO A MARTA
 }
 
 void RenombrarArchivo() {
-	t_archivo* archivo;
-	archivo=malloc(sizeof(t_archivo));
+	t_archivo* archivo=malloc(sizeof(t_archivo));
+	char ** directoriosPorSeparado;
+	char* directorio;
+	int posicionDirectorio=0;
 	printf("Eligió Renombrar archivos\n");
 	char* path = string_new();
+	directorio=string_new();
 	char* nuevoNombre = string_new();
 	printf("Ingrese el path del archivo \n");
 	scanf("%s", path);
-	uint32_t idPadre = BuscarPadre(path);
+	directoriosPorSeparado=string_split(path,"/");
+	while(directoriosPorSeparado[posicionDirectorio+1]!=NULL){
+		string_append(&directorio,"/");
+		string_append(&directorio,directoriosPorSeparado[posicionDirectorio]);
+		posicionDirectorio++;
+	}
+	uint32_t idPadre = BuscarPadre(directorio);
+	if (idPadre==-1){
+		printf("El archivo no existe\n");
+		Menu();
+	}
 	uint32_t posArchivo = BuscarArchivoPorNombre(path, idPadre);
 	archivo = list_get(archivos, posArchivo);
 	printf("Ingrese el nuevo nombre \n");
 	scanf("%s", nuevoNombre);
 	strcpy(archivo->nombre, nuevoNombre);
+	strcpy(archivo->path,directorio);
+	strcat(archivo->path,"/");
+	strcat(archivo->path,nuevoNombre);
 
+	//TODO: ACTUALIZAR EL NUEVO NOMBRE A MARTA
 }
 
 void MoverArchivo() {
