@@ -10,11 +10,11 @@ typedef struct datos_y_bloque{
 
 //se creara una lista de archivos, que contendra elementos del tipo "t_archivo"
 typedef struct estructura_filesystem {
-	char* nombre;
+	char nombre[100];
 	uint32_t padre;
 	uint32_t tamanio;
 	uint32_t estado;
-	char *path;
+	char path[100];
 	t_list *bloques; //Se debe crear una lista de tipo "t_bloque" y agregarla acá
 } t_archivo;
 

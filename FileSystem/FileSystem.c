@@ -1193,13 +1193,13 @@ bool nodos_mas_libres(t_nodo *vacio, t_nodo *mas_vacio) {
 int copiar_lista_de_archivos(t_list* destino, t_list* origen){
 	int i,j,k;
 	for (i=0;i<list_size(origen);i++){
-		t_archivo *original=malloc(sizeof(t_nodo));
-		t_archivo *copia=malloc(sizeof(t_nodo));
+		t_archivo *original=malloc(sizeof(t_archivo));
+		t_archivo *copia=malloc(sizeof(t_archivo));
 		original=list_get(origen,i);
 		copia->bloques=original->bloques;
 		copia->estado=original->estado;
-		copia->nombre=strdup(original->nombre);
-		copia->path=strdup(original->path);
+		strcpy(copia->nombre,original->nombre);
+		strcpy(copia->path,original->path);
 		copia->padre=original->padre;
 		copia->bloques=list_create();
 		for (j=0;j<list_size(original->bloques);j++){
@@ -1518,8 +1518,8 @@ int CopiarArchivoAMDFS(){
     	for (aux1=0;aux1<strlen(ruta);aux1++) if (ruta[aux1]=='/') aux2++;
     	nombre_del_archivo = strtok_r(ruta,"/",&saveptr);
     	for (aux1=0;aux1<aux2-1;aux1++) nombre_del_archivo = strtok_r(NULL,"/",&saveptr);
-    	archivo_temporal->nombre=string_new();
-    	archivo_temporal->path=string_new();
+    	memset(archivo_temporal->path,'\0',100);
+    	memset(archivo_temporal->nombre,'\0',100);
     	strcpy(archivo_temporal->path,pathMDFS);
 		strcpy(archivo_temporal->nombre,nombre_del_archivo);
     	archivo_temporal->estado=1;
