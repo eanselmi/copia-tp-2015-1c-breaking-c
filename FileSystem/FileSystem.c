@@ -1707,7 +1707,130 @@ void BorrarBloque() {
 }
 
 void CopiarBloque() {
+	char *nodo_origen=string_new();
+	char *nodo_destino=string_new();
+	int bloque_origen, bloque_destino;
+	char handshake[15]="copiar_archivo";
+	int i,j,k;
+	char *bloqueParaVer=string_new();
+	int origen_encontrado=0, destino_encontrado=0;
+	int socket_nodo;
 	printf("Eligió Copiar un bloque de un archivo\n");
+	printf ("Ingrese el nodo de origen:\n");
+	scanf ("%s",nodo_origen);
+	printf ("Ingrese bloque de origen:\n");
+	scanf("%d",&bloque_origen);
+	printf ("Ingrese el nodo de destino:\n");
+	scanf ("%s",nodo_destino);
+	printf ("Ingrese bloque de destino:\n");
+	scanf ("%d",&bloque_destino);
+
+	t_nodo *origen = malloc(sizeof(t_nodo));
+	t_nodo *destino = malloc(sizeof(t_nodo));
+
+	if(!obtenerEstadoDelNodo(nodo_origen)){
+		printf ("El nodo seleccionado como origen no esta disponible o no existe\n");
+		Menu();
+	}
+	if(!obtenerEstadoDelNodo(nodo_destino)){
+		printf ("El nodo seleccionado como destino no esta disponible o no existe\n");
+		Menu();
+	}
+	for (i=0;i<list_size(nodos);i++){
+		origen=list_get(nodos,i);
+		if (strcmp(origen->nodo_id,nodo_origen)==0){
+			if (origen->estado==1 && origen->estado_red==1) origen_encontrado=1;
+			if (!bitarray_test_bit(origen->bloques_del_nodo,bloque_origen)){
+				printf ("El bloque %d del nodo %s esta vacio, no hay nada que copiar\n",bloque_origen,nodo_origen);
+				Menu();
+			}
+			break;
+		}
+	}
+
+	for (i=0;i<list_size(nodos);i++){
+		destino=list_get(nodos,i);
+		if (strcmp(destino->nodo_id,nodo_destino)==0){
+			if (destino->estado==1 && destino->estado_red==1) destino_encontrado=1;
+			if (bitarray_test_bit(destino->bloques_del_nodo,bloque_destino)){
+				printf ("El bloque %d del nodo %s esta ocupado, no se puede copiar\n",bloque_destino,nodo_destino);
+				Menu();
+			}
+			break;
+		}
+	}
+	if (origen_encontrado==0){
+		printf ("El nodo origen no existe o no esta disponible\n");
+		Menu();
+	}
+	if (destino_encontrado==0){
+		printf ("El nodo destino no existe o no esta disponible\n");
+		Menu();
+	}
+	//obtener primero el bloque del nodo original
+	socket_nodo = obtener_socket_de_nodo_con_id(nodo_origen);
+	if (socket_nodo == -1){
+		log_error(logger, "El nodo ingresado no es valido o no esta disponible\n");
+		printf("El nodo ingresado no es valido o no esta disponible\n");
+		Menu();
+	}
+	enviarNumeroDeBloqueANodo(socket_nodo, bloque_origen);
+	bloqueParaVer = recibirBloque(socket_nodo);
+	memset(combo.buf_20mb,'\0',BLOCK_SIZE);
+	strcpy(combo.buf_20mb,bloqueParaVer);
+
+	//copiar el bloque obtenido en el nodo destino en el bloque especificado
+	//luego actualizar la estructura de copias del bloque destino del nodo destino
+	//no voy a usar copias de estructuras ya que previamente valido todos
+
+	socket_nodo = obtener_socket_de_nodo_con_id(nodo_destino);
+	if (send(socket_nodo, handshake, sizeof(handshake), MSG_WAITALL) == -1) {
+		perror("send handshake en funcion copiar bloque");
+		log_error(logger, "FALLO el envio del aviso de obtener bloque ");
+		exit(-1);
+	}
+	printf ("voy a mandar al nodo %s una copia del bloque %d\n",nodo_destino,bloque_origen);
+	combo.n_bloque=bloque_destino;
+	if (send(socket_nodo, &combo, sizeof(combo), 0) == -1) {
+		perror("send buffer en subir archivo");
+		log_error(logger, "FALLO el envio del aviso de obtener bloque ");
+		exit(-1);
+	}
+	bitarray_set_bit(destino->bloques_del_nodo,bloque_destino);
+	destino->bloques_libres--;
+
+	//Agrego la copia del bloque a la lista de copias de este bloque particular
+	t_copias *copia_temporal=malloc(sizeof(t_copias));
+	copia_temporal->bloqueNodo=bloque_destino;
+	char *cadena_para_md5=malloc(20971520);
+	strcpy(cadena_para_md5,combo.buf_20mb);
+	strcpy(copia_temporal->md5,obtener_md5(cadena_para_md5));
+	copia_temporal->nodo=strdup(nodo_destino);
+
+
+	//Busco el bloque en el destino para agregar la nueva copia del bloque
+	t_archivo *unArchivo=malloc(sizeof(t_archivo));
+	t_bloque *unBloque=malloc(sizeof(t_bloque));
+	t_copias *unaCopia=malloc(sizeof(t_copias));
+	int bloque_encontrado=0;
+	for (i=0;i<list_size(archivos);i++){
+		unArchivo=list_get(archivos,i);
+		for(j=0;j<list_size(unArchivo->bloques);j++){
+			unBloque=list_get(unArchivo->bloques,j);
+			for(k=0;k<list_size(unBloque->copias);k++){
+				unaCopia=list_get(unBloque->copias,k);
+				if (unaCopia->bloqueNodo==bloque_origen && strcmp(unaCopia->nodo,nodo_origen)==0){
+					bloque_encontrado=1;
+					break;
+				}
+			}
+			if (bloque_encontrado==1){
+				list_add(unBloque->copias,copia_temporal);
+				break;
+			}
+		}
+		if (bloque_encontrado==1) break;
+	}
 }
 
 void AgregarNodo(){
@@ -1844,7 +1967,6 @@ void enviarNumeroDeBloqueANodo( int socket_nodo, int bloque) {
 
 	}
 }
-
 char *recibirBloque( socket_nodo) {
 	char* bloqueAObtener;
 		bloqueAObtener = malloc(BLOCK_SIZE);
