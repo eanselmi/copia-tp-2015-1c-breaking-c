@@ -164,9 +164,6 @@ int main(void){
 							punteroMapper->bloque=datosMapper.bloque;
 							punteroMapper->puerto_nodo=datosMapper.puerto_nodo;
 							strcpy(punteroMapper->nombreArchivoTemporal,datosMapper.nombreArchivoTemporal);
-							punteroMapper->bloqueArchivo=datosMapper.bloqueArchivo;
-							strcpy(punteroMapper->nodo_id,datosMapper.nodo_id);
-							strcpy(punteroMapper->nombreArchivoJob, datosMapper.nombreArchivoJob);
 
 							if(pthread_create(&mapperThread,NULL,(void*)hilo_mapper,punteroMapper)!=0){
 								perror("pthread_create");
@@ -328,7 +325,7 @@ void* hilo_mapper(t_mapper* mapperStruct){
 	printf("En el puerto %d\n", mapperStruct->puerto_nodo);
 	printf("Ejecutará la rutina mapper en el bloque %d\n",mapperStruct->bloque);
 	printf("Guardará el resultado en el archivo %s\n",mapperStruct->nombreArchivoTemporal);
-	printf("Es el map que pertenece al bloque %d del archivo\n",mapperStruct->bloqueArchivo);
+
 
 	datosParaNodo.bloque=mapperStruct->bloque;
 	strcpy(datosParaNodo.nomArchTemp,mapperStruct->nombreArchivoTemporal);
