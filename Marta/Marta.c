@@ -467,8 +467,12 @@ void asignarMap (t_list*bloques,int socketJob){
 		}
 		//Le sumamos 1 a la cantidad de mappers que tiene el nodo
 		nodo->cantMappers ++;
-		memset(copiasNodo, '\0', cantCopias);
+		list_clean_and_destroy_elements(copiasNodo, (void*) eliminarCopiasNodo);
 	}
+}
+
+static void eliminarCopiasNodo(t_list *self){
+	free(self);
 }
 
 //Buscamos los nodos de la lista global en los que esta cada copia
