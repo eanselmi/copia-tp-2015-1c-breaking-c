@@ -568,15 +568,15 @@ char* getBloque(int numBloque){
 	*/
 
 	sem_wait(&semBloques[numBloque]);
-	char* datosLeidos;
+	//char* datosLeidos;
 	char *ubicacionEnElFile;
-	datosLeidos=malloc(BLOCK_SIZE);
+	//datosLeidos=malloc(BLOCK_SIZE);
 	//ubicacionEnElFile=malloc(BLOCK_SIZE);
 	ubicacionEnElFile=fileDeDatos+(BLOCK_SIZE*(numBloque));
-	memcpy(datosLeidos,ubicacionEnElFile,BLOCK_SIZE); //Copia el valor de BLOCK_SIZE bytes desde la direccion de memoria apuntada por fileDeDatos a la direccion de memoria apuntada por datosLeidos
+	//memcpy(datosLeidos,ubicacionEnElFile,BLOCK_SIZE); //Copia el valor de BLOCK_SIZE bytes desde la direccion de memoria apuntada por fileDeDatos a la direccion de memoria apuntada por datosLeidos
 	log_info(logger_archivo,"Se leyó el bloque %d",numBloque);
 	sem_post(&semBloques[numBloque]);
-	return datosLeidos;
+	return ubicacionEnElFile;
 }
 
 char* getFileContent(char* nombreFile){
