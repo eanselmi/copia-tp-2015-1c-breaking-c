@@ -48,8 +48,31 @@ typedef struct estructura_directorio{
 	uint32_t padre;
 }t_dir;
 
+//----------------------------------------------------------------------------------------
+//------------------------------ FUNCIONES PRINCIPALES DE CONSOLA ------------------------
+//----------------------------------------------------------------------------------------
+void FormatearFilesystem ();							//DESARROLLADA
+void EliminarArchivo();									//DESARROLLADA, falta persistencia
+void RenombrarArchivo();								//DESARROLLADA, falta persistencia
+void MoverArchivo();									//NO ANDA	  , falta persistencia
+void CrearDirectorio();									//DESARROLLADA, falta persistencia
+void EliminarDirectorio();								//DESARROLLADA, falta persistencia
+void RenombrarDirectorio();								//DESARROLLADA, falta persistencia
+void MoverDirectorio();									//DESARROLLADA, falta persistencia
+int CopiarArchivoAMDFS();								//DESARROLLADA, falta persistencia
+int CopiarArchivoDelMDFS(int flag, char*unArchivo);		//DESARROLLADA
+void MD5DeArchivo();									//DESARROLLADA
+int VerBloque();										//DESARROLLADA
+void BorrarBloque();									//DESARROLLADA, falta persistencia
+void CopiarBloque();									//DESARROLLADA, falta persistencia
+void AgregarNodo();										//DESARROLLADA
+void EliminarNodo();  									//DESARROLLADA
+void apagar_proceso();									//NO DESARROLLADA, DEBE LIBERAR LOS RECURSOS ANTES DEL EXIT
 
-//Prototipos de Funciones
+//----------------------------------------------------------------------------------------
+//------------------------------- FUNCIONES AUXILIARES -----------------------------------
+//----------------------------------------------------------------------------------------
+
 int Menu();
 void DibujarMenu();
 void listar_archivos_subidos(t_list *archivos);
@@ -73,25 +96,6 @@ int validar_nodo_reconectado (char nodo_id[6]);
 char *buscar_nodo_id(char *ip, int port);
 char *obtener_id_nodo(char *ip);
 void formatear_nodos(void);
-
-void FormatearFilesystem ();							//DESARROLLADA
-void EliminarArchivo();									//DESARROLLADA, falta persistencia
-void RenombrarArchivo();								//DESARROLLADA, falta persistencia
-void MoverArchivo();									//NO ANDA	  , falta persistencia
-void CrearDirectorio();									//DESARROLLADA, falta persistencia
-void EliminarDirectorio();								//DESARROLLADA, falta persistencia
-void RenombrarDirectorio();								//DESARROLLADA, falta persistencia
-void MoverDirectorio();									//DESARROLLADA, falta persistencia
-int CopiarArchivoAMDFS();								//DESARROLLADA, falta persistencia
-int CopiarArchivoDelMDFS(int flag, char*unArchivo);		//DESARROLLADA
-void MD5DeArchivo();									//DESARROLLADA
-int VerBloque();										//DESARROLLADA
-void BorrarBloque();									//DESARROLLADA, falta persistencia
-void CopiarBloque();									//DESARROLLADA, falta persistencia
-void AgregarNodo();										//DESARROLLADA
-void EliminarNodo();  									//DESARROLLADA
-void apagar_proceso();									//NO DESARROLLADA, DEBE LIBERAR LOS RECURSOS ANTES DEL EXIT
-
 int BuscarArchivoPorNombre ();
 uint32_t BuscarPadre (char* path);            			//Devuelve el idPadre en caso de éxito, devuelve -1 si no lo encuentra
 //static void eliminar_bloques(t_copias *bloque);
