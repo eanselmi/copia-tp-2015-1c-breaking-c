@@ -268,8 +268,8 @@ int Menu(void) {
 			EliminarNodo();	break;
 			//case 17: printf("Eligió Salir\n"); break;
 
-		case 17: listar_nodos_conectados(nodos); break;
-		//case 17: listar_archivos_subidos(archivos); break;
+		//case 17: listar_nodos_conectados(nodos); break;
+		case 17: listar_archivos_subidos(archivos); break;
 		//case 17: listar_directorios(); break;
 		default: printf("Opción incorrecta. Por favor ingrese una opción del 1 al 17\n"); break;
 		}
@@ -450,6 +450,7 @@ void listar_archivos_subidos(t_list *archivos) {
 			}
 		}
 	}
+	exit(0);
 }
 
 
@@ -916,20 +917,60 @@ void RenombrarArchivo() {
 }
 
 void MoverArchivo() {
-	t_archivo* archivo;
-	archivo=malloc(sizeof(t_archivo));
+	t_archivo* archivo=malloc(sizeof(t_archivo));
 	printf("Eligió Mover archivos\n");
 	char* path = string_new();
+	char *pathAuxiliar=string_new();
 	char* nuevoPath = string_new();
+	int i,encontrado=0;
+	char **directoriosPorSeparado;
+	int posicionDirectorio=0;
+	char *directorioDestino=string_new();
 	printf("Ingrese el path del archivo \n");
 	scanf("%s", path);
-	uint32_t idPadre = BuscarPadre(path);
-	uint32_t posArchivo = BuscarArchivoPorNombre(path, idPadre);
-	archivo = list_get(archivos, posArchivo);
+	strcpy(pathAuxiliar,path);
+	directoriosPorSeparado=string_split(pathAuxiliar,"/");
+	while(directoriosPorSeparado[posicionDirectorio+1]!=NULL){
+		string_append(&directorioDestino,"/");
+		string_append(&directorioDestino,directoriosPorSeparado[posicionDirectorio]);
+		posicionDirectorio++;
+	}
+	char *nombre_del_archivo=string_new();
+	int aux1,aux2=0;
+	char *saveptr;
+	for (aux1=0;aux1<strlen(pathAuxiliar);aux1++) if (pathAuxiliar[aux1]=='/') aux2++;
+	nombre_del_archivo = strtok_r(pathAuxiliar,"/",&saveptr);
+	for (aux1=0;aux1<aux2-1;aux1++) nombre_del_archivo = strtok_r(NULL,"/",&saveptr);
+
+	uint32_t idPadre = BuscarPadre(directorioDestino);
+	printf ("Padre: %d\n",idPadre);
+	if (idPadre==-1){
+		printf ("El path no existe\n");
+		Menu();
+	}
+
+	for (i=0;i<list_size(archivos);i++){
+		archivo=list_get(archivos,i);
+		if (strcmp(archivo->path,path)==0 && archivo->padre==idPadre){
+			encontrado=1;
+			break;
+		}
+	}
+	if (!encontrado){
+		printf ("No se encontro el archivo\n");
+		Menu();
+	}
 	printf("Ingrese el nuevo path \n");
 	scanf("%s", nuevoPath);
 	uint32_t idPadreNuevo = BuscarPadre(nuevoPath);
+	if (idPadreNuevo==-1){
+		printf ("El path destino no existe\n");
+		Menu();
+	}
 	archivo->padre = idPadreNuevo;
+	strcat(nuevoPath,"/");
+	strcat(nuevoPath,nombre_del_archivo);
+	strcpy(archivo->path,nuevoPath);
 }
 
 long ExisteEnLaLista(t_list* listaDirectorios, char* nombreDirectorioABuscar,uint32_t idPadre) {
