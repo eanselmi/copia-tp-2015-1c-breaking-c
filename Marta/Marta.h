@@ -57,3 +57,4 @@ t_list *buscarBloques (char*);
 void asignarMap(t_list *bloques,int socketJob);
 t_nodo* buscarCopiaEnNodos(t_copias *copia);
 bool ordenarSegunMapYReduce (t_nodo* menorCarga,t_nodo* mayorCarga);
+static void eliminarCopiasNodo(t_list *self);

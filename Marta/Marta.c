@@ -35,6 +35,8 @@ t_list* listaArchivos; //lista de archivos del FS
 
 
 
+
+
 int main(int argc, char**argv){
 
 	pthread_t escucha_jobs;
