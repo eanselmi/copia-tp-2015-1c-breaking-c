@@ -82,7 +82,7 @@ void EliminarDirectorio();			//DESARROLLADA, falta persistencia
 void RenombrarDirectorio();			//DESARROLLADA, falta persistencia
 void MoverDirectorio();				//DESARROLLADA, falta persistencia
 int CopiarArchivoAMDFS();			//Pame TODAVIA NO DESARROLLADA
-void CopiarArchivoDelMDFS();		//Pame TODAVIA NO DESARROLLADA
+int CopiarArchivoDelMDFS(int flag, char*unArchivo);		//Pame TODAVIA NO DESARROLLADA
 void MD5DeArchivo();				//Pame TODAVIA NO DESARROLLADA
 int VerBloque();					//DESARROLLADA
 void BorrarBloque();				//DESARROLLADA

@@ -253,7 +253,7 @@ int Menu(void) {
 		case 9:
 			CopiarArchivoAMDFS();	break;
 		case 10:
-			CopiarArchivoDelMDFS();	break;
+			CopiarArchivoDelMDFS(1,NULL);	break;
 		case 11:
 			MD5DeArchivo();	break;
 		case 12:
@@ -1558,7 +1558,7 @@ int CopiarArchivoAMDFS(){
     	list_destroy(archivos_temporales);
     	return 0;
 }
-void CopiarArchivoDelMDFS() {
+int CopiarArchivoDelMDFS(int flag, char*unArchivo) {
 	char pathArchivo[100];
 	memset(pathArchivo,'\0',100);
 	FILE* copiaLocal;
@@ -1569,15 +1569,17 @@ void CopiarArchivoDelMDFS() {
 	int bloqueDisponible;
 	int socket_nodo;
 	char* bloqueParaVer;
-	char *nombre_del_archivo=string_new();
 	char *ruta=string_new();
+	char *nombre_del_archivo=string_new();
 	int aux1,aux2=0;
-	char *ruta_local=string_new();
 	char *saveptr;
+	char *ruta_local=string_new();
 
-	printf("Eligió Copiar un archivo del MDFS al filesystem local\n");
-	printf ("Ingrese el archivo a copiar con su path completo, ej. /directorio/archivo.ext\n");
-	scanf("%s",pathArchivo);
+	if (flag!=99){
+		printf("Eligió Copiar un archivo del MDFS al filesystem local\n");
+		printf ("Ingrese el archivo a copiar con su path completo, ej. /directorio/archivo.ext\n");
+		scanf("%s",pathArchivo);
+	}else strcpy(pathArchivo,unArchivo);
 
 	strcpy(ruta,pathArchivo);
    	for (aux1=0;aux1<strlen(ruta);aux1++) if (ruta[aux1]=='/') aux2++;
@@ -1585,7 +1587,6 @@ void CopiarArchivoDelMDFS() {
    	for (aux1=0;aux1<aux2-1;aux1++) nombre_del_archivo = strtok_r(NULL,"/",&saveptr);
    	strcpy(ruta_local,"/tmp/");
    	strcat(ruta_local,nombre_del_archivo);
-
 
 	for (i=0;i<list_size(archivos);i++){
 		archivo=list_get(archivos,i);
@@ -1602,7 +1603,7 @@ void CopiarArchivoDelMDFS() {
 						if (socket_nodo == -1){
 							log_error(logger, "El nodo ingresado no es valido o no esta disponible\n");
 							printf("El nodo ingresado no es valido o no esta disponible\n");
-							Menu();
+							return -1;
 						}
 						enviarNumeroDeBloqueANodo(socket_nodo, copia->bloqueNodo);
 						bloqueParaVer = recibirBloque(socket_nodo);
@@ -1612,13 +1613,14 @@ void CopiarArchivoDelMDFS() {
 				}
 				if (bloqueDisponible==0){
 					printf ("El archivo no se puede recuperar, el bloque %d no esta disponible\n",j);
-					Menu();
+					return -1;
 				}
 			}
 		fclose(copiaLocal);
 		break;
 		}
 	}
+	return 0;
 }
 
 int obtenerEstadoDelNodo(char* nodo){
@@ -1637,9 +1639,30 @@ void MD5DeArchivo() {
 	int childpid;
 	pipe(fd);
 	char result[1000];
-	char *archivo="/tmp/archivito"; //archivo de ejemplo
+	//char *archivo="/tmp/archivito"; //archivo de ejemplo
 	// hay que pedir que ingrese un archivo que haya descargado previamente
 	// del MDFS y validar que exista
+	char *path=string_new();
+	char *ruta=string_new();
+	char *nombre_del_archivo=string_new();
+	char *ruta_local=string_new();
+	int aux1,aux2=0;
+	char *saveptr;
+	printf ("Ingrese el path del archivo en MDFS:\n");
+	scanf ("%s",path);
+
+	if(CopiarArchivoDelMDFS(99,path)==-1){
+		printf ("El archivo seleccionado no esta disponible\n");
+		Menu();
+	}
+
+	strcpy(ruta,path);
+	for (aux1=0;aux1<strlen(ruta);aux1++) if (ruta[aux1]=='/') aux2++;
+	nombre_del_archivo = strtok_r(ruta,"/",&saveptr);
+	for (aux1=0;aux1<aux2-1;aux1++) nombre_del_archivo = strtok_r(NULL,"/",&saveptr);
+	strcpy(ruta_local,"/tmp/");
+	strcat(ruta_local,nombre_del_archivo);
+
 	memset(result,'\0',1000);
 	if ( (childpid = fork() ) == -1){
 		fprintf(stderr, "FORK failed");
@@ -1647,7 +1670,7 @@ void MD5DeArchivo() {
 		close(1);
 		dup2(fd[1], 1);
 		close(fd[0]);
-		execlp("/usr/bin/md5sum","md5sum",archivo,NULL);
+		execlp("/usr/bin/md5sum","md5sum",ruta_local,NULL);
 	}
 	wait(NULL);
 	read(fd[0], result, sizeof(result));
