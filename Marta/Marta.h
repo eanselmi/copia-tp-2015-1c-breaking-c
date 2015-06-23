@@ -48,7 +48,16 @@ typedef struct estructura_mapper {
 	int bloque;
 	char nombreArchivoTemporal[TAM_NOMFINAL];
 	int bloqueArchivo;
+	char nodo_id[6];
+	char nombreArchivoJob[TAM_NOMFINAL];
 } __attribute__((packed)) t_mapper;
+
+typedef struct estructura_respuesta {
+	char nodo_id[6];
+	int bloqueArchivo;
+	char nombreArchivoJob[TAM_NOMFINAL];
+	int resultado; // 0 si salio bien , y 1 si salio mal el map
+}__attribute__((packed)) t_respuestaMap;
 
 //Prototipos de funciones
 void *connection_handler_jobs(); // Esta funcion escucha continuamente si recibo nuevos mensajes

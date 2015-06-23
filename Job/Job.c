@@ -165,6 +165,8 @@ int main(void){
 							punteroMapper->puerto_nodo=datosMapper.puerto_nodo;
 							strcpy(punteroMapper->nombreArchivoTemporal,datosMapper.nombreArchivoTemporal);
 							punteroMapper->bloqueArchivo=datosMapper.bloqueArchivo;
+							strcpy(punteroMapper->nodo_id,datosMapper.nodo_id);
+							strcpy(punteroMapper->nombreArchivoJob, datosMapper.nombreArchivoJob);
 
 							if(pthread_create(&mapperThread,NULL,(void*)hilo_mapper,punteroMapper)!=0){
 								perror("pthread_create");

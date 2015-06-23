@@ -10,6 +10,8 @@ typedef struct estructura_mapper {
 	int bloque;
 	char nombreArchivoTemporal[TAM_NOMFINAL];
 	int bloqueArchivo;
+	char nodo_id[6];
+	char nombreArchivoJob[TAM_NOMFINAL];
 } __attribute__((packed)) t_mapper;
 
 typedef struct datos_para_map{
@@ -31,6 +33,13 @@ typedef struct lista_nodos_reduce{
 	int puerto_nodo;
 	char archivoAAplicarReduce[TAM_NOMFINAL];
 } __attribute__((packed)) t_archivosReduce;
+
+typedef struct estructura_respuesta {
+	char nodo_id[6];
+	int bloqueArchivo;
+	char nombreArchivoJob[TAM_NOMFINAL];
+	int resultado; // 0 si salio bien , y 1 si salio mal el map
+}__attribute__((packed)) t_respuestaMap;
 
 
 //Declaración de funciones

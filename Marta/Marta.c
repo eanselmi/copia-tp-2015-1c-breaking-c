@@ -37,6 +37,8 @@ t_list* listaArchivos; //lista de archivos del FS
 
 
 
+
+
 int main(int argc, char**argv){
 
 	pthread_t escucha_jobs;
@@ -71,6 +73,213 @@ int main(int argc, char**argv){
 	listaNodos = list_create(); //creo la lista para los nodos que me pasa el FS
 	listaArchivos = list_create(); //creo la lista para los archivos que me pasa el FS
 	jobs=list_create(); //creo la lista de jobs
+
+	//Variables para probar
+		t_archivo *archivo1;
+		t_archivo *archivo2;
+		t_archivo *archivo3;
+		archivo1 = malloc(sizeof(t_archivo));
+		archivo2 = malloc(sizeof(t_archivo));
+		archivo3 = malloc(sizeof(t_archivo));
+		archivo1->bloques =list_create();
+		archivo2->bloques =list_create();
+		archivo3->bloques =list_create();
+		archivo1->estado =1;
+		archivo2->estado =1;
+		archivo3->estado =1;
+		archivo1->nombre= string_new();
+		archivo2->nombre= string_new();
+		archivo3->nombre= string_new();
+		archivo1->path= string_new();
+		archivo2->path= string_new();
+		archivo3->path= string_new();
+		string_append(&archivo1->nombre, "pam");
+		string_append(&archivo2->nombre, "bruno");
+		string_append(&archivo3->nombre, "archivoTemperatura1.txt");
+		string_append(&archivo1->path, "/home/utnso/pam");
+		string_append(&archivo2->path, "/home/utnso/bruno");
+		string_append(&archivo3->path, "/user/Bruno/datos/archivoTemperatura1.txt");
+
+		t_bloque * bloque0Archivo1;
+		t_bloque * bloque1Archivo1;
+		t_bloque * bloque0Archivo2;
+		t_bloque * bloque0Archivo3;
+		t_bloque * bloque1Archivo3;
+		t_bloque * bloque2Archivo3;
+		bloque0Archivo1 = malloc(sizeof(t_bloque));
+		bloque1Archivo1 = malloc(sizeof(t_bloque));
+		bloque0Archivo2 = malloc(sizeof(t_bloque));
+		bloque0Archivo3 = malloc(sizeof(t_bloque));
+		bloque1Archivo3 = malloc(sizeof(t_bloque));
+		bloque2Archivo3 = malloc(sizeof(t_bloque));
+
+		bloque0Archivo1->copias= list_create();
+		bloque1Archivo1->copias= list_create();
+		bloque0Archivo2->copias= list_create();
+		bloque0Archivo3->copias= list_create();
+		bloque1Archivo3->copias= list_create();
+		bloque2Archivo3->copias= list_create();
+
+		t_copias* copia0Bloque0Archivo1;
+		t_copias* copia1Bloque0Archivo1;
+		t_copias* copia2Bloque0Archivo1;
+		t_copias* copia0Bloque1Archivo1;
+		t_copias* copia1Bloque1Archivo1;
+		t_copias* copia2Bloque1Archivo1;
+		t_copias* copia0Bloque0Archivo2;
+		t_copias* copia1Bloque0Archivo2;
+		t_copias* copia2Bloque0Archivo2;
+		t_copias* copia0Bloque0Archivo3;
+		t_copias* copia1Bloque0Archivo3;
+		t_copias* copia2Bloque0Archivo3;
+		t_copias* copia0Bloque1Archivo3;
+		t_copias* copia1Bloque1Archivo3;
+		t_copias* copia2Bloque1Archivo3;
+		t_copias* copia0Bloque2Archivo3;
+		t_copias* copia1Bloque2Archivo3;
+		t_copias* copia2Bloque2Archivo3;
+
+		copia0Bloque0Archivo1=malloc(sizeof(t_copias));
+		copia1Bloque0Archivo1=malloc(sizeof(t_copias));
+		copia2Bloque0Archivo1=malloc(sizeof(t_copias));
+		copia0Bloque1Archivo1=malloc(sizeof(t_copias));
+		copia1Bloque1Archivo1=malloc(sizeof(t_copias));
+		copia2Bloque1Archivo1=malloc(sizeof(t_copias));
+		copia0Bloque0Archivo2=malloc(sizeof(t_copias));
+		copia1Bloque0Archivo2=malloc(sizeof(t_copias));
+		copia2Bloque0Archivo2=malloc(sizeof(t_copias));
+		copia0Bloque0Archivo3=malloc(sizeof(t_copias));
+		copia1Bloque0Archivo3=malloc(sizeof(t_copias));
+		copia2Bloque0Archivo3=malloc(sizeof(t_copias));
+		copia0Bloque1Archivo3=malloc(sizeof(t_copias));
+		copia1Bloque1Archivo3=malloc(sizeof(t_copias));
+		copia2Bloque1Archivo3=malloc(sizeof(t_copias));
+		copia0Bloque2Archivo3=malloc(sizeof(t_copias));
+		copia1Bloque2Archivo3=malloc(sizeof(t_copias));
+		copia2Bloque2Archivo3=malloc(sizeof(t_copias));
+
+		copia0Bloque0Archivo1->nodo = string_new();
+		copia1Bloque0Archivo1->nodo = string_new();
+		copia2Bloque0Archivo1->nodo = string_new();
+		copia0Bloque1Archivo1->nodo = string_new();
+		copia1Bloque1Archivo1->nodo = string_new();
+		copia2Bloque1Archivo1->nodo = string_new();
+		copia0Bloque0Archivo2->nodo = string_new();
+		copia1Bloque0Archivo2->nodo= string_new();
+		copia2Bloque0Archivo2->nodo = string_new();
+		copia0Bloque0Archivo3->nodo = string_new();
+		copia1Bloque0Archivo3->nodo = string_new();
+		copia2Bloque0Archivo3->nodo = string_new();
+		copia0Bloque1Archivo3->nodo= string_new();
+		copia1Bloque1Archivo3->nodo = string_new();
+		copia2Bloque1Archivo3->nodo = string_new();
+		copia0Bloque2Archivo3->nodo = string_new();
+		copia1Bloque2Archivo3->nodo = string_new();
+		copia2Bloque2Archivo3->nodo = string_new();
+
+		strcpy(copia0Bloque0Archivo1->nodo, "nodo1");
+		strcpy(copia1Bloque0Archivo1->nodo, "nodo2");
+		strcpy(copia2Bloque0Archivo1->nodo, "nodo3");
+		strcpy(copia0Bloque1Archivo1->nodo, "nodo1");
+		strcpy(copia1Bloque1Archivo1->nodo, "nodo2");
+		strcpy(copia2Bloque1Archivo1->nodo, "nodo3");
+		strcpy(copia0Bloque0Archivo2->nodo, "nodo1");
+		strcpy(copia1Bloque0Archivo2->nodo, "nodo2");
+		strcpy(copia2Bloque0Archivo2->nodo, "nodo3");
+		strcpy(copia0Bloque0Archivo3->nodo, "nodo1");
+		strcpy(copia1Bloque0Archivo3->nodo, "nodo2");
+		strcpy(copia2Bloque0Archivo3->nodo, "nodo3");
+		strcpy(copia0Bloque1Archivo3->nodo, "nodo1");
+		strcpy(copia1Bloque1Archivo3->nodo, "nodo2");
+		strcpy(copia2Bloque1Archivo3->nodo, "nodo3");
+		strcpy(copia0Bloque2Archivo3->nodo, "nodo1");
+		strcpy(copia1Bloque2Archivo3->nodo, "nodo2");
+		strcpy(copia2Bloque2Archivo3->nodo, "nodo3");
+
+		copia0Bloque0Archivo1->bloqueNodo=2;
+		copia1Bloque0Archivo1->bloqueNodo=5;
+		copia2Bloque0Archivo1->bloqueNodo=7;
+		copia0Bloque1Archivo1->bloqueNodo=8;
+		copia1Bloque1Archivo1->bloqueNodo=9;
+		copia2Bloque1Archivo1->bloqueNodo=10;
+		copia0Bloque0Archivo2->bloqueNodo=2;
+		copia1Bloque0Archivo2->bloqueNodo=1;
+		copia2Bloque0Archivo2->bloqueNodo=0;
+		copia0Bloque0Archivo3->bloqueNodo=4;
+		copia1Bloque0Archivo3->bloqueNodo=3;
+		copia2Bloque0Archivo3->bloqueNodo=2;
+		copia0Bloque1Archivo3->bloqueNodo=8;
+		copia1Bloque1Archivo3->bloqueNodo=5;
+		copia2Bloque1Archivo3->bloqueNodo=2;
+		copia0Bloque2Archivo3->bloqueNodo=6;
+		copia1Bloque2Archivo3->bloqueNodo=2;
+		copia2Bloque2Archivo3->bloqueNodo=9;
+
+		list_add(bloque0Archivo1->copias, copia0Bloque0Archivo1);
+		list_add(bloque0Archivo1->copias, copia1Bloque0Archivo1);
+		list_add(bloque0Archivo1->copias, copia2Bloque0Archivo1);
+		list_add(bloque1Archivo1->copias, copia0Bloque1Archivo1);
+		list_add(bloque1Archivo1->copias, copia1Bloque1Archivo1);
+		list_add(bloque1Archivo1->copias, copia2Bloque1Archivo1);
+		list_add(bloque0Archivo2->copias, copia0Bloque0Archivo2);
+		list_add(bloque0Archivo2->copias, copia1Bloque0Archivo2);
+		list_add(bloque0Archivo2->copias, copia2Bloque0Archivo2);
+		list_add(bloque0Archivo3->copias, copia0Bloque0Archivo3);
+		list_add(bloque0Archivo3->copias, copia1Bloque0Archivo3);
+		list_add(bloque0Archivo3->copias, copia2Bloque0Archivo3);
+		list_add(bloque1Archivo3->copias, copia0Bloque1Archivo3);
+		list_add(bloque1Archivo3->copias, copia1Bloque1Archivo3);
+		list_add(bloque1Archivo3->copias, copia2Bloque1Archivo3);
+		list_add(bloque2Archivo3->copias, copia0Bloque2Archivo3);
+		list_add(bloque2Archivo3->copias, copia1Bloque2Archivo3);
+		list_add(bloque2Archivo3->copias, copia2Bloque2Archivo3);
+
+		list_add(archivo1->bloques,bloque0Archivo1);
+		list_add(archivo1->bloques,bloque1Archivo1);
+		list_add(archivo2->bloques,bloque0Archivo2);
+		list_add(archivo3->bloques,bloque0Archivo3);
+		list_add(archivo3->bloques,bloque1Archivo3);
+		list_add(archivo3->bloques,bloque2Archivo3);
+
+		list_add(listaArchivos, archivo1);
+		list_add(listaArchivos, archivo2);
+		list_add(listaArchivos, archivo3);
+
+		t_nodo *nodo1;
+		t_nodo *nodo2;
+		t_nodo *nodo3;
+		nodo1 = malloc(sizeof(t_nodo));
+		nodo2 = malloc(sizeof(t_nodo));
+		nodo3 = malloc(sizeof(t_nodo));
+
+		 nodo1->cantMappers = 0;
+		 nodo2->cantMappers = 0;
+		 nodo3->cantMappers = 0;
+		 nodo1->cantReducers = 0;
+		 nodo2->cantReducers = 0;
+		 nodo3->cantReducers = 0;
+		 nodo1->estado =1;
+		 nodo2->estado =1;
+		 nodo3->estado =1;
+
+		 nodo1->ip = string_new();
+		 nodo2->ip = string_new();
+		 nodo3->ip = string_new();
+		 strcpy(nodo1->ip,"127.0.0.1");
+		 strcpy(nodo2->ip,"127.0.0.1");
+		 strcpy(nodo3->ip,"127.0.0.1");
+		 strcpy(nodo1->nodo_id,"nodo1");
+		 strcpy(nodo2->nodo_id,"nodo2");
+		 strcpy(nodo3->nodo_id,"nodo3");
+		 nodo1->puerto_escucha_nodo = 6500;
+		 nodo2->puerto_escucha_nodo = 6510;
+		 nodo3->puerto_escucha_nodo = 6520;
+
+		 list_add(listaNodos, nodo1);
+		 list_add(listaNodos, nodo2);
+		 list_add(listaNodos, nodo3);
+
+
 
 
 //
@@ -328,15 +537,28 @@ void *connection_handler_jobs(){
 }
 
 void *atenderJob (int *socketJob) {
+	int cantBloques;
+	int i;
+	int j;
+	t_nodo *nodo;
+	int cantCopias;
+	char accion[BUF_SIZE];
+	t_copias *copia;
+	t_bloque *bloque;
+	t_list *copiasNodo;
+	t_nodo *nodoAux;
+	int numeroResultado;
+	memset(accion,'\0',BUF_SIZE);
+	copiasNodo=list_create();
 	char archivoResultado[TAM_NOMFINAL];
 	pthread_detach(pthread_self());
 	int posicionArchivo;
 	char mensajeCombiner[3];
 	char archivosDelJob[MENSAJE_SIZE];
+	int cantMap;
 	memset(mensajeCombiner, '\0', 3);
 	memset(archivosDelJob, '\0', MENSAJE_SIZE);
 	memset(archivoResultado,'\0', TAM_NOMFINAL);
-
 	//Recibe mensaje de si es o no combiner
 	if(recv(*socketJob,mensajeCombiner,sizeof(mensajeCombiner),MSG_WAITALL)==-1){
 		perror("recv");
@@ -372,7 +594,84 @@ void *atenderJob (int *socketJob) {
 	//De cada archivo que nos manda el Job buscamos y nos traemos los bloques
 		bloques=buscarBloques(archivos[posicionArchivo]);
 	//Enviamos rutina Map de cada bloque del archivo al Job que nos envio dicho archivo
-		asignarMap(bloques,*socketJob);
+		cantBloques = list_size(bloques);
+		for(i=0; i<cantBloques; i++){ //recorremos los bloques del archivo que nos mando job
+			bloque = list_get(bloques,i);
+			cantCopias = list_size(bloque->copias);
+			for(j=0;j<cantCopias;j++){ // Por cada bloque del archivo recorremos las copias de dicho archivo
+				copia = list_get(bloque->copias,j);
+				// Nos traemos cada nodo en donde esta cada una de las copias del archivo
+				nodo= buscarCopiaEnNodos(copia);
+				list_add(copiasNodo,nodo); // Creamos una sublista de la lista global de nodos con los nodos en los que esta cada copia del archivo
+			}
+			// Ordenamos la sublista segun la suma de la cantidad de map y reduce
+			list_sort(copiasNodo, (void*) ordenarSegunMapYReduce);
+			nodoAux = malloc(sizeof(t_nodo));
+			nodoAux = list_get(copiasNodo,0); // Nos traemos el nodo con menos carga
+			//Del nodo que nos trajimos agarramos los datos que necesitamos para mandarle al job
+			t_mapper datosMapper;
+			memset(datosMapper.ip_nodo,'\0',20);
+			memset(datosMapper.nodo_id,'\0',6);
+			memset(datosMapper.nombreArchivoJob,'\0',TAM_NOMFINAL);
+			strcpy(datosMapper.ip_nodo,nodoAux->ip);
+			datosMapper.puerto_nodo= nodoAux->puerto_escucha_nodo;
+			datosMapper.bloqueArchivo=i;
+			for(j=0;j<cantCopias;j++){
+				copia = list_get(bloque->copias,j);
+				if(strcmp(copia->nodo,nodoAux->nodo_id)==0){
+					datosMapper.bloque=copia->bloqueNodo;
+				}
+			}
+			strcpy(datosMapper.nodo_id,nodoAux->nodo_id);
+			strcpy(datosMapper.nombreArchivoJob,archivos[posicionArchivo]);
+
+			//*************************************************************************************************
+			//Que marta rearme el archivo temporal con nombre con los milisegundos PAM (COPIALA DE BRUNO)
+			//************************************************************************************************
+			strcpy(datosMapper.nombreArchivoTemporal,"/tmp/mapBloque1.txt"); //Falta generar un nombre
+
+			strcpy(accion,"ejecuta map");
+			//Le avisamos al job que vamos a mandarle rutina map
+			if(send(*socketJob,accion,sizeof(accion),MSG_WAITALL)==-1){
+				perror("send");
+				log_error(logger,"Fallo el envio de los datos para el mapper");
+				exit(-1);
+			}
+			// Le mandamos los datos que necesita el job para aplicar map
+			if(send(*socketJob,&datosMapper,sizeof(t_mapper),MSG_WAITALL)==-1){
+				perror("send");
+				log_error(logger,"Fallo el envio de los datos para el mapper");
+				exit(-1);
+			}
+			//******************************************************************************
+			//Buscar nodoAux en la lista general comparando por nodo_id y sumarle cantMapper
+			//*******************************************************************************
+			cantMap ++;
+			list_clean_and_destroy_elements(copiasNodo, (void*) eliminarCopiasNodo);
+		}
+	}
+
+	for(numeroResultado = 0; numeroResultado < cantMap;numeroResultado ++) {
+		t_respuestaMap respuestaMap;
+		memset(respuestaMap.nodo_id,'\0',6);
+		memset(respuestaMap.nombreArchivoJob,'\0', TAM_NOMFINAL);
+		//Recibo respuesta del Job de cada map
+		if(recv(*socketJob,&respuestaMap, sizeof(t_respuestaMap),MSG_WAITALL)==-1){
+		perror("recv");
+		log_error(logger,"Fallo al recibir el ok del job");
+		//exit(-1);
+		}
+		if(respuestaMap.resultado ==1){
+			printf("El map falló\n");
+			//PAM
+			//REPLANIFICAR BLOQUE (buscar respuestasMap.archivoJob, buscar respuestaMap.bloqueArchivo (list_get indice con el nro de bloque) to do esto me lo manda job en respuestaMap y luego buscar en la lista global de nodos
+			// el nodo_id que se desconecto, borrarlo de la sublista y ordenar la lista devuelta y mandar el map a el primer nodo de la sublista :)
+			// y sumar cantMap ++ y de la lista gral de nodos restarle map al que me dio KO = 1 LE RESTO UN cantMap-- y le sumo al nuevo nodo que mando el map
+		}else {
+			printf("El map salio ok\n");
+		//Buscar el respuestasMap.nodo_id en la lista gral de nodos y restarle 1 a su catMappers
+		}
+
 	}
 //
 //	t_mapper datosMapper;
@@ -406,72 +705,6 @@ t_list* buscarBloques (char *unArchivo){
 	return bloques;
 }
 
-//Le manda las rutinas de map al job
-void asignarMap (t_list*bloques,int socketJob){
-	int cantBloques;
-	int i;
-	int j;
-	t_nodo *nodo;
-	int cantCopias;
-	char accion[BUF_SIZE];
-	t_copias *copia;
-	t_bloque *bloque;
-	t_list *copiasNodo;
-	t_nodo *nodoAux;
-	memset(accion,'\0',BUF_SIZE);
-	copiasNodo=list_create();
-	cantBloques = list_size(bloques);
-	for(i=0; i<cantBloques; i++){ //recorremos los bloques del archivo que nos mando job
-		bloque = list_get(bloques,i);
-		cantCopias = list_size(bloque->copias);
-//*********************************************************************************************************************
-//	Por cada Bloque del archivo que nos mando el job que recorremos, esperamos un recv del job con el ok del map,
-//	de lo contrario a ese bloque hay que replanificarlo en otro nodo
-//
-//*********************************************************************************************************************
-		for(j=0;j<cantCopias;j++){ // Por cada bloque del archivo recorremos las copias de dicho archivo
-			copia = list_get(bloque->copias,j);
-			// Nos traemos cada nodo en donde esta cada una de las copias del archivo
-			nodo= buscarCopiaEnNodos(copia);
-			list_add(copiasNodo,nodo); // Creamos una sublista de la lista global de nodos con los nodos en los que esta cada copia del archivo
-		}
-		// Ordenamos la sublista segun la suma de la cantidad de map y reduce
-		list_sort(copiasNodo, (void*) ordenarSegunMapYReduce);
-		nodoAux = list_get(copiasNodo,0); // Nos traemos el nodo con menos carga
-		//Del nodo que nos trajimos agarramos los datos que necesitamos para mandarle al job
-		t_mapper datosMapper;
-		strcpy(datosMapper.ip_nodo,nodoAux->ip);
-		datosMapper.puerto_nodo= nodoAux->puerto_escucha_nodo;
-		datosMapper.bloqueArchivo=i;
-		for(j=0;j<cantCopias;j++){
-			copia = list_get(bloque->copias,j);
-			if(strcmp(copia->nodo,nodoAux->nodo_id)==0){
-				datosMapper.bloque=copia->bloqueNodo;
-			}
-		}
-		//*************************************************************************************************
-		//Que marta rearme el archivo temporal con nombre con los milisegundos
-		//************************************************************************************************
-		strcpy(datosMapper.nombreArchivoTemporal,"/tmp/mapBloque1.txt"); //Falta generar un nombre
-
-		strcpy(accion,"ejecuta map");
-		//Le avisamos al job que vamos a mandarle rutina map
-		if(send(socketJob,accion,sizeof(accion),MSG_WAITALL)==-1){
-			perror("send");
-			log_error(logger,"Fallo el envio de los datos para el mapper");
-			exit(-1);
-		}
-		// Le mandamos los datos que necesita el job para aplicar map
-		if(send(socketJob,&datosMapper,sizeof(t_mapper),MSG_WAITALL)==-1){
-			perror("send");
-			log_error(logger,"Fallo el envio de los datos para el mapper");
-			exit(-1);
-		}
-		//Le sumamos 1 a la cantidad de mappers que tiene el nodo
-		nodo->cantMappers ++;
-		list_clean_and_destroy_elements(copiasNodo, (void*) eliminarCopiasNodo);
-	}
-}
 
 static void eliminarCopiasNodo(t_list *self){
 	free(self);
