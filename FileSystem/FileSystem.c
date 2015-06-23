@@ -268,8 +268,8 @@ int Menu(void) {
 			EliminarNodo();	break;
 			//case 17: printf("Eligió Salir\n"); break;
 
-	//	case 17: listar_nodos_conectados(nodos); break;
-		case 17: listar_archivos_subidos(archivos); break;
+		case 17: listar_nodos_conectados(nodos); break;
+		//case 17: listar_archivos_subidos(archivos); break;
 		//case 17: listar_directorios(); break;
 		default: printf("Opción incorrecta. Por favor ingrese una opción del 1 al 17\n"); break;
 		}
@@ -410,8 +410,7 @@ char *obtener_md5(char *bloque) {
 
 void listar_nodos_conectados(t_list *nodos) {
 	int i, j, cantidad_nodos;
-	t_nodo *elemento;
-	//obtenerNodosMasLibres();
+	t_nodo *elemento=malloc(sizeof(t_nodo));
 	cantidad_nodos = list_size(nodos);
 	for (i = 0; i < cantidad_nodos; i++) {
 		elemento = list_get(nodos, i);
@@ -421,6 +420,7 @@ void listar_nodos_conectados(t_list *nodos) {
 		for (j = 0; j < elemento->bloques_totales; j++)
 			printf("%d", bitarray_test_bit(elemento->bloques_del_nodo, j));
 	}
+	exit(0);
 }
 void listar_archivos_subidos(t_list *archivos) {
 	int i,j,k,cantidad_archivos,cantidad_bloques,cantidad_copias;
