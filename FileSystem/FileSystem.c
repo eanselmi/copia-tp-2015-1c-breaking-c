@@ -172,11 +172,15 @@ int main(int argc, char *argv[]) {
 	//Cuando sale de este ciclo el proceso FileSystem ya se encuentra en condiciones de iniciar sus tareas
 
 	//Este hilo va a manejar las conexiones con los nodos de forma paralela a la ejecucion del proceso
+
+
+
 	if (pthread_create(&escucha, NULL, connection_handler_escucha, NULL) < 0) {
 		perror("could not create thread");
 		log_error(logger,"Falló la creación del hilo que maneja las conexiones");
 		return 1;
 	}
+
 
 	archivos = list_create(); //Crea la lista de archivos
 	directorios = list_create(); //crea la lista de directorios
@@ -253,7 +257,7 @@ int Menu(void) {
 		case 11:
 			MD5DeArchivo();	break;
 		case 12:
-			VerBloque(); break;
+			VerBloque(1,NULL,0); break;
 		case 13:
 			BorrarBloque(); break;
 		case 14:
@@ -604,16 +608,23 @@ void *connection_handler_escucha(void) {
 
 				} else { //si entra aca no es un cliente nuevo, es uno que ya tenia y me esta mandando algo
 					// gestionar datos de un cliente
-					if ((read_size = recv(i, mensaje, sizeof(mensaje), MSG_WAITALL))
-							<= 0) { //si entra aca es porque se desconecto o hubo un error
-						if (read_size == 0) {
-							// Un nodo o marta cerro su conexion, actualizo la lista de nodos, reviso quien fue
-							if (i == marta_sock) {
+
+					if (i == marta_sock) {
+						if ((read_size = recv(i, mensaje, sizeof(mensaje), MSG_WAITALL)) <= 0) { //si entra aca es porque se desconecto o hubo un error
+							if (read_size == 0) {
 								marta_presente = 0;
 								close(i); // ¡Hasta luego!
 								FD_CLR(i, &master); // eliminar del conjunto maestro
 								printf("Marta se desconecto\n");
-							} else {
+							}else{
+								//Marta me manda algo
+							}
+						}
+					}else{
+						//Si no es marta, es un nodo
+						if ((read_size = recv(i, mensaje, sizeof(mensaje), MSG_PEEK)) <= 0){
+							if (read_size == 0) {
+								//Se desconecto
 								addrlen = sizeof(struct sockaddr_in);
 								if ((getpeername(i,(struct sockaddr*) &remote_client,(socklen_t*) &addrlen)) == -1) {
 									perror("getpeername");
@@ -632,15 +643,13 @@ void *connection_handler_escucha(void) {
 									printf("ALGO SALIO MUY MAL\n");
 									exit(-1);
 								}
+							}else{
+								perror("recv");
+								log_error(logger, "FALLO el Recv");
+								exit(-1);
 							}
-						} else {
-							perror("recv");
-							log_error(logger, "FALLO el Recv");
-							exit(-1);
 						}
-					} else {
-						// tenemos datos de algún cliente
-						// ...... Tratamiento del mensaje nuevo
+						//Recibi algo de un nodo
 					}
 				}
 			}
@@ -763,8 +772,8 @@ static void eliminar_lista_de_bloques(t_bloque *self){
 }
 
 static void eliminar_lista_de_archivos (t_archivo *self){
-	free(self->nombre);
-	free(self->path);
+	//free(self->nombre);
+	//free(self->path);
 	list_destroy(self->bloques);
 	free(self);
 }
@@ -1549,12 +1558,10 @@ int CopiarArchivoAMDFS(){
     	list_destroy(archivos_temporales);
     	return 0;
 }
-
 void CopiarArchivoDelMDFS() {
 	char pathArchivo[100];
 	memset(pathArchivo,'\0',100);
 	FILE* copiaLocal;
-	copiaLocal = fopen("/tmp/archivoDelMDFS", "w");
 	t_archivo *archivo=malloc(sizeof(t_archivo));
 	t_bloque *bloque=malloc(sizeof(t_bloque));
 	t_copias *copia=malloc(sizeof(t_copias));
@@ -1562,12 +1569,28 @@ void CopiarArchivoDelMDFS() {
 	int bloqueDisponible;
 	int socket_nodo;
 	char* bloqueParaVer;
+	char *nombre_del_archivo=string_new();
+	char *ruta=string_new();
+	int aux1,aux2=0;
+	char *ruta_local=string_new();
+	char *saveptr;
+
 	printf("Eligió Copiar un archivo del MDFS al filesystem local\n");
 	printf ("Ingrese el archivo a copiar con su path completo, ej. /directorio/archivo.ext\n");
 	scanf("%s",pathArchivo);
+
+	strcpy(ruta,pathArchivo);
+   	for (aux1=0;aux1<strlen(ruta);aux1++) if (ruta[aux1]=='/') aux2++;
+   	nombre_del_archivo = strtok_r(ruta,"/",&saveptr);
+   	for (aux1=0;aux1<aux2-1;aux1++) nombre_del_archivo = strtok_r(NULL,"/",&saveptr);
+   	strcpy(ruta_local,"/tmp/");
+   	strcat(ruta_local,nombre_del_archivo);
+
+
 	for (i=0;i<list_size(archivos);i++){
 		archivo=list_get(archivos,i);
 		if (strcmp(archivo->path,pathArchivo)==0){
+			copiaLocal = fopen(ruta_local, "w");
 			for (j=0;j<list_size(archivo->bloques);j++){
 				bloque=list_get(archivo->bloques,j);
 				bloqueDisponible=0;
@@ -1592,6 +1615,8 @@ void CopiarArchivoDelMDFS() {
 					Menu();
 				}
 			}
+		fclose(copiaLocal);
+		break;
 		}
 	}
 }
@@ -1774,7 +1799,7 @@ int VerBloque() {
 			}
 			enviarNumeroDeBloqueANodo(socket_nodo, nroBloque);
 			bloqueParaVer = recibirBloque(socket_nodo);
-			archivoParaVerPath = fopen("./archBloqueParaVer.txt", "w");
+			archivoParaVerPath = fopen("./archBloqueParaVer.txt", "a+");
 			fprintf(archivoParaVerPath, "%s", bloqueParaVer);
 			printf ("El md5 del bloque que traje es: %s\n",obtener_md5(bloqueParaVer));
 			printf("El bloque se copio en el archivo: ./archBloqueParaVer.txt\n");
