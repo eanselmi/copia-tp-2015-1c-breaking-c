@@ -73,24 +73,27 @@ int validar_nodo_reconectado (char nodo_id[6]);
 char *buscar_nodo_id(char *ip, int port);
 char *obtener_id_nodo(char *ip);
 void formatear_nodos(void);
-void FormatearFilesystem ();		//Pame TODAVIA NO DESARROLLADA
-void EliminarArchivo();				//DESARROLLADA
-void RenombrarArchivo ();			//DESARROLLADA
-void MoverArchivo();				//DESARROLLADA
-void CrearDirectorio();				//DESARROLLADA, falta persistencia
-void EliminarDirectorio();			//DESARROLLADA, falta persistencia
-void RenombrarDirectorio();			//DESARROLLADA, falta persistencia
-void MoverDirectorio();				//DESARROLLADA, falta persistencia
-int CopiarArchivoAMDFS();			//Pame TODAVIA NO DESARROLLADA
-int CopiarArchivoDelMDFS(int flag, char*unArchivo);		//Pame TODAVIA NO DESARROLLADA
-void MD5DeArchivo();				//Pame TODAVIA NO DESARROLLADA
-int VerBloque();					//DESARROLLADA
-void BorrarBloque();				//DESARROLLADA
-void CopiarBloque();				//TODAVIA NO DESARROLLADA
-void AgregarNodo();					//DESARROLLADA
-void EliminarNodo();  				//DESARROLLADA
-int BuscarArchivoPorNombre (); //DESARROLLADA
-uint32_t BuscarPadre (char* path);            //Devuelve el idPadre en caso de éxito, devuelve -1 si no lo encuentra
+
+void FormatearFilesystem ();							//DESARROLLADA
+void EliminarArchivo();									//DESARROLLADA, falta persistencia
+void RenombrarArchivo();								//DESARROLLADA, falta persistencia
+void MoverArchivo();									//NO ANDA	  , falta persistencia
+void CrearDirectorio();									//DESARROLLADA, falta persistencia
+void EliminarDirectorio();								//DESARROLLADA, falta persistencia
+void RenombrarDirectorio();								//DESARROLLADA, falta persistencia
+void MoverDirectorio();									//DESARROLLADA, falta persistencia
+int CopiarArchivoAMDFS();								//DESARROLLADA, falta persistencia
+int CopiarArchivoDelMDFS(int flag, char*unArchivo);		//DESARROLLADA
+void MD5DeArchivo();									//DESARROLLADA
+int VerBloque();										//DESARROLLADA
+void BorrarBloque();									//DESARROLLADA, falta persistencia
+void CopiarBloque();									//DESARROLLADA, falta persistencia
+void AgregarNodo();										//DESARROLLADA
+void EliminarNodo();  									//DESARROLLADA
+void apagar_proceso();									//NO DESARROLLADA, DEBE LIBERAR LOS RECURSOS ANTES DEL EXIT
+
+int BuscarArchivoPorNombre ();
+uint32_t BuscarPadre (char* path);            			//Devuelve el idPadre en caso de éxito, devuelve -1 si no lo encuentra
 //static void eliminar_bloques(t_copias *bloque);
 long ExisteEnLaLista(t_list* listaDirectorios, char* nombreDirectorioABuscar, uint32_t idPadre);
 int BuscarMenorIndiceLibre (char indiceDirectorios[]);
