@@ -1639,9 +1639,6 @@ void MD5DeArchivo() {
 	int childpid;
 	pipe(fd);
 	char result[1000];
-	//char *archivo="/tmp/archivito"; //archivo de ejemplo
-	// hay que pedir que ingrese un archivo que haya descargado previamente
-	// del MDFS y validar que exista
 	char *path=string_new();
 	char *ruta=string_new();
 	char *nombre_del_archivo=string_new();
