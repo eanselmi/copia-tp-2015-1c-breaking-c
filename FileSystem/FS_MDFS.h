@@ -66,7 +66,7 @@ void BorrarBloque();									//DESARROLLADA, falta persistencia
 void CopiarBloque();									//DESARROLLADA, falta persistencia
 void AgregarNodo();										//DESARROLLADA
 void EliminarNodo();  									//DESARROLLADA
-void apagar_proceso();									//NO DESARROLLADA, DEBE LIBERAR LOS RECURSOS ANTES DEL EXIT
+void eliminar_listas(t_list *archivos_l, t_list *directorios_d, t_list *nodos_n);	//NO DESARROLLADA, DEBE LIBERAR LOS RECURSOS ANTES DEL EXIT
 
 //----------------------------------------------------------------------------------------
 //------------------------------- FUNCIONES AUXILIARES -----------------------------------
