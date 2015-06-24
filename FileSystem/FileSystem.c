@@ -919,15 +919,20 @@ void RenombrarArchivo() {
 void MoverArchivo() {
 	t_archivo* archivo=malloc(sizeof(t_archivo));
 	printf("Eligió Mover archivos\n");
-	char* path = string_new();
-	char *pathAuxiliar=string_new();
-	char* nuevoPath = string_new();
+	char path[100];
+	char pathAuxiliar[100];
+	char nuevoPath[100];
 	int i,encontrado=0;
 	char **directoriosPorSeparado;
 	int posicionDirectorio=0;
 	char *directorioDestino=string_new();
+	char *nombre_del_archivo=string_new();
+	int aux1,aux2=0;
+	char *saveptr;
 	printf("Ingrese el path del archivo \n");
+	memset(path,'\0',100);
 	scanf("%s", path);
+	memset(pathAuxiliar,'\0',100);
 	strcpy(pathAuxiliar,path);
 	directoriosPorSeparado=string_split(pathAuxiliar,"/");
 	while(directoriosPorSeparado[posicionDirectorio+1]!=NULL){
@@ -935,14 +940,11 @@ void MoverArchivo() {
 		string_append(&directorioDestino,directoriosPorSeparado[posicionDirectorio]);
 		posicionDirectorio++;
 	}
-	char *nombre_del_archivo=string_new();
-	int aux1,aux2=0;
-	char *saveptr;
 	for (aux1=0;aux1<strlen(pathAuxiliar);aux1++) if (pathAuxiliar[aux1]=='/') aux2++;
 	nombre_del_archivo = strtok_r(pathAuxiliar,"/",&saveptr);
 	for (aux1=0;aux1<aux2-1;aux1++) nombre_del_archivo = strtok_r(NULL,"/",&saveptr);
 
-	uint32_t idPadre = BuscarPadre(directorioDestino);
+	int idPadre = BuscarPadre(directorioDestino);
 	printf ("Padre: %d\n",idPadre);
 	if (idPadre==-1){
 		printf ("El path no existe\n");
@@ -961,15 +963,18 @@ void MoverArchivo() {
 		Menu();
 	}
 	printf("Ingrese el nuevo path \n");
+	memset(nuevoPath,'\0',100);
 	scanf("%s", nuevoPath);
-	uint32_t idPadreNuevo = BuscarPadre(nuevoPath);
+	int idPadreNuevo = BuscarPadre(nuevoPath);
 	if (idPadreNuevo==-1){
 		printf ("El path destino no existe\n");
 		Menu();
 	}
+	printf("andre was here\n");
 	archivo->padre = idPadreNuevo;
 	strcat(nuevoPath,"/");
 	strcat(nuevoPath,nombre_del_archivo);
+	memset(archivo->path,'\0',100);
 	strcpy(archivo->path,nuevoPath);
 }
 
@@ -996,13 +1001,14 @@ long ExisteEnLaLista(t_list* listaDirectorios, char* nombreDirectorioABuscar,uin
 void CrearDirectorio() {
 	//printf("Eligió Crear directorios\n");
 	uint32_t idPadre;
-	char* path = string_new();
+	char path[200];
 	char** directorioNuevo;
 	t_dir* directorioACrear;
 	int cantDirACrear = 0;
 	directorioACrear = malloc(sizeof(t_dir));
 	long idAValidar; //uso este tipo para cubrir rango de uint32_t y el -1,  deberia mejorar el nombre de la variable
 	printf("Ingrese el path del directorio desde raíz ejemplo /home/utnso \n");
+	memset(path,'\0',200);
 	scanf("%s", path);
 	directorioNuevo = string_split((char*) path, "/"); //Devuelve un array del path del directorio a crear
 	//int indiceVectorDirNuevo=1;
