@@ -269,8 +269,8 @@ int Menu(void) {
 			//case 17: printf("Eligió Salir\n"); break;
 
 		//case 17: listar_nodos_conectados(nodos); break;
-		case 17: listar_archivos_subidos(archivos); break;
-		//case 17: listar_directorios(); break;
+		//case 17: listar_archivos_subidos(archivos); break;
+		case 17: listar_directorios(); break;
 		default: printf("Opción incorrecta. Por favor ingrese una opción del 1 al 17\n"); break;
 		}
 	}
@@ -1137,9 +1137,13 @@ void EliminarDirectorio() {
 
 void RenombrarDirectorio() {
 	//printf("Eligió Renombrar directorios\n");
-	char* pathOriginal = string_new();
+	//char* pathOriginal = string_new();
+	char pathOriginal[200];
+	memset(pathOriginal, '\0', 200);
 	char** vectorPathOriginal;
-	char* pathNuevo = string_new();
+	//char* pathNuevo = string_new();
+	char pathNuevo[200];
+	memset(pathNuevo, '\0', 200);
 	t_dir* elementoDeMiLista;
 	elementoDeMiLista = malloc(sizeof(t_dir));
 	int tamanioLista = list_size(directorios);
