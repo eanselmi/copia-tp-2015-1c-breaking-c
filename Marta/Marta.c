@@ -61,8 +61,9 @@ int main(int argc, char**argv){
 	//para recibir la informacion de los archivos
 	int j, k, l;
 	int cantArchivos;
-	char* pathArchivo;
+	//char* pathArchivo;
 	char* nombreArchivo;
+	uint32_t padreArchivo;
 	uint32_t estadoArchivo;
 	char* nodoArchivo;
 	char nodoIdArchivo[6];
@@ -355,7 +356,6 @@ int main(int argc, char**argv){
 //
 //	//para recibir los archivos de FS
 
-/*
 	if ((nbytes = recv(socket_fs, &cantArchivos, sizeof(int), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
 		perror("recv");
 		log_error(logger,"FALLO el Recv de cantidad de archivos");
@@ -365,10 +365,10 @@ int main(int argc, char**argv){
 	while (j < cantArchivos){
 		//primero los datos de t_archivo, la lista de archivos
 		t_archivo* archivoTemporal = malloc(sizeof(t_archivo));
-		pathArchivo=string_new();
-		if ((nbytes = recv(socket_fs, pathArchivo, sizeof(pathArchivo), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
+		//pathArchivo=string_new(); //no enviamos path por ahora
+		if ((nbytes = recv(socket_fs, padreArchivo, sizeof(uint32_t), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
 			perror("recv");
-			log_error(logger,"FALLO el Recv del path de archivo");
+			log_error(logger,"FALLO el Recv del padre del archivo");
 			exit(-1);
 		}
 		nombreArchivo=string_new();
@@ -383,7 +383,8 @@ int main(int argc, char**argv){
 			exit(-1);
 		}
 		strcpy(archivoTemporal->nombre, nombreArchivo);
-		strcpy(archivoTemporal->path, pathArchivo);
+		//strcpy(archivoTemporal->path, pathArchivo);
+		archivoTemporal->padre = padreArchivo;
 		archivoTemporal->estado =estadoArchivo;
 
 		if ((nbytes = recv(socket_fs, cantidadBloquesArchivo, sizeof(int), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
@@ -422,7 +423,6 @@ int main(int argc, char**argv){
 		list_add(listaArchivos, archivoTemporal);
 		j++;
 	}
-*/
 
 	if( pthread_create( &escucha_jobs , NULL , connection_handler_jobs , NULL) < 0){
 	    perror("could not create thread");
@@ -592,6 +592,8 @@ void *atenderJob (int *socketJob) {
 	for(posicionArchivo=0;archivos[posicionArchivo]!=NULL;posicionArchivo++){
 		printf("Se debe trabajar en el archivo:%s\n",archivos[posicionArchivo]);
 	//De cada archivo que nos manda el Job buscamos y nos traemos los bloques
+
+//TODO revisar buscarBloques
 		bloques=buscarBloques(archivos[posicionArchivo]);
 	//Enviamos rutina Map de cada bloque del archivo al Job que nos envio dicho archivo
 		cantBloques = list_size(bloques);
@@ -690,8 +692,10 @@ void *atenderJob (int *socketJob) {
 
 }
 
+//TODO revisar funcion buscarBloques ahora que ya t_archivo no guarda el path
+
 //Busca y trae todos los bloques de un archivo
-t_list* buscarBloques (char *unArchivo){
+/*t_list* buscarBloques (char *unArchivo){
 	t_archivo *archivoAux;
 	t_list *bloques;
 	int i;
@@ -703,7 +707,7 @@ t_list* buscarBloques (char *unArchivo){
 		}
 	}
 	return bloques;
-}
+}*/
 
 
 static void eliminarCopiasNodo(t_list *self){
