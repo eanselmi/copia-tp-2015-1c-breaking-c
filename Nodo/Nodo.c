@@ -887,7 +887,9 @@ void* rutinaReduce (int* sckReduce){
 				&& unArchivoReduce->puerto_nodo==config_get_int_value(configurador,"PUERTO_NODO")){
 			FILE * nuevoFileStream;
 			t_archivoEnApareo *nuevoArchivoEnApareo=malloc(sizeof(t_archivoEnApareo));
-			nuevoFileStream=fopen(unArchivoReduce->archivoAAplicarReduce,"r");
+			if((nuevoFileStream=fopen(unArchivoReduce->archivoAAplicarReduce,"r"))==NULL){
+				perror("fopen:");
+			}
 			nuevoArchivoEnApareo->archivo=nuevoFileStream;
 			memset(nuevoArchivoEnApareo->buffer,'\0',512);
 			nuevoArchivoEnApareo->socket=-1;
@@ -954,6 +956,7 @@ void ejecutarReduce(t_list* archivosApareando,char* resultado){
 	int posicionLista;
 	int cantidadArchivos=list_size(archivosApareando);
 	char dameUnRenglon[BUF_SIZE];
+	char bufferMenor[512];
 	memset(dameUnRenglon,'\0',BUF_SIZE);
 	strcpy(dameUnRenglon,"Dame renglon");
 	//Leer una linea de cada uno, guardar en el buffer
@@ -965,25 +968,33 @@ void ejecutarReduce(t_list* archivosApareando,char* resultado){
 			send(unArchivo->socket,dameUnRenglon,sizeof(dameUnRenglon),MSG_WAITALL);
 			send(unArchivo->socket,unArchivo->nombreArchivo,sizeof(unArchivo->nombreArchivo),MSG_WAITALL);
 			recv(unArchivo->socket,unArchivo->buffer,sizeof(unArchivo->buffer),MSG_WAITALL);
-			printf("Recibi del nodo el renglon: %s\n",unArchivo->buffer);
+		//	printf("Recibi del nodo el renglon: %s",unArchivo->buffer);
 		}
 		else{ //es un archivo local
 			fgets(unArchivo->buffer,512,unArchivo->archivo);
-			printf("El renglon del archivo local es:%s",unArchivo->buffer);
+		//	printf("El renglon del archivo local es:%s",unArchivo->buffer);
+		}
+	}
+	//Comparar entretodos los buffer el menor
+	memset(bufferMenor,'\0',512);
+	t_archivoEnApareo* unArchivo=malloc(sizeof(t_archivoEnApareo));
+	unArchivo=list_get(archivosApareando,0); // Considero como menor al primer archivo
+	strcpy(bufferMenor,unArchivo->buffer);
+	for(posicionLista=0;posicionLista<cantidadArchivos;posicionLista++){
+		unArchivo=list_get(archivosApareando,posicionLista);
+		if (strcmp(unArchivo->buffer,bufferMenor)<0){
+			strcpy(bufferMenor,unArchivo->buffer);
 		}
 	}
 
-
-	//Comparar entretodos los buffer el menor
 	//El menor, escribirlo en stdin
+	printf("El menor es: %s",bufferMenor);
+
 	//Leer la proxima linea del menor
 	//cuando alguno de los archivos sea EOF, se tiene que cerrar (fclose ya sea en el nodo o local)
 
 
 
-	//Recorro la lista de archivos, si es local lo abro, agrego el FILE* y un buffer de 512 bytes a la lista archivosReduce,
-	//Si es remoto lo pido al nodo, guardo el socket y un buffer de 512 bytes
-	//voy leyendo una lin
 }
 
 
