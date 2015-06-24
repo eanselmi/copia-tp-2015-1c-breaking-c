@@ -365,19 +365,19 @@ int main(int argc, char**argv){
 	while (j < cantArchivos){
 		//primero los datos de t_archivo, la lista de archivos
 		t_archivo* archivoTemporal = malloc(sizeof(t_archivo));
-		//pathArchivo=string_new(); //no enviamos path por ahora
-		if ((nbytes = recv(socket_fs, padreArchivo, sizeof(uint32_t), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
-			perror("recv");
-			log_error(logger,"FALLO el Recv del padre del archivo");
-			exit(-1);
-		}
 		nombreArchivo=string_new();
 		if ((nbytes = recv(socket_fs, nombreArchivo, sizeof(nombreArchivo), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
 			perror("recv");
 			log_error(logger,"FALLO el Recv del nombre del archivo");
 			exit(-1);
 		}
-		if ((nbytes = recv(socket_fs, estadoArchivo, sizeof(uint32_t), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
+		//pathArchivo=string_new(); //no enviamos path por ahora
+		if ((nbytes = recv(socket_fs, &padreArchivo, sizeof(uint32_t), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
+			perror("recv");
+			log_error(logger,"FALLO el Recv del padre del archivo");
+			exit(-1);
+		}
+		if ((nbytes = recv(socket_fs, &estadoArchivo, sizeof(uint32_t), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
 			perror("recv");
 			log_error(logger,"FALLO el Recv del estado del archivo");
 			exit(-1);
@@ -387,15 +387,16 @@ int main(int argc, char**argv){
 		archivoTemporal->padre = padreArchivo;
 		archivoTemporal->estado =estadoArchivo;
 
-		if ((nbytes = recv(socket_fs, cantidadBloquesArchivo, sizeof(int), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
+		if ((nbytes = recv(socket_fs, &cantidadBloquesArchivo, sizeof(int), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
 			perror("recv");
 			log_error(logger,"FALLO el Recv de cantidad de bloques del archivo");
 			exit(-1);
 		}
+		archivoTemporal->bloques = list_create();
 		while (k < cantidadBloquesArchivo){
 			t_bloque* bloqueArchivoTemporal = malloc(sizeof(t_bloque));
 			bloqueArchivoTemporal->copias = list_create();
-			if ((nbytes = recv(socket_fs, cantidadCopiasArchivo, sizeof(int), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
+			if ((nbytes = recv(socket_fs, &cantidadCopiasArchivo, sizeof(int), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
 				perror("recv");
 				log_error(logger,"FALLO el Recv de cantidad de copias del bloque del archivo");
 				exit(-1);
