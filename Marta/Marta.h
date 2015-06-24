@@ -5,7 +5,8 @@
 //estructura con la información de FileSystem
 typedef struct estructura_filesystem {
 	char* nombre;
-	char* path;
+	//char* path; // Job le dira el path completo a Marta, ella se lo pregunta a FS y este le devuelve el padre
+	uint32_t padre;
 	uint32_t estado;
 	t_list *bloques; //Se debe crear una lista de tipo "t_bloque" y agregarla acá
 } t_archivo;

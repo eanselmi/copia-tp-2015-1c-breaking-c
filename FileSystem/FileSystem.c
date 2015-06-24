@@ -915,6 +915,7 @@ void RenombrarArchivo() {
 
 
 void MoverArchivo() {
+
 	t_archivo* archivo=malloc(sizeof(t_archivo));
 	printf("Eligió Mover archivos\n");
 	char path[100];
