@@ -26,9 +26,13 @@ typedef struct estructura_archivosapareando{
 	FILE* archivo;
 	int socket;
 	char buffer[512];
+	char nombreArchivo[TAM_NOMFINAL];
 }t_archivoEnApareo;
 
-
+typedef struct estructura_archivoAbierto{
+	FILE* archivoAbierto;
+	char nombreArchivo[TAM_NOMFINAL];
+}t_archivoAbierto;
 
 //Declaración de funciones
 char* mapearFileDeDatos();
@@ -47,7 +51,7 @@ char* crearBloqueFalso(); //Solo para uso interno, crea un bloque de 20MB
 char* crearBloqueAMediasFalso(); // Solo para uso interno, crea un bloque de 10MB
 void crearArchivoFalso();//Solo para uso interno, crea un archivo de 50MB en /tmp/archivoPrueba.txt (se puede regular el tamaño en multiplos de 10MB)
 void ejecutarReduce(t_list * listaArchivos, char* resultado);
-
+FILE* estaEnListaArchivosAbiertos(char* nombreArchivo);
 
 //Para probar crearBloqueFalso y grabar en un bloque del nodo hacer lo siguiente
 /*Generacion de datos para probar el funcionamiento de la funcion setBloque*/

@@ -35,6 +35,7 @@ int listener; //socket encargado de escuchar nuevas conexiones
 t_list* listaNodosConectados; //Lista con los nodos conectados
 t_list* listaMappersConectados; //Lista con los mappers conectados
 t_list* listaReducersConectados; //lista con los reducers conectados
+t_list* archivosAbiertos; //Archivos ya abiertos que otro nodo me pide que pase renglon
 char nodo_id[6];
 char bufGetArchivo[BLOCK_SIZE]; //Buffer para la funcion getFileContent
 //char buffer[BLOCK_SIZE]; //Buffer que tiene un bloque que llega del filesystem
@@ -72,6 +73,7 @@ int main(int argc , char *argv[]){
 	listaNodosConectados=list_create();
 	listaMappersConectados=list_create();
 	listaReducersConectados=list_create();
+	archivosAbiertos=list_create();
 
 
 	bloquesTotales=malloc(sizeof(int));
@@ -202,6 +204,8 @@ void *manejador_de_escuchas(){
 	pthread_t mapperThread;
 	pthread_t reducerThread;
 	char mensaje[BUF_SIZE]; //Mensaje que recivirá de los clientes
+	char archivoAPasar[TAM_NOMFINAL]; //Nombre del archivo que me pide otro nodo
+	char renglon[512]; //Renglon para otro nodo
 	int socketModificado,nbytes,newfd,addrlen,read_size;
 	struct sockaddr_in remote_client; //Direccion del cliente que se conectará
 	int* socketNodo; //para identificar los que son nodos conectados
@@ -248,23 +252,14 @@ void *manejador_de_escuchas(){
 							// el nuevo conectado me manda algo, se identifica como mapper, reducer o nodo
 							if(nbytes>0 && strncmp(mensaje,"soy nodo",9)==0){
 								//se conectó un nodo
-								//*socketNodo=newfd;
-							//	list_add(listaNodosConectados,socketNodo); //agrego el nuevo socket a la lista de Nodos conectados
-//								FD_SET(newfd,&master); //añadir al conjunto maestro
-//								if(newfd>fdmax){ //actualizar el máximo
-//									fdmax=newfd;
-//								}
-								char archivoAPasar[TAM_NOMFINAL];
-								memset(archivoAPasar,'\0',TAM_NOMFINAL);
-								log_info(logger,"Se conectó el nodo %s, puerto %d",inet_ntoa(remote_client.sin_addr),ntohs(remote_client.sin_port));
-
-								if(recv(newfd,archivoAPasar,sizeof(archivoAPasar),MSG_WAITALL)==-1){
-									perror("recv");
-									log_error(logger,"Fallo al recibir el archivo a pasarle al otro nodo");
+								socketNodo=malloc(sizeof(int));
+								*socketNodo=newfd;
+								list_add(listaNodosConectados,socketNodo); //agrego el nuevo socket a la lista de Nodos conectados
+								FD_SET(newfd,&master); //añadir al conjunto maestro
+								if(newfd>fdmax){ //actualizar el máximo
+									fdmax=newfd;
 								}
-
-								printf("El nodo me pidio el archivo %s\n",archivoAPasar);
-
+								log_info(logger,"Se conectó el nodo %s, puerto %d",inet_ntoa(remote_client.sin_addr),ntohs(remote_client.sin_port));
 
 							}
 							if(nbytes>0 && strncmp(mensaje,"soy mapper",11)==0){
@@ -361,8 +356,32 @@ void *manejador_de_escuchas(){
 						log_info(logger,"Se desconectó un Nodo");
 					}
 					else{
-
 						/* -- el nodo envío un mensaje a tratar -- */
+
+						if(strncmp(mensaje,"Dame renglon",12)==0){ //Me pidio un renglon, espero el nombre de que archivo
+							memset(renglon,'\0',512);
+							memset(archivoAPasar,'\0',TAM_NOMFINAL);
+							FILE* archParaPasar;
+							recv(socketModificado,archivoAPasar,sizeof(archivoAPasar),MSG_WAITALL);
+							printf("Me pidio un renglón del archivo %s\n",archivoAPasar);
+							if((archParaPasar=estaEnListaArchivosAbiertos(archivoAPasar))==NULL){ //Si el archivo no está ya abierto, lo abro y leo un renglon
+								t_archivoAbierto* archAbierto=malloc(sizeof(t_archivoAbierto));
+								//Abro el nuevo archivo
+								archParaPasar=fopen(archivoAPasar,"r");
+								//Agrego al nuevo archivo abierto a la lista de archivos abiertos
+								archAbierto->archivoAbierto=archParaPasar;
+								strcpy(archAbierto->nombreArchivo,archivoAPasar);
+								list_add(archivosAbiertos,archAbierto);
+								//leo un renglon
+								fgets(renglon,512,archParaPasar);
+							}
+							else{ //si ya esta abierto leo un renglon
+								fgets(renglon,512,archParaPasar);
+							}
+
+							send(socketModificado,renglon,sizeof(renglon),MSG_WAITALL);
+
+						}
 
 					}
 				}
@@ -410,6 +429,21 @@ void *manejador_de_escuchas(){
 		}
 	}
 }
+
+FILE* estaEnListaArchivosAbiertos(char* nombreArchivo){
+	int tamanio=list_size(archivosAbiertos);
+	int indice=0;
+	t_archivoAbierto* unArchAbierto;
+	for(indice=0;indice<tamanio;indice++){
+		unArchAbierto=list_get(archivosAbiertos,indice);
+		if(strcmp(unArchAbierto->nombreArchivo,nombreArchivo)==0){
+			return unArchAbierto->archivoAbierto;
+		}
+	}
+	//No está abierto
+	return NULL;
+}
+
 
 void ordenarMapper(char* pathMapperTemporal, char* nombreMapperOrdenado){
 	int outfd[2];
@@ -857,6 +891,7 @@ void* rutinaReduce (int* sckReduce){
 			nuevoArchivoEnApareo->archivo=nuevoFileStream;
 			memset(nuevoArchivoEnApareo->buffer,'\0',512);
 			nuevoArchivoEnApareo->socket=-1;
+			strcpy(nuevoArchivoEnApareo->nombreArchivo,unArchivoReduce->archivoAAplicarReduce);
 			printf("Agrego el archivo local %s\n",unArchivoReduce->archivoAAplicarReduce);
 			list_add(archivosEnApareo,nuevoArchivoEnApareo);
 		}
@@ -867,9 +902,9 @@ void* rutinaReduce (int* sckReduce){
 			int otroNodoSock;
 			struct sockaddr_in nodo_addr;
 			char identificacion[BUF_SIZE];
-			char nombreArchivo[TAM_NOMFINAL];
+//			char nombreArchivo[TAM_NOMFINAL];
 			t_archivoEnApareo *nuevoArchivoEnApareo=malloc(sizeof(t_archivoEnApareo));
-			memset(nombreArchivo,'\0',TAM_NOMFINAL);
+//			memset(nombreArchivo,'\0',TAM_NOMFINAL);
 			memset(identificacion,'\0',BUF_SIZE);
 			if((otroNodoSock=socket(AF_INET,SOCK_STREAM,0))==-1){ //si función socket devuelve -1 es error
 				perror("socket");
@@ -890,15 +925,16 @@ void* rutinaReduce (int* sckReduce){
 			}
 			/*Conexión mapper-nodo establecida*/
 			log_info(logger,"Nodo conectado al Nodo con IP: %s,en el Puerto: %d",unArchivoReduce->ip_nodo,unArchivoReduce->puerto_nodo);
-			strcpy(nombreArchivo,unArchivoReduce->archivoAAplicarReduce);
-			if(send(otroNodoSock,nombreArchivo,sizeof(nombreArchivo),MSG_WAITALL)==-1){
-				perror("send");
-				log_error(logger,"Fallo el envío de identificación nodo-nodo");
-			}
-			printf("Agrego el archivo remoto %s\n",nombreArchivo);
+//			strcpy(nombreArchivo,unArchivoReduce->archivoAAplicarReduce);
+//			if(send(otroNodoSock,nombreArchivo,sizeof(nombreArchivo),MSG_WAITALL)==-1){
+//				perror("send");
+//				log_error(logger,"Fallo el envío de identificación nodo-nodo");
+//			}
+//			printf("Agrego el archivo remoto %s\n",nombreArchivo);
 			nuevoArchivoEnApareo->archivo=NULL;
 			memset(nuevoArchivoEnApareo->buffer,'\0',512);
 			nuevoArchivoEnApareo->socket=otroNodoSock;
+			strcpy(nuevoArchivoEnApareo->nombreArchivo,unArchivoReduce->archivoAAplicarReduce);
 			list_add(archivosEnApareo,nuevoArchivoEnApareo);
 		}
 	}
@@ -906,7 +942,7 @@ void* rutinaReduce (int* sckReduce){
 
 
 	pthread_mutex_lock(&mutexReduce);
-	ejecutarReduce(listaArchivosReduce,nombreFinalReduce);
+	ejecutarReduce(archivosEnApareo,nombreFinalReduce);
 	pthread_mutex_unlock(&mutexReduce);
 
 
@@ -914,7 +950,35 @@ void* rutinaReduce (int* sckReduce){
 	pthread_exit((void*)0);
 }
 
-void ejecutarReduce(t_list* listaArchivos,char* resultado){
+void ejecutarReduce(t_list* archivosApareando,char* resultado){
+	int posicionLista;
+	int cantidadArchivos=list_size(archivosApareando);
+	char dameUnRenglon[BUF_SIZE];
+	memset(dameUnRenglon,'\0',BUF_SIZE);
+	strcpy(dameUnRenglon,"Dame renglon");
+	//Leer una linea de cada uno, guardar en el buffer
+
+	for(posicionLista=0;posicionLista<cantidadArchivos;posicionLista++){
+		t_archivoEnApareo* unArchivo=malloc(sizeof(t_archivoEnApareo));
+		unArchivo=list_get(archivosApareando,posicionLista);
+		if(unArchivo->archivo==NULL){ //Si es un archivo Remoto
+			send(unArchivo->socket,dameUnRenglon,sizeof(dameUnRenglon),MSG_WAITALL);
+			send(unArchivo->socket,unArchivo->nombreArchivo,sizeof(unArchivo->nombreArchivo),MSG_WAITALL);
+			recv(unArchivo->socket,unArchivo->buffer,sizeof(unArchivo->buffer),MSG_WAITALL);
+			printf("Recibi del nodo el renglon: %s\n",unArchivo->buffer);
+		}
+		else{ //es un archivo local
+			fgets(unArchivo->buffer,512,unArchivo->archivo);
+			printf("El renglon del archivo local es:%s",unArchivo->buffer);
+		}
+	}
+
+
+	//Comparar entretodos los buffer el menor
+	//El menor, escribirlo en stdin
+	//Leer la proxima linea del menor
+	//cuando alguno de los archivos sea EOF, se tiene que cerrar (fclose ya sea en el nodo o local)
+
 
 
 	//Recorro la lista de archivos, si es local lo abro, agrego el FILE* y un buffer de 512 bytes a la lista archivosReduce,
