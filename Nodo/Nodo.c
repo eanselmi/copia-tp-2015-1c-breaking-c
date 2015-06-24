@@ -250,11 +250,22 @@ void *manejador_de_escuchas(){
 								//se conectó un nodo
 								//*socketNodo=newfd;
 							//	list_add(listaNodosConectados,socketNodo); //agrego el nuevo socket a la lista de Nodos conectados
-								FD_SET(newfd,&master); //añadir al conjunto maestro
-								if(newfd>fdmax){ //actualizar el máximo
-									fdmax=newfd;
+//								FD_SET(newfd,&master); //añadir al conjunto maestro
+//								if(newfd>fdmax){ //actualizar el máximo
+//									fdmax=newfd;
+//								}
+								char archivoAPasar[TAM_NOMFINAL];
+								memset(archivoAPasar,'\0',TAM_NOMFINAL);
+								log_info(logger,"Se conectó el nodo %s, puerto %d",inet_ntoa(remote_client.sin_addr),ntohs(remote_client.sin_port));
+
+								if(recv(newfd,archivoAPasar,sizeof(archivoAPasar),MSG_WAITALL)==-1){
+									perror("recv");
+									log_error(logger,"Fallo al recibir el archivo a pasarle al otro nodo");
 								}
-								log_info(logger,"Se conectó el nodo %s",inet_ntoa(remote_client.sin_addr));
+
+								printf("El nodo me pidio el archivo %s\n",archivoAPasar);
+
+
 							}
 							if(nbytes>0 && strncmp(mensaje,"soy mapper",11)==0){
 								//se conectó un hilo mapper
@@ -738,12 +749,15 @@ void* rutinaReduce (int* sckReduce){
 	char nombreFinalReduce[TAM_NOMFINAL];
 	char rutinaReduce[REDUCE_SIZE];
 	int cantidadArchivos;
+	int posicionEnListaArchivos=0;
 	int indice=0;
 	FILE* scriptReduce;
 	t_list* listaArchivosReduce;
+	t_list* archivosEnApareo;
 	memset(nombreFinalReduce,'\0',TAM_NOMFINAL);
 	memset(rutinaReduce,'\0',REDUCE_SIZE);
 	listaArchivosReduce=list_create();
+	archivosEnApareo=list_create();
 	char** arrayTiempo;
 	char *nombreNuevoReduce=string_new(); //será el nombre del nuevo map
 	char *tiempo=string_new(); //string que tendrá la hora
@@ -819,15 +833,77 @@ void* rutinaReduce (int* sckReduce){
 		list_add(listaArchivosReduce,archivoParaReduce);
 	}
 
-	printf("Se aplicara reduce en los archivos:\n");
+//	printf("Se aplicara reduce en los archivos:\n");
+//
+//	for(indice=0;indice<list_size(listaArchivosReduce);indice++){
+//		t_archivosReduce *archivoPR;
+//		archivoPR=list_get(listaArchivosReduce,indice);
+//		printf("\t IP Nodo:%s\n",archivoPR->ip_nodo);
+//		printf("\t Puerto Nodo:%d\n",archivoPR->puerto_nodo);
+//		printf("\t Nombre archivo:%s\n",archivoPR->archivoAAplicarReduce);
+//	}
 
-	for(indice=0;indice<list_size(listaArchivosReduce);indice++){
-		t_archivosReduce *archivoPR;
-		archivoPR=list_get(listaArchivosReduce,indice);
-		printf("\t IP Nodo:%s\n",archivoPR->ip_nodo);
-		printf("\t Puerto Nodo:%d\n",archivoPR->puerto_nodo);
-		printf("\t Nombre archivo:%s\n",archivoPR->archivoAAplicarReduce);
+	//RECORRO LA LISTA DE ARCHIVOS Y LLENO OTRA LISTA, CON FILE* SI ES ARCHIVO LOCAL; SOCKET SI ES REMOTO y UN BUF PARA AMBOS DONDE
+	//IRIA LA NUEVA LINEA
+	for(posicionEnListaArchivos=0;posicionEnListaArchivos<list_size(listaArchivosReduce);posicionEnListaArchivos++){
+		t_archivosReduce *unArchivoReduce;
+		unArchivoReduce=malloc(sizeof(t_archivosReduce));
+		unArchivoReduce=list_get(listaArchivosReduce,posicionEnListaArchivos);
+		if(strcmp(unArchivoReduce->ip_nodo,config_get_string_value(configurador,"IP_NODO"))==0  //SI ENTRA ACÁ ES UN ARCHIVO LOCAL
+				&& unArchivoReduce->puerto_nodo==config_get_int_value(configurador,"PUERTO_NODO")){
+			FILE * nuevoFileStream;
+			t_archivoEnApareo *nuevoArchivoEnApareo=malloc(sizeof(t_archivoEnApareo));
+			nuevoFileStream=fopen(unArchivoReduce->archivoAAplicarReduce,"r");
+			nuevoArchivoEnApareo->archivo=nuevoFileStream;
+			memset(nuevoArchivoEnApareo->buffer,'\0',512);
+			nuevoArchivoEnApareo->socket=-1;
+			printf("Agrego el archivo local %s\n",unArchivoReduce->archivoAAplicarReduce);
+			list_add(archivosEnApareo,nuevoArchivoEnApareo);
+		}
+
+		//SI NO ENTRO EN EL IF, ES UN ARCHIVO REMOTO, HAY QUE BUSCARLO EN UN NODO
+
+		else{
+			int otroNodoSock;
+			struct sockaddr_in nodo_addr;
+			char identificacion[BUF_SIZE];
+			char nombreArchivo[TAM_NOMFINAL];
+			t_archivoEnApareo *nuevoArchivoEnApareo=malloc(sizeof(t_archivoEnApareo));
+			memset(nombreArchivo,'\0',TAM_NOMFINAL);
+			memset(identificacion,'\0',BUF_SIZE);
+			if((otroNodoSock=socket(AF_INET,SOCK_STREAM,0))==-1){ //si función socket devuelve -1 es error
+				perror("socket");
+				log_error(logger,"Fallo la creación del socket (conexión nodo-nodo)");
+			}
+			nodo_addr.sin_family=AF_INET;
+			nodo_addr.sin_port=htons(unArchivoReduce->puerto_nodo);
+			nodo_addr.sin_addr.s_addr=inet_addr(unArchivoReduce->ip_nodo);
+			memset(&(nodo_addr.sin_zero),'\0',8);
+			if((connect(otroNodoSock,(struct sockaddr *)&nodo_addr,sizeof(struct sockaddr)))==-1){
+				perror("connect");
+				log_error(logger,"Fallo la conexión con el nodo");
+			}
+			strcpy(identificacion,"soy nodo");
+			if(send(otroNodoSock,identificacion,sizeof(identificacion),MSG_WAITALL)==-1){
+				perror("send");
+				log_error(logger,"Fallo el envío de identificación nodo-nodo");
+			}
+			/*Conexión mapper-nodo establecida*/
+			log_info(logger,"Nodo conectado al Nodo con IP: %s,en el Puerto: %d",unArchivoReduce->ip_nodo,unArchivoReduce->puerto_nodo);
+			strcpy(nombreArchivo,unArchivoReduce->archivoAAplicarReduce);
+			if(send(otroNodoSock,nombreArchivo,sizeof(nombreArchivo),MSG_WAITALL)==-1){
+				perror("send");
+				log_error(logger,"Fallo el envío de identificación nodo-nodo");
+			}
+			printf("Agrego el archivo remoto %s\n",nombreArchivo);
+			nuevoArchivoEnApareo->archivo=NULL;
+			memset(nuevoArchivoEnApareo->buffer,'\0',512);
+			nuevoArchivoEnApareo->socket=otroNodoSock;
+			list_add(archivosEnApareo,nuevoArchivoEnApareo);
+		}
 	}
+
+
 
 	pthread_mutex_lock(&mutexReduce);
 	ejecutarReduce(listaArchivosReduce,nombreFinalReduce);
@@ -839,9 +915,11 @@ void* rutinaReduce (int* sckReduce){
 }
 
 void ejecutarReduce(t_list* listaArchivos,char* resultado){
-	int cantidadArch;
-	cantidadArch=list_size(listaArchivos);
-	printf("Se hará el reduce entre %d archivos\n",cantidadArch);
+
+
+	//Recorro la lista de archivos, si es local lo abro, agrego el FILE* y un buffer de 512 bytes a la lista archivosReduce,
+	//Si es remoto lo pido al nodo, guardo el socket y un buffer de 512 bytes
+	//voy leyendo una lin
 }
 
 

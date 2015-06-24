@@ -22,6 +22,13 @@ typedef struct lista_nodos_reduce{
 	char archivoAAplicarReduce[TAM_NOMFINAL];
 } __attribute__((packed)) t_archivosReduce;
 
+typedef struct estructura_archivosapareando{
+	FILE* archivo;
+	int socket;
+	char buffer[512];
+}t_archivoEnApareo;
+
+
 
 //Declaración de funciones
 char* mapearFileDeDatos();
