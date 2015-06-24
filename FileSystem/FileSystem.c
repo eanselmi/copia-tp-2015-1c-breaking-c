@@ -268,9 +268,10 @@ int Menu(void) {
 			EliminarNodo();	break;
 			//case 17: printf("Eligió Salir\n"); break;
 
-		//case 17: listar_nodos_conectados(nodos); break;
+		case 17: listar_nodos_conectados(nodos); break;
 		//case 17: listar_archivos_subidos(archivos); break;
-		case 17: listar_directorios(); break;
+		//case 17: listar_directorios(); break;
+		//case 17: eliminar_listas(archivos,directorios,nodos); break;
 		default: printf("Opción incorrecta. Por favor ingrese una opción del 1 al 17\n"); break;
 		}
 	}
@@ -314,11 +315,11 @@ static t_nodo *agregar_nodo_a_lista(char nodo_id[6], int socket, int est, int es
 		bitarray_clean_bit(nodo_temporal->bloques_del_nodo, i);
 
 	//mongo
-	char *tmp_socket = malloc(sizeof(int));
-	char *tmp_estado = malloc(sizeof(int));
-	char *tmp_puerto = malloc(sizeof(int));
-	char *tmp_bl_lib = malloc(sizeof(int));
-	char *tmp_bl_tot = malloc(sizeof(int));
+	char *tmp_socket = string_new();
+	char *tmp_estado = string_new();
+	char *tmp_puerto = string_new();
+	char *tmp_bl_lib = string_new();
+	char *tmp_bl_tot = string_new();
 	sprintf(tmp_socket, "%d", socket);
 	sprintf(tmp_estado, "%d", est);
 	sprintf(tmp_puerto, "%d", port);
@@ -329,6 +330,11 @@ static t_nodo *agregar_nodo_a_lista(char nodo_id[6], int socket, int est, int es
 	if (!mongoc_collection_insert(collection, MONGOC_INSERT_NONE, doc, NULL,&error)) {
 		printf("%s\n", error.message);
 	}
+	free(tmp_socket);
+	free(tmp_estado);
+	free(tmp_puerto);
+	free(tmp_bl_lib);
+	free(tmp_bl_tot);
 
 	return nodo_temporal;
 }
@@ -767,14 +773,18 @@ static void eliminar_lista_de_copias (t_copias *self){
 	free(self->nodo);
 	free(self);
 }
+static void eliminar_lista_de_nodos (t_nodo *self){
+	bitarray_destroy(self->bloques_del_nodo);
+	free(self->bloques_bitarray);
+	free(self->ip);
+	free(self);
+}
 static void eliminar_lista_de_bloques(t_bloque *self){
 	list_destroy(self->copias);
 	free(self);
 }
 
 static void eliminar_lista_de_archivos (t_archivo *self){
-	//free(self->nombre);
-	//free(self->path);
 	list_destroy(self->bloques);
 	free(self);
 }
@@ -881,7 +891,6 @@ void EliminarArchivo() {
 
 	//TODO: ACTUALIZAR EL ARCHIVO ELIMINADO A MARTA
 }
-
 void RenombrarArchivo() {
 	t_archivo* archivo=malloc(sizeof(t_archivo));
 	char ** directoriosPorSeparado;
@@ -912,8 +921,6 @@ void RenombrarArchivo() {
 
 	//TODO: ACTUALIZAR EL NUEVO NOMBRE A MARTA
 }
-
-
 void MoverArchivo() {
 
 	t_archivo* archivo=malloc(sizeof(t_archivo));
@@ -1039,6 +1046,55 @@ void CrearDirectorio() {
 static void directorio_destroy(t_dir* self) {
 	free(self->nombre);
 	free(self);
+}
+
+void eliminar_listas(t_list *archivos_l, t_list *directorios_l, t_list *nodos_l){
+	int i,j,k;
+	//=====================================================================
+	//======================= LIBERAR PARTE 1 =============================
+	//==================ELIMINO LA LISTA DE ARCHIVOS=======================
+	//=====================================================================
+	if (archivos_l!=NULL){
+		t_archivo *archi=malloc(sizeof(t_archivo));
+		t_bloque *bloq=malloc(sizeof(t_bloque));
+
+		for (i=0;i<list_size(archivos_l);i++){
+			archi=list_get(archivos_l,i);
+			for (j=0;j<list_size(archi->bloques);j++){
+				bloq=list_get(archi->bloques,j);
+				for (k=0;k<list_size(bloq->copias);k++){
+					list_remove_and_destroy_element(bloq->copias,k,(void*)eliminar_lista_de_copias);
+				}
+				list_remove_and_destroy_element(archi->bloques,j,(void*)eliminar_lista_de_bloques);
+			}
+			list_remove_and_destroy_element(archivos_l,i,(void*)eliminar_lista_de_archivos);
+		}
+		list_destroy(archivos_l);
+
+	}
+	//=====================================================================
+	//======================= LIBERAR PARTE 2 =============================
+	//====================== LIBERO LOS NODOS =============================
+	//=====================================================================
+
+	if (nodos_l!=NULL){
+		list_clean_and_destroy_elements(nodos_l,(void*)eliminar_lista_de_nodos);
+		list_destroy(nodos_l);
+	}
+	//=====================================================================
+	//======================= FORMATEO PARTE 3 ============================
+	//==================ELIMINO LA LISTA DE DIRECTORIOS====================
+	//=====================================================================
+
+	if (directorios_l!=NULL){
+		list_clean_and_destroy_elements(directorios_l,(void*)eliminar_lista_de_directorio);
+		list_destroy(directorios_l);
+	}
+	if (archivos_l!=NULL && directorios_l!=NULL && nodos_l!=NULL){
+		printf ("Adios!\n");
+		exit(0);
+	}
+
 }
 
 void EliminarDirectorio() {
@@ -1407,6 +1463,7 @@ int CopiarArchivoAMDFS(){
 						copia_temporal->bloqueNodo=combo.n_bloque;
 						char *cadena_para_md5=malloc(20971520);
 						strcpy(cadena_para_md5,combo.buf_20mb);
+						memset(copia_temporal->md5,'\0',32);
 						strcpy(copia_temporal->md5,obtener_md5(cadena_para_md5));
 						copia_temporal->nodo=strdup(nodo_temporal->nodo_id);
 						list_add(bloque_temporal->copias,copia_temporal);
@@ -1468,20 +1525,17 @@ int CopiarArchivoAMDFS(){
     					copia_temporal->bloqueNodo=combo.n_bloque;
     					char *cadena_para_md5=malloc(20971520);
     					strcpy(cadena_para_md5,combo.buf_20mb);
-						strcpy(copia_temporal->md5,obtener_md5(cadena_para_md5));
+    					memset(copia_temporal->md5,'\0',32);
+    					strcpy(copia_temporal->md5,obtener_md5(cadena_para_md5));
     					copia_temporal->nodo=strdup(nodo_temporal->nodo_id);
     					list_add(bloque_temporal->copias,copia_temporal);
     					free(cadena_para_md5);
-
-
-
     				}
     			}
     			if (bandera!=3){
     				printf ("No hay suficientes nodos disponibles con espacio libre\n");
     				return -1;
     			}
-    			//list_add(archivo_temporal.bloques,agregar_bloque_a_lista(bloque_temporal));
     			pos = 0; //pos = 0;
     			cantBytes-=aux;
     			fseek(archivoLocal,cantBytes,SEEK_SET);
@@ -1532,19 +1586,18 @@ int CopiarArchivoAMDFS(){
     				printf ("Esto es lo que quedo, Quiero enviar %d y envie %d\n",sizeof(combo),total_enviado);
     				nodo_temporal->bloques_libres--;
     				bitarray_set_bit(nodo_temporal->bloques_del_nodo,combo.n_bloque);
-					//Agrego la copia del bloque a la lista de copias de este bloque particular
+
+    				//Agrego la copia del bloque a la lista de copias de este bloque particular
 					t_copias *copia_temporal=malloc(sizeof(t_copias));
 					copia_temporal->bloqueNodo=combo.n_bloque;
 					char *cadena_para_md5=malloc(20971520);
 					strcpy(cadena_para_md5,combo.buf_20mb);
+					memset(copia_temporal->md5,'\0',32);
 					strcpy(copia_temporal->md5,obtener_md5(cadena_para_md5));
 					copia_temporal->nodo=strdup(nodo_temporal->nodo_id);
 					list_add(bloque_temporal->copias,copia_temporal);
 					free(cadena_para_md5);
-
-
     			}
-
     		}
     		if (bandera!=3){
     			printf ("No hay suficientes nodos disponibles con espacio libre\n");
@@ -1567,23 +1620,23 @@ int CopiarArchivoAMDFS(){
     	fclose(archivoLocal);
 
     	//Si llego hasta aca salio tod0 bien, actualizo la lista real de nodos
-    	list_destroy(nodos);
+    	eliminar_listas(NULL,NULL,nodos);
     	nodos=list_create();
     	if (copiar_lista_de_nodos(nodos,nodos_temporales)){
     		printf ("No se pudo crear la copia de la lista de nodos\n");
     		return -1;
     	}
-    	list_destroy(nodos_temporales);
+    	eliminar_listas(NULL,NULL,nodos_temporales);
 
     	//Si llego aca es porque tod0 salio bien y actualizo la lista de archivos
     	list_add(archivos_temporales,archivo_temporal);
-    	list_destroy(archivos);
+    	eliminar_listas(archivos,NULL,NULL);
     	archivos=list_create();
     	if (copiar_lista_de_archivos(archivos,archivos_temporales)){
     		printf ("No se pudo crear la copia de la lista de archivos\n");
     		return -1;
     	}
-    	list_destroy(archivos_temporales);
+    	eliminar_listas(archivos_temporales,NULL,NULL);
     	return 0;
 }
 int CopiarArchivoDelMDFS(int flag, char*unArchivo) {
