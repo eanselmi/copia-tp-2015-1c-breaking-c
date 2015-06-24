@@ -435,7 +435,7 @@ void listar_archivos_subidos(t_list *archivos) {
 	for (i = 0; i < cantidad_archivos; i++) {
 		elemento = list_get(archivos, i);
 		printf("\n\n");
-		printf("Archivo: %s\nPadre: %d\nTam: %d\nEstado: %d\nPath En MDFS: %s\n",elemento->nombre,elemento->padre,elemento->tamanio,elemento->estado,elemento->path);
+		printf("Archivo: %s\nPadre: %d\nTam: %d\nEstado: %d\n",elemento->nombre,elemento->padre,elemento->tamanio,elemento->estado);
 		printf("\n");
 		cantidad_bloques=list_size(elemento->bloques);
 		for (j = 0; j < cantidad_bloques; j++){
@@ -909,59 +909,43 @@ void RenombrarArchivo() {
 	printf("Ingrese el nuevo nombre \n");
 	scanf("%s", nuevoNombre);
 	strcpy(archivo->nombre, nuevoNombre);
-	strcpy(archivo->path,directorio);
-	strcat(archivo->path,"/");
-	strcat(archivo->path,nuevoNombre);
 
 	//TODO: ACTUALIZAR EL NUEVO NOMBRE A MARTA
 }
 
+
 void MoverArchivo() {
+
 	t_archivo* archivo=malloc(sizeof(t_archivo));
 	printf("Eligió Mover archivos\n");
 	char path[100];
-	char pathAuxiliar[100];
 	char nuevoPath[100];
-	int i,encontrado=0;
 	char **directoriosPorSeparado;
 	int posicionDirectorio=0;
 	char *directorioDestino=string_new();
-	char *nombre_del_archivo=string_new();
-	int aux1,aux2=0;
-	char *saveptr;
 	printf("Ingrese el path del archivo \n");
 	memset(path,'\0',100);
 	scanf("%s", path);
-	memset(pathAuxiliar,'\0',100);
-	strcpy(pathAuxiliar,path);
-	directoriosPorSeparado=string_split(pathAuxiliar,"/");
+
+	directoriosPorSeparado=string_split(path,"/");
 	while(directoriosPorSeparado[posicionDirectorio+1]!=NULL){
 		string_append(&directorioDestino,"/");
 		string_append(&directorioDestino,directoriosPorSeparado[posicionDirectorio]);
 		posicionDirectorio++;
 	}
-	for (aux1=0;aux1<strlen(pathAuxiliar);aux1++) if (pathAuxiliar[aux1]=='/') aux2++;
-	nombre_del_archivo = strtok_r(pathAuxiliar,"/",&saveptr);
-	for (aux1=0;aux1<aux2-1;aux1++) nombre_del_archivo = strtok_r(NULL,"/",&saveptr);
-
 	int idPadre = BuscarPadre(directorioDestino);
 	printf ("Padre: %d\n",idPadre);
 	if (idPadre==-1){
 		printf ("El path no existe\n");
 		Menu();
 	}
-
-	for (i=0;i<list_size(archivos);i++){
-		archivo=list_get(archivos,i);
-		if (strcmp(archivo->path,path)==0 && archivo->padre==idPadre){
-			encontrado=1;
-			break;
-		}
-	}
-	if (!encontrado){
-		printf ("No se encontro el archivo\n");
+	int posArchivo = BuscarArchivoPorNombre(path, idPadre);
+	if (posArchivo==-1){
+		printf ("El archivo no existe\n");
 		Menu();
 	}
+	archivo = list_get(archivos, posArchivo);
+
 	printf("Ingrese el nuevo path \n");
 	memset(nuevoPath,'\0',100);
 	scanf("%s", nuevoPath);
@@ -972,10 +956,6 @@ void MoverArchivo() {
 	}
 	printf("andre was here\n");
 	archivo->padre = idPadreNuevo;
-	strcat(nuevoPath,"/");
-	strcat(nuevoPath,nombre_del_archivo);
-	memset(archivo->path,'\0',100);
-	strcpy(archivo->path,nuevoPath);
 }
 
 long ExisteEnLaLista(t_list* listaDirectorios, char* nombreDirectorioABuscar,uint32_t idPadre) {
@@ -1259,7 +1239,6 @@ int copiar_lista_de_archivos(t_list* destino, t_list* origen){
 		copia->bloques=original->bloques;
 		copia->estado=original->estado;
 		strcpy(copia->nombre,original->nombre);
-		strcpy(copia->path,original->path);
 		copia->padre=original->padre;
 		copia->bloques=list_create();
 		for (j=0;j<list_size(original->bloques);j++){
@@ -1580,10 +1559,8 @@ int CopiarArchivoAMDFS(){
     	for (aux1=0;aux1<strlen(ruta);aux1++) if (ruta[aux1]=='/') aux2++;
     	nombre_del_archivo = strtok_r(ruta,"/",&saveptr);
     	for (aux1=0;aux1<aux2-1;aux1++) nombre_del_archivo = strtok_r(NULL,"/",&saveptr);
-    	memset(archivo_temporal->path,'\0',100);
     	memset(archivo_temporal->nombre,'\0',100);
-    	strcpy(archivo_temporal->path,pathMDFS);
-		strcpy(archivo_temporal->nombre,nombre_del_archivo);
+    	strcpy(archivo_temporal->nombre,nombre_del_archivo);
     	archivo_temporal->estado=1;
     	archivo_temporal->padre=idPadre; //modifico al path del archivo en el MDFS
     	archivo_temporal->tamanio=0; //para mi este campo esta al pedo
@@ -1616,61 +1593,72 @@ int CopiarArchivoDelMDFS(int flag, char*unArchivo) {
 	t_archivo *archivo=malloc(sizeof(t_archivo));
 	t_bloque *bloque=malloc(sizeof(t_bloque));
 	t_copias *copia=malloc(sizeof(t_copias));
-	int i,j,k;
+	int j,k;
 	int bloqueDisponible;
 	int socket_nodo;
 	char* bloqueParaVer;
-	char *ruta=string_new();
+	char ruta[100];
 	char *nombre_del_archivo=string_new();
 	int aux1,aux2=0;
 	char *saveptr;
-	char *ruta_local=string_new();
-
+	char ruta_local[100];
+	char **directoriosPorSeparado;
+	int posicionDirectorio=0;
+	char *directorio=string_new();
 	if (flag!=99){
 		printf("Eligió Copiar un archivo del MDFS al filesystem local\n");
 		printf ("Ingrese el archivo a copiar con su path completo, ej. /directorio/archivo.ext\n");
 		scanf("%s",pathArchivo);
 	}else strcpy(pathArchivo,unArchivo);
-
 	strcpy(ruta,pathArchivo);
-   	for (aux1=0;aux1<strlen(ruta);aux1++) if (ruta[aux1]=='/') aux2++;
-   	nombre_del_archivo = strtok_r(ruta,"/",&saveptr);
-   	for (aux1=0;aux1<aux2-1;aux1++) nombre_del_archivo = strtok_r(NULL,"/",&saveptr);
-   	strcpy(ruta_local,"/tmp/");
-   	strcat(ruta_local,nombre_del_archivo);
-
-	for (i=0;i<list_size(archivos);i++){
-		archivo=list_get(archivos,i);
-		if (strcmp(archivo->path,pathArchivo)==0){
-			copiaLocal = fopen(ruta_local, "w");
-			for (j=0;j<list_size(archivo->bloques);j++){
-				bloque=list_get(archivo->bloques,j);
-				bloqueDisponible=0;
-				for (k=0;k<list_size(bloque->copias);k++){
-					copia=list_get(bloque->copias,k);
-					if(obtenerEstadoDelNodo(copia->nodo)){
-						bloqueDisponible=1;
-						socket_nodo =obtener_socket_de_nodo_con_id(copia->nodo);
-						if (socket_nodo == -1){
-							log_error(logger, "El nodo ingresado no es valido o no esta disponible\n");
-							printf("El nodo ingresado no es valido o no esta disponible\n");
-							return -1;
-						}
-						enviarNumeroDeBloqueANodo(socket_nodo, copia->bloqueNodo);
-						bloqueParaVer = recibirBloque(socket_nodo);
-						fprintf(copiaLocal,"%s",bloqueParaVer);
-						break;
-					}
-				}
-				if (bloqueDisponible==0){
-					printf ("El archivo no se puede recuperar, el bloque %d no esta disponible\n",j);
+	for (aux1=0;aux1<strlen(ruta);aux1++) if (ruta[aux1]=='/') aux2++;
+	nombre_del_archivo = strtok_r(ruta,"/",&saveptr);
+	for (aux1=0;aux1<aux2-1;aux1++) nombre_del_archivo = strtok_r(NULL,"/",&saveptr);
+	strcpy(ruta_local,"/tmp/");
+	strcat(ruta_local,nombre_del_archivo);
+	directoriosPorSeparado=string_split(pathArchivo,"/");
+	while(directoriosPorSeparado[posicionDirectorio+1]!=NULL){
+		string_append(&directorio,"/");
+		string_append(&directorio,directoriosPorSeparado[posicionDirectorio]);
+		posicionDirectorio++;
+	}
+	int idPadre = BuscarPadre(directorio);
+	if (idPadre==-1){
+		printf("El directorio no existe\n");
+		Menu();
+	}
+	int posArchivo = BuscarArchivoPorNombre(pathArchivo, idPadre);
+	if (posArchivo==-1){
+		printf ("El archivo no existe\n");
+		Menu();
+	}
+	archivo = list_get(archivos, posArchivo);
+	copiaLocal = fopen(ruta_local, "w");
+	for (j=0;j<list_size(archivo->bloques);j++){
+		bloque=list_get(archivo->bloques,j);
+		bloqueDisponible=0;
+		for (k=0;k<list_size(bloque->copias);k++){
+			copia=list_get(bloque->copias,k);
+			if(obtenerEstadoDelNodo(copia->nodo)){
+				bloqueDisponible=1;
+				socket_nodo =obtener_socket_de_nodo_con_id(copia->nodo);
+				if (socket_nodo == -1){
+					log_error(logger, "El nodo ingresado no es valido o no esta disponible\n");
+					printf("El nodo ingresado no es valido o no esta disponible\n");
 					return -1;
 				}
+				enviarNumeroDeBloqueANodo(socket_nodo, copia->bloqueNodo);
+				bloqueParaVer = recibirBloque(socket_nodo);
+				fprintf(copiaLocal,"%s",bloqueParaVer);
+				break;
 			}
-		fclose(copiaLocal);
-		break;
+		}
+		if (bloqueDisponible==0){
+			printf ("El archivo no se puede recuperar, el bloque %d no esta disponible\n",j);
+			return -1;
 		}
 	}
+	fclose(copiaLocal);
 	return 0;
 }
 
@@ -1756,6 +1744,7 @@ void BorrarBloque() {
 		printf("No se puede eliminar el bloque\n");
 		}
 }
+
 
 void CopiarBloque() {
 	char *nodo_origen=string_new();
