@@ -56,9 +56,8 @@ int directoriosDisponibles; //reservo raiz
 int j; //variable para recorrer el vector de indices
 int *puerto_escucha_nodo;
 char nodo_id[6];
-//t_nodo nodosMasLibres[3];
-//char bufBloque[BLOCK_SIZE];
-//Variables para la persistencia con mongo
+
+//=========== Variables para la persistencia con mongo ===============
 mongoc_client_t *client;
 mongoc_collection_t *collection;
 mongoc_cursor_t *cursor;
@@ -71,6 +70,27 @@ int main(int argc, char *argv[]) {
 	pthread_t escucha; //Hilo que va a manejar los mensajes recibidos
 	int newfd;
 	int addrlen;
+
+//============= REVISO LA PERSISTENCIA Y EL ESTADO DE LA ULTIMA EJECUCUION DEL FILESYSTEM ===================
+	FILE* archivo_persistencia;
+	if((archivo_persistencia=fopen("persistencia","r+"))==NULL){
+		log_error(logger,"El archivo de persistencia no existe en el filesystem local");
+		perror("fopen");
+	}
+	char *valor=string_new();
+	if((fgets(valor,sizeof(valor),archivo_persistencia))==NULL){
+		perror ("fgets del archivo de persistencia");
+		exit(-1);
+	}
+	rewind(archivo_persistencia);
+	fprintf (archivo_persistencia,"%s","1");
+	fclose(archivo_persistencia);
+	printf ("%s\n",valor);
+	if (strcmp(valor,"1")==0){
+		//Hay que restaurar la persistencia
+	}
+ // ================================= FIN CONTROL DE PERSISTENCIA ===================================
+
 	int yes = 1; // para setsockopt() SO_REUSEADDR, más abajo
 	configurador = config_create("resources/fsConfig.conf"); //se asigna el archivo de configuración especificado en la ruta
 	logger = log_create("fsLog.log", "FileSystem", false, LOG_LEVEL_INFO);
@@ -268,10 +288,10 @@ int Menu(void) {
 			EliminarNodo();	break;
 			//case 17: printf("Eligió Salir\n"); break;
 
-		case 17: listar_nodos_conectados(nodos); break;
+		//case 17: listar_nodos_conectados(nodos); break;
 		//case 17: listar_archivos_subidos(archivos); break;
 		//case 17: listar_directorios(); break;
-		//case 17: eliminar_listas(archivos,directorios,nodos); break;
+		case 17: eliminar_listas(archivos,directorios,nodos); break;
 		default: printf("Opción incorrecta. Por favor ingrese una opción del 1 al 17\n"); break;
 		}
 	}
@@ -314,27 +334,21 @@ static t_nodo *agregar_nodo_a_lista(char nodo_id[6], int socket, int est, int es
 	for (i = 0; i < nodo_temporal->bloques_totales; i++)
 		bitarray_clean_bit(nodo_temporal->bloques_del_nodo, i);
 
-	//mongo
-	char *tmp_socket = string_new();
-	char *tmp_estado = string_new();
-	char *tmp_puerto = string_new();
+	//===================== FIN DEL AGREGAR NODO, INICIA LA PERSISTENCIA A MONGO ==========================
+
 	char *tmp_bl_lib = string_new();
 	char *tmp_bl_tot = string_new();
-	sprintf(tmp_socket, "%d", socket);
-	sprintf(tmp_estado, "%d", est);
-	sprintf(tmp_puerto, "%d", port);
 	sprintf(tmp_bl_lib, "%d", bloques_lib);
 	sprintf(tmp_bl_tot, "%d", bloques_tot);
 	//Persistencia del nodo agregado a la base de mongo
-	doc = BCON_NEW("Socket", tmp_socket, "Nodo_ID", nodo_id, "Estado",tmp_estado, "IP", ip, "Puerto", tmp_puerto, "Bloques_Libres",tmp_bl_lib, "Bloques_Totales", tmp_bl_tot);
+	doc = BCON_NEW("Nodo_ID", nodo_id, "Bloques_Libres",tmp_bl_lib, "Bloques_Totales", tmp_bl_tot);
 	if (!mongoc_collection_insert(collection, MONGOC_INSERT_NONE, doc, NULL,&error)) {
 		printf("%s\n", error.message);
 	}
-	free(tmp_socket);
-	free(tmp_estado);
-	free(tmp_puerto);
 	free(tmp_bl_lib);
 	free(tmp_bl_tot);
+
+	//==================================== FIN PERSISTENCIA ===============================================
 
 	return nodo_temporal;
 }
@@ -1150,6 +1164,13 @@ void eliminar_listas(t_list *archivos_l, t_list *directorios_l, t_list *nodos_l)
 	}
 	if (archivos_l!=NULL && directorios_l!=NULL && nodos_l!=NULL){
 		printf ("Adios!\n");
+		FILE* archivo_persistencia;
+		if((archivo_persistencia=fopen("persistencia","r+"))==NULL){
+			log_error(logger,"El archivo de persistencia no existe en el filesystem local");
+			perror("fopen");
+		}
+		fprintf (archivo_persistencia,"%s","0");
+		fclose(archivo_persistencia);
 		exit(0);
 	}
 
