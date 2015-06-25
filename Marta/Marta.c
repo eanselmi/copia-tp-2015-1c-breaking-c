@@ -415,6 +415,7 @@ int main(int argc, char**argv){
 			exit(-1);
 		}
 		archivoTemporal->bloques = list_create();
+		k=0;
 		while (k < cantidadBloquesArchivo){
 			t_bloque* bloqueArchivoTemporal = malloc(sizeof(t_bloque));
 			bloqueArchivoTemporal->copias = list_create();
@@ -423,6 +424,7 @@ int main(int argc, char**argv){
 				log_error(logger,"FALLO el Recv de cantidad de copias del bloque del archivo");
 				exit(-1);
 			}
+			l=0;
 			while (l < cantidadCopiasArchivo){
 				t_copias* copiaBloqueTemporal = malloc(sizeof(t_copias));
 				if ((nbytes = recv(socket_fs, nodoIdArchivo, sizeof(nodoIdArchivo), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
