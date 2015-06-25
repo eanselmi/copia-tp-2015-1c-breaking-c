@@ -268,8 +268,8 @@ int Menu(void) {
 			EliminarNodo();	break;
 			//case 17: printf("Eligió Salir\n"); break;
 
-		//case 17: listar_nodos_conectados(nodos); break;
-		case 17: listar_archivos_subidos(archivos); break;
+		case 17: listar_nodos_conectados(nodos); break;
+		//case 17: listar_archivos_subidos(archivos); break;
 		//case 17: listar_directorios(); break;
 		//case 17: eliminar_listas(archivos,directorios,nodos); break;
 		default: printf("Opción incorrecta. Por favor ingrese una opción del 1 al 17\n"); break;
@@ -341,7 +341,7 @@ static t_nodo *agregar_nodo_a_lista(char nodo_id[6], int socket, int est, int es
 
 int validar_nodo_nuevo(char nodo_id[6]) {
 	int i;
-	t_nodo *tmp;
+	t_nodo *tmp=malloc(sizeof(t_nodo));
 	for (i = 0; i < list_size(nodos); i++) {
 		tmp = list_get(nodos, i);
 		if (strcmp(tmp->nodo_id, nodo_id) == 0)
@@ -351,10 +351,10 @@ int validar_nodo_nuevo(char nodo_id[6]) {
 }
 int validar_nodo_reconectado(char nodo_id[6]) {
 	int i;
-	t_nodo *tmp;
+	t_nodo *tmp=malloc(sizeof(t_nodo));
 	for (i = 0; i < list_size(nodos); i++) {
 		tmp = list_get(nodos, i);
-		if (strcmp(tmp->nodo_id, nodo_id) == 0)
+		if ((strcmp(tmp->nodo_id, nodo_id) == 0) && (tmp->estado_red==0))
 			return 0;
 	}
 	return 1;
@@ -808,7 +808,7 @@ int BuscarMenorIndiceLibre(char indiceDirectorios[]) {
 
 void modificar_estado_nodo(char nodo_id[6], int socket, int port, int estado, int estado_red) {
 	int i;
-	t_nodo *tmp;
+	t_nodo *tmp=malloc(sizeof(t_nodo));
 	for (i = 0; i < list_size(nodos); i++) {
 		tmp = list_get(nodos, i);
 
@@ -1750,12 +1750,12 @@ int CopiarArchivoDelMDFS(int flag, char*unArchivo) {
 		bloqueDisponible=0;
 		for (k=0;k<list_size(bloque->copias);k++){
 			copia=list_get(bloque->copias,k);
-			if(obtenerEstadoDelNodo(copia->nodo)){
+			if(obtenerEstadoDelNodo(copia->nodo)==1){
 				bloqueDisponible=1;
 				socket_nodo =obtener_socket_de_nodo_con_id(copia->nodo);
 				if (socket_nodo == -1){
 					log_error(logger, "El nodo ingresado no es valido o no esta disponible\n");
-					printf("El nodo ingresado no es valido o no esta disponible\n");
+					printf("El nodo %s no esta disponible\n",copia->nodo);
 					return -1;
 				}
 				enviarNumeroDeBloqueANodo(socket_nodo, copia->bloqueNodo);
@@ -1778,9 +1778,9 @@ int obtenerEstadoDelNodo(char* nodo){
 	int i;
 	for (i=0;i<list_size(nodos);i++){
 		unNodo=list_get(nodos,i);
-		if ((strcmp(unNodo->nodo_id,nodo)==0) && (unNodo->estado_red==1) && (unNodo->estado=1)) return 1;
+		if ((strcmp(unNodo->nodo_id,nodo)==0) && (unNodo->estado_red==1) && (unNodo->estado==1)) return 1;
 	}
-	return 0;
+	return -1;
 }
 
 void MD5DeArchivo() {
