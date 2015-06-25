@@ -374,9 +374,19 @@ void *manejador_de_escuchas(){
 								list_add(archivosAbiertos,archAbierto);
 								//leo un renglon
 								fgets(renglon,512,archParaPasar);
+								if(feof(archParaPasar)){
+									fclose(archParaPasar);
+									strcpy(renglon,"Llego al EOF");
+									removerDeListaDeArchivosAbiertos(archParaPasar);
+								}
 							}
 							else{ //si ya esta abierto leo un renglon
 								fgets(renglon,512,archParaPasar);
+								if(feof(archParaPasar)){
+									fclose(archParaPasar);
+									strcpy(renglon,"Llego al EOF");
+									removerDeListaDeArchivosAbiertos(archParaPasar);
+								}
 							}
 
 							send(socketModificado,renglon,sizeof(renglon),MSG_WAITALL);
@@ -444,6 +454,21 @@ FILE* estaEnListaArchivosAbiertos(char* nombreArchivo){
 	return NULL;
 }
 
+void removerDeListaDeArchivosAbiertos(FILE* archivoARemover){
+	int tamanio=list_size(archivosAbiertos);
+	int indice=0;
+	t_archivoAbierto* unArchAbierto;
+	for(indice=0;indice<tamanio;indice++){
+		unArchAbierto=list_get(archivosAbiertos,indice);
+		if(unArchAbierto->archivoAbierto==archivoARemover){
+			list_remove_and_destroy_element(archivosAbiertos,indice,(void*)eliminarArchivo);
+		}
+	}
+}
+
+static void eliminarArchivo(t_archivoAbierto * archivoAbierto) {
+    free(archivoAbierto);
+}
 
 void ordenarMapper(char* pathMapperTemporal, char* nombreMapperOrdenado){
 	int outfd[2];
@@ -894,6 +919,7 @@ void* rutinaReduce (int* sckReduce){
 			memset(nuevoArchivoEnApareo->buffer,'\0',512);
 			nuevoArchivoEnApareo->socket=-1;
 			strcpy(nuevoArchivoEnApareo->nombreArchivo,unArchivoReduce->archivoAAplicarReduce);
+			nuevoArchivoEnApareo->endOfFile=0;
 			printf("Agrego el archivo local %s\n",unArchivoReduce->archivoAAplicarReduce);
 			list_add(archivosEnApareo,nuevoArchivoEnApareo);
 		}
@@ -937,6 +963,7 @@ void* rutinaReduce (int* sckReduce){
 			memset(nuevoArchivoEnApareo->buffer,'\0',512);
 			nuevoArchivoEnApareo->socket=otroNodoSock;
 			strcpy(nuevoArchivoEnApareo->nombreArchivo,unArchivoReduce->archivoAAplicarReduce);
+			nuevoArchivoEnApareo->endOfFile=0;
 			list_add(archivosEnApareo,nuevoArchivoEnApareo);
 		}
 	}
@@ -954,6 +981,7 @@ void* rutinaReduce (int* sckReduce){
 
 void ejecutarReduce(t_list* archivosApareando,char* resultado){
 	int posicionLista;
+	int posicionDelMenor=0;
 	int cantidadArchivos=list_size(archivosApareando);
 	char dameUnRenglon[BUF_SIZE];
 	char bufferMenor[512];
@@ -962,40 +990,83 @@ void ejecutarReduce(t_list* archivosApareando,char* resultado){
 	//Leer una linea de cada uno, guardar en el buffer
 
 	for(posicionLista=0;posicionLista<cantidadArchivos;posicionLista++){
-		t_archivoEnApareo* unArchivo=malloc(sizeof(t_archivoEnApareo));
+		t_archivoEnApareo* unArchivo;//=malloc(sizeof(t_archivoEnApareo));
 		unArchivo=list_get(archivosApareando,posicionLista);
 		if(unArchivo->archivo==NULL){ //Si es un archivo Remoto
 			send(unArchivo->socket,dameUnRenglon,sizeof(dameUnRenglon),MSG_WAITALL);
 			send(unArchivo->socket,unArchivo->nombreArchivo,sizeof(unArchivo->nombreArchivo),MSG_WAITALL);
 			recv(unArchivo->socket,unArchivo->buffer,sizeof(unArchivo->buffer),MSG_WAITALL);
+			if(strcmp(unArchivo->buffer,"Llego al EOF")==0){
+				unArchivo->endOfFile=1;
+			}
 		//	printf("Recibi del nodo el renglon: %s",unArchivo->buffer);
 		}
 		else{ //es un archivo local
 			fgets(unArchivo->buffer,512,unArchivo->archivo);
+			if(feof(unArchivo->archivo)){
+				unArchivo->endOfFile=1;
+				fclose(unArchivo->archivo);
+			}
 		//	printf("El renglon del archivo local es:%s",unArchivo->buffer);
 		}
 	}
-	//Comparar entretodos los buffer el menor
-	memset(bufferMenor,'\0',512);
-	t_archivoEnApareo* unArchivo=malloc(sizeof(t_archivoEnApareo));
-	unArchivo=list_get(archivosApareando,0); // Considero como menor al primer archivo
-	strcpy(bufferMenor,unArchivo->buffer);
-	for(posicionLista=0;posicionLista<cantidadArchivos;posicionLista++){
-		unArchivo=list_get(archivosApareando,posicionLista);
-		if (strcmp(unArchivo->buffer,bufferMenor)<0){
-			strcpy(bufferMenor,unArchivo->buffer);
+
+	//Comparar entretodos los buffer el menor mientras que haya algún archivo abierto
+	while(list_any_satisfy(archivosApareando,(void*)no_llego_a_eof)){
+
+		memset(bufferMenor,'\0',512);
+		t_archivoEnApareo* unArchivo;//=malloc(sizeof(t_archivoEnApareo));
+		t_archivoEnApareo* otroArchivo;
+		unArchivo=list_find(archivosApareando,(void*)no_llego_a_eof); // Considero como menor al primer archivo
+		strcpy(bufferMenor,unArchivo->buffer);
+		for(posicionLista=0;posicionLista<cantidadArchivos;posicionLista++){
+			otroArchivo=list_get(archivosApareando,posicionLista);
+			if(strcmp(unArchivo->nombreArchivo,otroArchivo->nombreArchivo)==0){
+				posicionDelMenor=posicionLista;
+			}
 		}
+		for(posicionLista=0;posicionLista<cantidadArchivos;posicionLista++){
+			unArchivo=list_get(archivosApareando,posicionLista);
+			if (strcmp(unArchivo->buffer,bufferMenor)<0 && unArchivo->endOfFile==0){
+				strcpy(bufferMenor,unArchivo->buffer);
+				posicionDelMenor=posicionLista;
+			}
+		}
+
+		//El menor, escribirlo en stdin
+		printf("El menor es: %s",bufferMenor);
+
+		//Leer la proxima linea del menor
+		//t_archivoEnApareo* unArchivo;
+		unArchivo=list_get(archivosApareando,posicionDelMenor);
+		if(unArchivo->archivo==NULL){ //Si es un archivo Remoto
+			send(unArchivo->socket,dameUnRenglon,sizeof(dameUnRenglon),MSG_WAITALL);
+			send(unArchivo->socket,unArchivo->nombreArchivo,sizeof(unArchivo->nombreArchivo),MSG_WAITALL);
+			recv(unArchivo->socket,unArchivo->buffer,sizeof(unArchivo->buffer),MSG_WAITALL);
+		//	printf("Recibi del nodo el renglon: %s",unArchivo->buffer);
+			if(strcmp(unArchivo->buffer,"Llego al EOF")==0){
+				unArchivo->endOfFile=1;
+			}
+		}
+		else{ //es un archivo local
+			fgets(unArchivo->buffer,512,unArchivo->archivo);
+		//	printf("El renglon del archivo local es:%s",unArchivo->buffer);
+			if(feof(unArchivo->archivo)){
+				unArchivo->endOfFile=1;
+				fclose(unArchivo->archivo);
+			}
+		}
+		//cuando alguno de los archivos sea EOF, se tiene que cerrar (fclose ya sea en el nodo o local)
 	}
-
-	//El menor, escribirlo en stdin
-	printf("El menor es: %s",bufferMenor);
-
-	//Leer la proxima linea del menor
-	//cuando alguno de los archivos sea EOF, se tiene que cerrar (fclose ya sea en el nodo o local)
-
+	printf("Llegaron todos al EOF\n");
 
 
 }
+
+int no_llego_a_eof(t_archivoEnApareo* archivo){
+	return (archivo->endOfFile==0);
+}
+
 
 
 //char* crearBloqueFalso(){
