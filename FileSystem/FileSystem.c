@@ -268,8 +268,8 @@ int Menu(void) {
 			EliminarNodo();	break;
 			//case 17: printf("Eligió Salir\n"); break;
 
-		case 17: listar_nodos_conectados(nodos); break;
-		//case 17: listar_archivos_subidos(archivos); break;
+		//case 17: listar_nodos_conectados(nodos); break;
+		case 17: listar_archivos_subidos(archivos); break;
 		//case 17: listar_directorios(); break;
 		//case 17: eliminar_listas(archivos,directorios,nodos); break;
 		default: printf("Opción incorrecta. Por favor ingrese una opción del 1 al 17\n"); break;
@@ -689,7 +689,7 @@ void *connection_handler_escucha(void) {
 						}
 					}else{
 						//Si no es marta, es un nodo
-						if ((read_size = recv(i, mensaje, sizeof(mensaje), MSG_PEEK)) <= 0){
+						if ((read_size = recv(i, mensaje, sizeof(mensaje), MSG_PEEK | MSG_DONTWAIT)) <= 0){
 							if (read_size == 0) {
 								//Se desconecto
 								addrlen = sizeof(struct sockaddr_in);
@@ -711,9 +711,7 @@ void *connection_handler_escucha(void) {
 									exit(-1);
 								}
 							}else{
-								perror("recv");
-								log_error(logger, "FALLO el Recv");
-								exit(-1);
+								//No voy a hacer nada aca por ahora
 							}
 						}
 						//Recibi algo de un nodo
