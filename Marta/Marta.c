@@ -46,6 +46,7 @@ int main(int argc, char**argv){
 	char identificacion[BUF_SIZE]; //para el mensaje que envie al conectarse para identificarse, puede cambiar
 	FD_ZERO(&master); // borra los conjuntos maestro y temporal
 	FD_ZERO(&read_fds);
+	printf("%s\n", config_get_string_value(configurador,"IP_FS"));
 	filesystem.sin_family = AF_INET;
 	filesystem.sin_addr.s_addr = inet_addr(config_get_string_value(configurador,"IP_FS"));
 	filesystem.sin_port = htons(config_get_int_value(configurador,"PUERTO_FS"));
@@ -314,46 +315,48 @@ int main(int argc, char**argv){
 //	if (nbytes > 0 && strncmp(identificacion,"ok",2)==0)	log_info (logger,"Conexion con el FS exitosa");
 //
 //
-////Para recibir los nodos de FS
-//	if ((nbytes = recv(socket_fs, &cantNodos, sizeof(int), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
-//		perror("recv");
-//		log_error(logger,"FALLO el Recv de cantidad de nodos");
-//		exit(-1);
-//	}
-//	i=0;
-//	while (i < cantNodos){
-//		t_nodo* nodoTemporal = malloc(sizeof(t_nodo));
-//		if ((nbytes = recv(socket_fs, nodoId, sizeof(nodoId), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
-//			perror("recv");
-//			log_error(logger,"FALLO el Recv de nodoId");
-//			exit(-1);
-//		}
-//		if ((nbytes = recv(socket_fs, &estadoNodo, sizeof(int), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
-//			perror("recv");
-//			log_error(logger,"FALLO el Recv del estado del nodo");
-//			exit(-1);
-//		}
-//		//ipNodo=string_new();
-//		memset(ipNodo, '\0',15);
-//		if ((nbytes = recv(socket_fs, ipNodo, sizeof(ipNodo), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
-//			perror("recv");
-//			log_error(logger,"FALLO el Recv de la ip del nodo");
-//			exit(-1);
-//		}
-//		if ((nbytes = recv(socket_fs, &puertoEscuchaNodo, sizeof(int), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
-//			perror("recv");
-//			log_error(logger,"FALLO el Recv del puerto escucha del nodo");
-//			exit(-1);
-//		}
-//		memset(nodoTemporal->nodo_id, '\0', 6);
-//		strcpy(nodoTemporal->nodo_id, nodoId);
-//		nodoTemporal->estado =estadoNodo;
-//		nodoTemporal->ip = strdup(ipNodo);
-//		nodoTemporal->puerto_escucha_nodo = puertoEscuchaNodo;
-//		list_add(listaNodos, nodoTemporal);
-//		i++;
-//	}
-//
+
+
+//Para recibir los nodos de FS
+	if ((nbytes = recv(socket_fs, &cantNodos, sizeof(int), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
+		perror("recv");
+		log_error(logger,"FALLO el Recv de cantidad de nodos");
+		exit(-1);
+	}
+	i=0;
+	while (i < cantNodos){
+		t_nodo* nodoTemporal = malloc(sizeof(t_nodo));
+		if ((nbytes = recv(socket_fs, nodoId, sizeof(nodoId), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
+			perror("recv");
+			log_error(logger,"FALLO el Recv de nodoId");
+			exit(-1);
+		}
+		if ((nbytes = recv(socket_fs, &estadoNodo, sizeof(int), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
+			perror("recv");
+			log_error(logger,"FALLO el Recv del estado del nodo");
+			exit(-1);
+		}
+		//ipNodo=string_new();
+		memset(ipNodo, '\0',15);
+		if ((nbytes = recv(socket_fs, ipNodo, sizeof(ipNodo), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
+			perror("recv");
+			log_error(logger,"FALLO el Recv de la ip del nodo");
+			exit(-1);
+		}
+		if ((nbytes = recv(socket_fs, &puertoEscuchaNodo, sizeof(int), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
+			perror("recv");
+			log_error(logger,"FALLO el Recv del puerto escucha del nodo");
+			exit(-1);
+		}
+		memset(nodoTemporal->nodo_id, '\0', 6);
+		strcpy(nodoTemporal->nodo_id, nodoId);
+		nodoTemporal->estado =estadoNodo;
+		nodoTemporal->ip = strdup(ipNodo);
+		nodoTemporal->puerto_escucha_nodo = puertoEscuchaNodo;
+		list_add(listaNodos, nodoTemporal);
+		i++;
+	}
+
 //	//para recibir los archivos de FS
 
 	if ((nbytes = recv(socket_fs, &cantArchivos, sizeof(int), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
@@ -595,7 +598,7 @@ void *atenderJob (int *socketJob) {
 	//De cada archivo que nos manda el Job buscamos y nos traemos los bloques
 
 //TODO revisar buscarBloques
-		bloques=buscarBloques(archivos[posicionArchivo]);
+ //	bloques=buscarBloques(archivos[posicionArchivo]);
 	//Enviamos rutina Map de cada bloque del archivo al Job que nos envio dicho archivo
 		cantBloques = list_size(bloques);
 		for(i=0; i<cantBloques; i++){ //recorremos los bloques del archivo que nos mando job
