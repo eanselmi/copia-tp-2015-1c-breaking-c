@@ -971,7 +971,7 @@ void* rutinaReduce (int* sckReduce){
 
 
 	pthread_mutex_lock(&mutexReduce);
-	ejecutarReduce(archivosEnApareo,nombreFinalReduce);
+	ejecutarReduce(archivosEnApareo,nombreNuevoReduce,nombreFinalReduce);
 	pthread_mutex_unlock(&mutexReduce);
 
 
@@ -979,7 +979,7 @@ void* rutinaReduce (int* sckReduce){
 	pthread_exit((void*)0);
 }
 
-void ejecutarReduce(t_list* archivosApareando,char* resultado){
+void ejecutarReduce(t_list* archivosApareando,char* script,char* resultado){
 	int posicionLista;
 	int posicionDelMenor=0;
 	int cantidadArchivos=list_size(archivosApareando);
@@ -988,77 +988,115 @@ void ejecutarReduce(t_list* archivosApareando,char* resultado){
 	memset(dameUnRenglon,'\0',BUF_SIZE);
 	strcpy(dameUnRenglon,"Dame renglon");
 	//Leer una linea de cada uno, guardar en el buffer
-
-	for(posicionLista=0;posicionLista<cantidadArchivos;posicionLista++){
-		t_archivoEnApareo* unArchivo;//=malloc(sizeof(t_archivoEnApareo));
-		unArchivo=list_get(archivosApareando,posicionLista);
-		if(unArchivo->archivo==NULL){ //Si es un archivo Remoto
-			send(unArchivo->socket,dameUnRenglon,sizeof(dameUnRenglon),MSG_WAITALL);
-			send(unArchivo->socket,unArchivo->nombreArchivo,sizeof(unArchivo->nombreArchivo),MSG_WAITALL);
-			recv(unArchivo->socket,unArchivo->buffer,sizeof(unArchivo->buffer),MSG_WAITALL);
-			if(strcmp(unArchivo->buffer,"Llego al EOF")==0){
-				unArchivo->endOfFile=1;
-			}
-		//	printf("Recibi del nodo el renglon: %s",unArchivo->buffer);
-		}
-		else{ //es un archivo local
-			fgets(unArchivo->buffer,512,unArchivo->archivo);
-			if(feof(unArchivo->archivo)){
-				unArchivo->endOfFile=1;
-				fclose(unArchivo->archivo);
-			}
-		//	printf("El renglon del archivo local es:%s",unArchivo->buffer);
-		}
+	int outfd[2];
+	int bak,pid,archivo_resultado;
+	bak=0;
+	char *path;
+	sem_t terminoElReduce;
+	sem_init(&terminoElReduce,0,1);
+	pipe(outfd); /* Donde escribe el padre */
+	if((pid=fork())==-1){
+		perror("fork mapper");
 	}
-
-	//Comparar entretodos los buffer el menor mientras que haya algún archivo abierto
-	while(list_any_satisfy(archivosApareando,(void*)no_llego_a_eof)){
-
-		memset(bufferMenor,'\0',512);
-		t_archivoEnApareo* unArchivo;//=malloc(sizeof(t_archivoEnApareo));
-		t_archivoEnApareo* otroArchivo;
-		unArchivo=list_find(archivosApareando,(void*)no_llego_a_eof); // Considero como menor al primer archivo
-		strcpy(bufferMenor,unArchivo->buffer);
+	else if(pid==0)
+	{
+		archivo_resultado=open(resultado,O_RDWR|O_CREAT,S_IRWXU|S_IRWXG); //abro file resultado, si no esta lo crea, asigno permisos
+		fflush(stdout);
+		bak=dup(STDOUT_FILENO);
+		dup2(archivo_resultado,STDOUT_FILENO); //STDOUT de este proceso se grabara en el file resultado
+		close(archivo_resultado);
+		close(STDIN_FILENO);
+		dup2(outfd[0], STDIN_FILENO); //STDIN de este proceso será STDOUT del proceso padre
+		close(outfd[0]); /* innecesarios para el hijo */
+		close(outfd[1]);
+		path=string_new();
+		string_append(&path,config_get_string_value(configurador,"PATHREDUCERS"));
+		string_append(&path,"/");
+		string_append(&path,script);
+		execlp(path,script,NULL); //Ejecuto el script
+		sem_post(&terminoElReduce);
+	}
+	else
+	{
+		close(outfd[0]); /* Estan siendo usados por el hijo */
 		for(posicionLista=0;posicionLista<cantidadArchivos;posicionLista++){
-			otroArchivo=list_get(archivosApareando,posicionLista);
-			if(strcmp(unArchivo->nombreArchivo,otroArchivo->nombreArchivo)==0){
-				posicionDelMenor=posicionLista;
-			}
-		}
-		for(posicionLista=0;posicionLista<cantidadArchivos;posicionLista++){
+			t_archivoEnApareo* unArchivo;//=malloc(sizeof(t_archivoEnApareo));
 			unArchivo=list_get(archivosApareando,posicionLista);
-			if (strcmp(unArchivo->buffer,bufferMenor)<0 && unArchivo->endOfFile==0){
-				strcpy(bufferMenor,unArchivo->buffer);
-				posicionDelMenor=posicionLista;
+			if(unArchivo->archivo==NULL){ //Si es un archivo Remoto
+				send(unArchivo->socket,dameUnRenglon,sizeof(dameUnRenglon),MSG_WAITALL);
+				send(unArchivo->socket,unArchivo->nombreArchivo,sizeof(unArchivo->nombreArchivo),MSG_WAITALL);
+				recv(unArchivo->socket,unArchivo->buffer,sizeof(unArchivo->buffer),MSG_WAITALL);
+				if(strcmp(unArchivo->buffer,"Llego al EOF")==0){
+					unArchivo->endOfFile=1;
+				}
+				//	printf("Recibi del nodo el renglon: %s",unArchivo->buffer);
+			}
+			else{ //es un archivo local
+				fgets(unArchivo->buffer,512,unArchivo->archivo);
+				if(feof(unArchivo->archivo)){
+					unArchivo->endOfFile=1;
+					fclose(unArchivo->archivo);
+				}
+				//	printf("El renglon del archivo local es:%s",unArchivo->buffer);
 			}
 		}
 
-		//El menor, escribirlo en stdin
-		printf("El menor es: %s",bufferMenor);
+		//Comparar entretodos los buffer el menor mientras que haya algún archivo abierto
+		while(list_any_satisfy(archivosApareando,(void*)no_llego_a_eof)){
 
-		//Leer la proxima linea del menor
-		//t_archivoEnApareo* unArchivo;
-		unArchivo=list_get(archivosApareando,posicionDelMenor);
-		if(unArchivo->archivo==NULL){ //Si es un archivo Remoto
-			send(unArchivo->socket,dameUnRenglon,sizeof(dameUnRenglon),MSG_WAITALL);
-			send(unArchivo->socket,unArchivo->nombreArchivo,sizeof(unArchivo->nombreArchivo),MSG_WAITALL);
-			recv(unArchivo->socket,unArchivo->buffer,sizeof(unArchivo->buffer),MSG_WAITALL);
-		//	printf("Recibi del nodo el renglon: %s",unArchivo->buffer);
-			if(strcmp(unArchivo->buffer,"Llego al EOF")==0){
-				unArchivo->endOfFile=1;
+			memset(bufferMenor,'\0',512);
+			t_archivoEnApareo* unArchivo;//=malloc(sizeof(t_archivoEnApareo));
+			t_archivoEnApareo* otroArchivo;
+			unArchivo=list_find(archivosApareando,(void*)no_llego_a_eof); // Considero como menor al primer archivo
+			strcpy(bufferMenor,unArchivo->buffer);
+			for(posicionLista=0;posicionLista<cantidadArchivos;posicionLista++){
+				otroArchivo=list_get(archivosApareando,posicionLista);
+				if(strcmp(unArchivo->nombreArchivo,otroArchivo->nombreArchivo)==0){
+					posicionDelMenor=posicionLista;
+				}
 			}
-		}
-		else{ //es un archivo local
-			fgets(unArchivo->buffer,512,unArchivo->archivo);
-		//	printf("El renglon del archivo local es:%s",unArchivo->buffer);
-			if(feof(unArchivo->archivo)){
-				unArchivo->endOfFile=1;
-				fclose(unArchivo->archivo);
+			for(posicionLista=0;posicionLista<cantidadArchivos;posicionLista++){
+				unArchivo=list_get(archivosApareando,posicionLista);
+				if (strcmp(unArchivo->buffer,bufferMenor)<0 && unArchivo->endOfFile==0){
+					strcpy(bufferMenor,unArchivo->buffer);
+					posicionDelMenor=posicionLista;
+				}
 			}
+
+			//El menor, escribirlo en stdin
+			//printf("El menor es: %s",bufferMenor);
+			write(outfd[1],bufferMenor,strlen(bufferMenor));/* Escribe en el stdin del hijo el contenido del bloque*/
+
+
+			//Leer la proxima linea del menor
+			//t_archivoEnApareo* unArchivo;
+			unArchivo=list_get(archivosApareando,posicionDelMenor);
+			if(unArchivo->archivo==NULL){ //Si es un archivo Remoto
+				send(unArchivo->socket,dameUnRenglon,sizeof(dameUnRenglon),MSG_WAITALL);
+				send(unArchivo->socket,unArchivo->nombreArchivo,sizeof(unArchivo->nombreArchivo),MSG_WAITALL);
+				recv(unArchivo->socket,unArchivo->buffer,sizeof(unArchivo->buffer),MSG_WAITALL);
+				//	printf("Recibi del nodo el renglon: %s",unArchivo->buffer);
+				if(strcmp(unArchivo->buffer,"Llego al EOF")==0){
+					unArchivo->endOfFile=1;
+				}
+			}
+			else{ //es un archivo local
+				fgets(unArchivo->buffer,512,unArchivo->archivo);
+				//	printf("El renglon del archivo local es:%s",unArchivo->buffer);
+				if(feof(unArchivo->archivo)){
+					unArchivo->endOfFile=1;
+					fclose(unArchivo->archivo);
+				}
+			}
+			//cuando alguno de los archivos sea EOF, se tiene que cerrar (fclose ya sea en el nodo o local)
 		}
-		//cuando alguno de los archivos sea EOF, se tiene que cerrar (fclose ya sea en el nodo o local)
+		close(outfd[1]);
+		dup2(bak,STDOUT_FILENO);
+		sem_wait(&terminoElReduce);
 	}
-	printf("Llegaron todos al EOF\n");
+
+
+	printf("Llegaron todos al EOF - Termino el reduce \n");
 
 
 }
