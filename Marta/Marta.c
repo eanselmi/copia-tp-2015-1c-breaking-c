@@ -32,12 +32,6 @@ t_list* jobs;
 t_list* listaNodos; //lista de nodos conectados al FS
 t_list* listaArchivos; //lista de archivos del FS
 
-
-
-
-
-
-
 int main(int argc, char**argv){
 
 	pthread_t escucha_jobs;
@@ -57,7 +51,7 @@ int main(int argc, char**argv){
 	char nodoId[6];
 	int estadoNodo;
 	//char* ipNodo;
-	char ipNodo[15];
+	char ipNodo[17];
 	int puertoEscuchaNodo;
 	//para recibir la informacion de los archivos
 	int j, k, l;
@@ -337,7 +331,7 @@ int main(int argc, char**argv){
 			exit(-1);
 		}
 		//ipNodo=string_new();
-		memset(ipNodo, '\0',15);
+		memset(ipNodo, '\0',17);
 		if ((nbytes = recv(socket_fs, ipNodo, sizeof(ipNodo), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
 			perror("recv");
 			log_error(logger,"FALLO el Recv de la ip del nodo");
@@ -348,7 +342,7 @@ int main(int argc, char**argv){
 			log_error(logger,"FALLO el Recv del puerto escucha del nodo");
 			exit(-1);
 		}
-		memset(nodoTemporal->nodo_id, '\0', 6);
+		memset(nodoTemporal->nodo_id,'\0', 6);
 		strcpy(nodoTemporal->nodo_id, nodoId);
 		nodoTemporal->estado =estadoNodo;
 		nodoTemporal->ip = strdup(ipNodo);
@@ -368,7 +362,7 @@ int main(int argc, char**argv){
 	for (iii = 0; iii < n_nodos; iii++) {
 		elemento = list_get(listaNodos, iii);
 		printf("\n\n");
-		printf("Nodo_ID: %s\Estado: %d\nIP: %s\nPuerto de Escucha: %d\n",elemento->nodo_id, elemento->estado, elemento->ip,elemento->puerto_escucha_nodo);
+		printf("Nodo_ID: %s\nEstado: %d\nIP: %s\nPuerto de Escucha: %d\n",elemento->nodo_id, elemento->estado, elemento->ip,elemento->puerto_escucha_nodo);
 		printf("\n");
 	}
 
@@ -458,7 +452,6 @@ int main(int argc, char**argv){
 		cant_archivos = list_size(listaArchivos);
 		if (cant_archivos==0){
 			printf ("No hay archivos cargados en MDFS\n");
-			exit(1);
 		}
 		for (ii = 0; ii < cant_archivos; ii++) {
 			archi = list_get(listaArchivos, ii);

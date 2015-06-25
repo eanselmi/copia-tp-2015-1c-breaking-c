@@ -528,8 +528,10 @@ void *connection_handler_escucha(void) {
 											log_error(logger, "FALLO el envio del ok a Marta");
 											exit(-1);
 										}
-										printf ("%d\n",strlen(nodo_para_marta->ip));
-										if ((send(marta_sock, nodo_para_marta->ip,strlen(nodo_para_marta->ip), MSG_WAITALL)) == -1) {
+										char ip_para_enviar[17];
+										memset(ip_para_enviar,'\0',17);
+										strcpy(ip_para_enviar,nodo_para_marta->ip);
+										if ((send(marta_sock, ip_para_enviar,sizeof(ip_para_enviar), MSG_WAITALL)) == -1) {
 											perror("send");
 											log_error(logger, "FALLO el envio del ok a Marta");
 											exit(-1);
