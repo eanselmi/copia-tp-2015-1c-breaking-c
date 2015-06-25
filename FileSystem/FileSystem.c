@@ -586,7 +586,10 @@ void *connection_handler_escucha(void) {
 											for (cantidad_copias=0;cantidad_copias<list_size(unBloque->copias);cantidad_copias++){
 												t_copias *unaCopia=malloc(sizeof(t_copias));
 												unaCopia=list_get(unBloque->copias,cantidad_copias);
-												if ((send(marta_sock, unaCopia->nodo,sizeof(unaCopia->nodo), MSG_WAITALL)) == -1) {
+												char nodo_id_para_enviar[6];
+												memset(nodo_id_para_enviar,'\0',6);
+												strcpy(nodo_id_para_enviar,unaCopia->nodo);
+												if ((send(marta_sock, nodo_id_para_enviar,sizeof(nodo_id_para_enviar), MSG_WAITALL)) == -1) {
 													perror("send");
 													log_error(logger, "FALLO el envio del ok a Marta");
 													exit(-1);
