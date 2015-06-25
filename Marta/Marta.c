@@ -619,6 +619,10 @@ void *atenderJob (int *socketJob) {
 	memset(mensajeCombiner, '\0', 3);
 	memset(archivosDelJob, '\0', MENSAJE_SIZE);
 	memset(archivoResultado,'\0', TAM_NOMFINAL);
+	char ** arrayTiempo;
+	char *tiempo=string_new(); //string que tendrá la hora
+	char *nombreArchivoTemp=string_new();//Nombre del archivo que va a mandar a los nodos
+	char *pathArchivoTemp = string_new(); //Path donde va a guardar los archivos temporales
 	//Recibe mensaje de si es o no combiner
 	if(recv(*socketJob,mensajeCombiner,sizeof(mensajeCombiner),MSG_WAITALL)==-1){
 		perror("recv");
@@ -687,8 +691,18 @@ void *atenderJob (int *socketJob) {
 			}
 			//*************************************************************************************************
 			//Que marta rearme el archivo temporal con nombre con los milisegundos PAM (COPIALA DE BRUNO)
+			strcpy(pathArchivoTemp,"/tmp/");
+			strcpy(nombreArchivoTemp,"MapTemporal");
+			arrayTiempo=string_split(temporal_get_string_time(),":"); //creo array con hora minutos segundos y milisegundos separados
+			string_append(&tiempo,arrayTiempo[0]);//Agrego horas
+			string_append(&tiempo,arrayTiempo[1]);//Agrego minutos
+			string_append(&tiempo,arrayTiempo[2]);//Agrego segundos
+			string_append(&tiempo,arrayTiempo[3]);//Agrego milisegundos
+			string_append(&nombreArchivoTemp,tiempo); //Concateno la fecha en formato hhmmssmmmm
+			string_append(&nombreArchivoTemp,".tmp");
+			string_append(&pathArchivoTemp,nombreArchivoTemp);
 			//************************************************************************************************
-			strcpy(datosMapper.nombreArchivoTemporal,"/tmp/mapBloque1.txt"); //Falta generar un nombre
+			strcpy(datosMapper.nombreArchivoTemporal,pathArchivoTemp); //Falta generar un nombre
 
 			strcpy(accion,"ejecuta map");
 			//Le avisamos al job que vamos a mandarle rutina map
