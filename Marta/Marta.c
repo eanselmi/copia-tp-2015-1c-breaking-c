@@ -46,6 +46,7 @@ int main(int argc, char**argv){
 	char identificacion[BUF_SIZE]; //para el mensaje que envie al conectarse para identificarse, puede cambiar
 	FD_ZERO(&master); // borra los conjuntos maestro y temporal
 	FD_ZERO(&read_fds);
+	printf("%s\n", config_get_string_value(configurador,"IP_FS"));
 	filesystem.sin_family = AF_INET;
 	filesystem.sin_addr.s_addr = inet_addr(config_get_string_value(configurador,"IP_FS"));
 	filesystem.sin_port = htons(config_get_int_value(configurador,"PUERTO_FS"));
@@ -281,80 +282,101 @@ int main(int argc, char**argv){
 
 
 
+//====================== CONEXION CON FS =================================
 
-//
-//	if ((socket_fs = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
-//		perror ("socket");
-//		log_error(logger,"FALLO la creacion del socket");
-//		exit (-1);
-//	}
-//	if (connect(socket_fs, (struct sockaddr *)&filesystem,sizeof(struct sockaddr)) == -1) {
-//		perror ("connect");
-//		log_error(logger,"FALLO la conexion con el FS");
-//		exit (-1);
-//	}
-//	FD_SET(socket_fs, &master);
-//	fdmax = socket_fs; // por ahora es éste el ultimo socket
-//
-//	strcpy(identificacion,"marta");
-//	if((send(socket_fs,identificacion,sizeof(identificacion),MSG_WAITALL))==-1) {
-//		perror("send");
-//		log_error(logger,"FALLO el envio del saludo al FS");
-//	exit(-1);
-//	}
-//	//int nbytes;  //AR los subi con el resto de las declaraciones, lo dejo comentado para revisarlo luego
-//	if ((nbytes = recv(socket_fs, identificacion, sizeof(identificacion), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error, no considero desconexion porque es nuevo
-//		perror("recv");
-//		log_error(logger,"FALLO el Recv");
-//		exit(-1);
-//	} else if (nbytes == 0){
-//		printf ("Conexion con FS cerrada, el proceso fs no esta listo o bien ya existe una instancia de marta conectada\n");
-//		exit(-1);
-//	}
-//	if (nbytes > 0 && strncmp(identificacion,"ok",2)==0)	log_info (logger,"Conexion con el FS exitosa");
-//
-//
-////Para recibir los nodos de FS
-//	if ((nbytes = recv(socket_fs, &cantNodos, sizeof(int), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
-//		perror("recv");
-//		log_error(logger,"FALLO el Recv de cantidad de nodos");
-//		exit(-1);
-//	}
-//	i=0;
-//	while (i < cantNodos){
-//		t_nodo* nodoTemporal = malloc(sizeof(t_nodo));
-//		if ((nbytes = recv(socket_fs, nodoId, sizeof(nodoId), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
-//			perror("recv");
-//			log_error(logger,"FALLO el Recv de nodoId");
-//			exit(-1);
-//		}
-//		if ((nbytes = recv(socket_fs, &estadoNodo, sizeof(int), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
-//			perror("recv");
-//			log_error(logger,"FALLO el Recv del estado del nodo");
-//			exit(-1);
-//		}
-//		//ipNodo=string_new();
-//		memset(ipNodo, '\0',15);
-//		if ((nbytes = recv(socket_fs, ipNodo, sizeof(ipNodo), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
-//			perror("recv");
-//			log_error(logger,"FALLO el Recv de la ip del nodo");
-//			exit(-1);
-//		}
-//		if ((nbytes = recv(socket_fs, &puertoEscuchaNodo, sizeof(int), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
-//			perror("recv");
-//			log_error(logger,"FALLO el Recv del puerto escucha del nodo");
-//			exit(-1);
-//		}
-//		memset(nodoTemporal->nodo_id, '\0', 6);
-//		strcpy(nodoTemporal->nodo_id, nodoId);
-//		nodoTemporal->estado =estadoNodo;
-//		nodoTemporal->ip = strdup(ipNodo);
-//		nodoTemporal->puerto_escucha_nodo = puertoEscuchaNodo;
-//		list_add(listaNodos, nodoTemporal);
-//		i++;
-//	}
-//
-//	//para recibir los archivos de FS
+	if ((socket_fs = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
+		perror ("socket");
+		log_error(logger,"FALLO la creacion del socket");
+		exit (-1);
+	}
+	if (connect(socket_fs, (struct sockaddr *)&filesystem,sizeof(struct sockaddr)) == -1) {
+		perror ("connect");
+		log_error(logger,"FALLO la conexion con el FS");
+		exit (-1);
+	}
+	FD_SET(socket_fs, &master);
+	fdmax = socket_fs; // por ahora es éste el ultimo socket
+	strcpy(identificacion,"marta");
+	if((send(socket_fs,identificacion,sizeof(identificacion),MSG_WAITALL))==-1) {
+		perror("send");
+		log_error(logger,"FALLO el envio del saludo al FS");
+		exit(-1);
+	}
+	//int nbytes;  //AR los subi con el resto de las declaraciones, lo dejo comentado para revisarlo luego
+	if ((nbytes = recv(socket_fs, identificacion, sizeof(identificacion), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error, no considero desconexion porque es nuevo
+		perror("recv");
+		log_error(logger,"FALLO el Recv");
+		exit(-1);
+	} else if (nbytes == 0){
+		printf ("Conexion con FS cerrada, el proceso fs no esta listo o bien ya existe una instancia de marta conectada\n");
+		exit(-1);
+	}
+	if (nbytes > 0 && strncmp(identificacion,"ok",2)==0)	log_info (logger,"Conexion con el FS exitosa");
+
+//==================================== FIN CONEXION CON FS ====================================================
+
+
+//============================ RECIBO LA LISTA DE NODOS QUE TIENE EL FS =========================================
+
+	if ((nbytes = recv(socket_fs, &cantNodos, sizeof(int), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
+		perror("recv");
+		log_error(logger,"FALLO el Recv de cantidad de nodos");
+		exit(-1);
+	}
+	i=0;
+	while (i < cantNodos){
+		t_nodo* nodoTemporal = malloc(sizeof(t_nodo));
+		if ((nbytes = recv(socket_fs, nodoId, sizeof(nodoId), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
+			perror("recv");
+			log_error(logger,"FALLO el Recv de nodoId");
+			exit(-1);
+		}
+		if ((nbytes = recv(socket_fs, &estadoNodo, sizeof(int), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
+			perror("recv");
+			log_error(logger,"FALLO el Recv del estado del nodo");
+			exit(-1);
+		}
+		//ipNodo=string_new();
+		memset(ipNodo, '\0',15);
+		if ((nbytes = recv(socket_fs, ipNodo, sizeof(ipNodo), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
+			perror("recv");
+			log_error(logger,"FALLO el Recv de la ip del nodo");
+			exit(-1);
+		}
+		if ((nbytes = recv(socket_fs, &puertoEscuchaNodo, sizeof(int), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
+			perror("recv");
+			log_error(logger,"FALLO el Recv del puerto escucha del nodo");
+			exit(-1);
+		}
+		memset(nodoTemporal->nodo_id, '\0', 6);
+		strcpy(nodoTemporal->nodo_id, nodoId);
+		nodoTemporal->estado =estadoNodo;
+		nodoTemporal->ip = strdup(ipNodo);
+		nodoTemporal->puerto_escucha_nodo = puertoEscuchaNodo;
+		list_add(listaNodos, nodoTemporal);
+		i++;
+	}
+
+
+	//VOY A LISTAR LA LISTA DE NODOS PARA VER SI LLEGO BIEN
+
+	printf ("\n\nLista de nodos recibida");
+	printf ("\n=======================\n\n");
+	int iii, n_nodos;
+	t_nodo *elemento=malloc(sizeof(t_nodo));
+	n_nodos = list_size(listaNodos);
+	for (iii = 0; iii < n_nodos; iii++) {
+		elemento = list_get(listaNodos, iii);
+		printf("\n\n");
+		printf("Nodo_ID: %s\Estado: %d\nIP: %s\nPuerto de Escucha: %d\n",elemento->nodo_id, elemento->estado, elemento->ip,elemento->puerto_escucha_nodo);
+		printf("\n");
+	}
+
+//================================== FIN DEL ENVIO DE LA LISTA DE NODOS DEL FS =================================================
+
+
+
+//=================================== RECIBO LA LISTA DE ARCHIVOS QUE TIENE EL FS ==============================================
 
 	if ((nbytes = recv(socket_fs, &cantArchivos, sizeof(int), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
 		perror("recv");
@@ -425,6 +447,40 @@ int main(int argc, char**argv){
 		j++;
 	}
 
+	//VOY A LISTAR LA LISTA DE ARCHIVOS PARA VER SI LLEGO BIEN
+
+	int ii,jj,kk,cant_archivos,cant_bloques,cant_copias;
+		t_archivo *archi=malloc(sizeof(t_archivo));
+		t_bloque *bloque=malloc(sizeof(t_bloque));
+		t_copias *copia=malloc(sizeof(t_copias));
+		cant_archivos = list_size(listaArchivos);
+		if (cant_archivos==0){
+			printf ("No hay archivos cargados en MDFS\n");
+			exit(1);
+		}
+		for (ii = 0; ii < cant_archivos; ii++) {
+			archi = list_get(listaArchivos, ii);
+			printf("\n\n");
+			printf("Archivo: %s\nPadre: %d\nEstado: %d\n",archi->nombre,archi->padre,archi->estado);
+			printf("\n");
+			cant_bloques=list_size(archi->bloques);
+			for (jj = 0; jj < cant_bloques; jj++){
+				bloque=list_get(archi->bloques,jj);
+				printf ("Numero de bloque: %d\n",jj);
+				cant_copias=list_size(bloque->copias);
+				for (kk=0;kk<cant_copias;kk++){
+					copia=list_get(bloque->copias,kk);
+					printf ("Copia %d del bloque %d\n",kk,jj);
+					printf ("----------------------\n");
+					printf ("	Nodo: %s\n	Bloque: %d\n\n",copia->nodo,copia->bloqueNodo);
+				}
+			}
+		}
+
+
+//================================= FIN DEL ENVIO DE LA LISTA DE ARCHIVOS DEL FS ================================================
+
+
 	if( pthread_create( &escucha_jobs , NULL , connection_handler_jobs , NULL) < 0){
 	    perror("could not create thread");
 	    return -1;
@@ -432,7 +488,8 @@ int main(int argc, char**argv){
 
 	pthread_join(escucha_jobs,NULL);
 	return 0;
-}
+
+}//================================== FIN DEL MAIN =====================================================
 
 
 void *connection_handler_jobs(){
@@ -595,7 +652,7 @@ void *atenderJob (int *socketJob) {
 	//De cada archivo que nos manda el Job buscamos y nos traemos los bloques
 
 //TODO revisar buscarBloques
-		bloques=buscarBloques(archivos[posicionArchivo]);
+ //	bloques=buscarBloques(archivos[posicionArchivo]);
 	//Enviamos rutina Map de cada bloque del archivo al Job que nos envio dicho archivo
 		cantBloques = list_size(bloques);
 		for(i=0; i<cantBloques; i++){ //recorremos los bloques del archivo que nos mando job

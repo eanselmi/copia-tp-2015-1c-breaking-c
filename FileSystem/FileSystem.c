@@ -539,9 +539,64 @@ void *connection_handler_escucha(void) {
 											log_error(logger, "FALLO el envio del ok a Marta");
 											exit(-1);
 										}
+
 									}
+									int cantidad_archivos=list_size(archivos);
+									if ((send(marta_sock, &cantidad_archivos,sizeof(int), MSG_WAITALL)) == -1) {
+										perror("send");
+										log_error(logger, "FALLO el envio del ok a Marta");
+										exit(-1);
+									}
+									for (cantidad_archivos=0;cantidad_archivos<list_size(archivos);cantidad_archivos++){
+										t_archivo *unArchivo=malloc(sizeof(t_archivo));
+										unArchivo=list_get(archivos,cantidad_archivos);
+										if ((send(marta_sock, unArchivo->nombre,sizeof(unArchivo->nombre), MSG_WAITALL)) == -1) {
+											perror("send");
+											log_error(logger, "FALLO el envio del ok a Marta");
+											exit(-1);
+										}
+										if ((send(marta_sock, &unArchivo->padre,sizeof(uint32_t), MSG_WAITALL)) == -1) {
+											perror("send");
+											log_error(logger, "FALLO el envio del ok a Marta");
+											exit(-1);
+										}
+										if ((send(marta_sock, &unArchivo->estado,sizeof(uint32_t), MSG_WAITALL)) == -1) {
+											perror("send");
+											log_error(logger, "FALLO el envio del ok a Marta");
+											exit(-1);
+										}
+										int cantidad_bloques=list_size(unArchivo->bloques);
+										if ((send(marta_sock, &cantidad_bloques,sizeof(int), MSG_WAITALL)) == -1) {
+											perror("send");
+											log_error(logger, "FALLO el envio del ok a Marta");
+											exit(-1);
+										}
 
-
+										for (cantidad_bloques=0;cantidad_bloques<list_size(unArchivo->bloques);cantidad_bloques++){
+											t_bloque *unBloque=malloc(sizeof(t_bloque));
+											unBloque=list_get(unArchivo->bloques,cantidad_bloques);
+											int cantidad_copias=list_size(unBloque->copias);
+											if ((send(marta_sock, &cantidad_copias,sizeof(int), MSG_WAITALL)) == -1) {
+												perror("send");
+												log_error(logger, "FALLO el envio del ok a Marta");
+												exit(-1);
+											}
+											for (cantidad_copias=0;cantidad_copias<list_size(unBloque->copias);cantidad_copias++){
+												t_copias *unaCopia=malloc(sizeof(t_copias));
+												unaCopia=list_get(unBloque->copias,cantidad_copias);
+												if ((send(marta_sock, unaCopia->nodo,sizeof(unaCopia->nodo), MSG_WAITALL)) == -1) {
+													perror("send");
+													log_error(logger, "FALLO el envio del ok a Marta");
+													exit(-1);
+												}
+												if ((send(marta_sock, &unaCopia->bloqueNodo,sizeof(int), MSG_WAITALL)) == -1) {
+													perror("send");
+													log_error(logger, "FALLO el envio del ok a Marta");
+													exit(-1);
+												}
+											}
+										}
+									}
 
 								} else {
 									printf("Ya existe un proceso marta conectado, no puede haber más de 1\n");
@@ -1392,7 +1447,7 @@ int CopiarArchivoAMDFS(){
     	perror("fopen");
     	Menu();
     }
-    printf("Ingrese el path del archivo destino \n");
+    printf("Ingrese el path del archivo destino desde raíz, por ejemplo /tmp/nombreArchivo \n");
     scanf("%99s", pathMDFS);
     directoriosPorSeparado=string_split(pathMDFS,"/");
     while(directoriosPorSeparado[posicionDirectorio+1]!=NULL){
