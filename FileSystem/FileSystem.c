@@ -1447,7 +1447,7 @@ int CopiarArchivoAMDFS(){
     	perror("fopen");
     	Menu();
     }
-    printf("Ingrese el path del archivo destino \n");
+    printf("Ingrese el path del archivo destino desde raíz, por ejemplo /tmp/nombreArchivo \n");
     scanf("%99s", pathMDFS);
     directoriosPorSeparado=string_split(pathMDFS,"/");
     while(directoriosPorSeparado[posicionDirectorio+1]!=NULL){
