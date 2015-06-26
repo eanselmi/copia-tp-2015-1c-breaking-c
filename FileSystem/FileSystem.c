@@ -85,7 +85,6 @@ int main(int argc, char *argv[]) {
 	rewind(archivo_persistencia);
 	fprintf (archivo_persistencia,"%s","1");
 	fclose(archivo_persistencia);
-	printf ("%s\n",valor);
 	if (strcmp(valor,"1")==0){
 		//Hay que restaurar la persistencia
 	}
@@ -1771,7 +1770,7 @@ int CopiarArchivoDelMDFS(int flag, char*unArchivo) {
 		bloqueDisponible=0;
 		for (k=0;k<list_size(bloque->copias);k++){
 			copia=list_get(bloque->copias,k);
-			if(obtenerEstadoDelNodo(copia->nodo)==1){
+			if(obtenerEstadoDelNodo(copia->nodo)==1 && obtenerEstadoDelBloque(copia->nodo,copia->bloqueNodo)==1){
 				bloqueDisponible=1;
 				socket_nodo =obtener_socket_de_nodo_con_id(copia->nodo);
 				if (socket_nodo == -1){
@@ -1792,6 +1791,16 @@ int CopiarArchivoDelMDFS(int flag, char*unArchivo) {
 	}
 	fclose(copiaLocal);
 	return 0;
+}
+int obtenerEstadoDelBloque(char *nodo,int bloqueNodo){
+	t_nodo *unNodo;
+		int i;
+		for (i=0;i<list_size(nodos);i++){
+			unNodo=list_get(nodos,i);
+			if (bloqueNodo <= unNodo->bloques_totales)
+				if ((strcmp(unNodo->nodo_id,nodo)==0) && bitarray_test_bit(unNodo->bloques_del_nodo,bloqueNodo)==1) return 1;
+		}
+		return -1;
 }
 
 int obtenerEstadoDelNodo(char* nodo){

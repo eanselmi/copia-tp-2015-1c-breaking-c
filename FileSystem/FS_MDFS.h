@@ -50,20 +50,20 @@ typedef struct estructura_directorio{
 //----------------------------------------------------------------------------------------
 //------------------------------ FUNCIONES PRINCIPALES DE CONSOLA ------------------------
 //----------------------------------------------------------------------------------------
-void FormatearFilesystem ();							//DESARROLLADA
-void EliminarArchivo();									//DESARROLLADA, falta persistencia
-void RenombrarArchivo();								//DESARROLLADA, falta persistencia
-void MoverArchivo();									//NO ANDA	  , falta persistencia
+void FormatearFilesystem ();							//DESARROLLADA                          mandar formatear
+void EliminarArchivo();									//DESARROLLADA, falta persistencia      1. mandar elim_arch 2. nombre 3. padre
+void RenombrarArchivo();								//DESARROLLADA, falta persistencia      1. mandar renom_arch 2. nombre 3. padre
+void MoverArchivo();									//DESARROLLADA, falta persistencia      revisar si cambio el padre / 1. mov_arch 2. nom 3. padre_viejo  4. padre_nuevo
 void CrearDirectorio();									//DESARROLLADA, falta persistencia
 void EliminarDirectorio();								//DESARROLLADA, falta persistencia
 void RenombrarDirectorio();								//DESARROLLADA, falta persistencia
 void MoverDirectorio();									//DESARROLLADA, falta persistencia
-int CopiarArchivoAMDFS();								//DESARROLLADA, falta persistencia
+int CopiarArchivoAMDFS();								//DESARROLLADA, falta persistencia      1. mandar nuevo_arch --- mandar casi igual que al principio
 int CopiarArchivoDelMDFS(int flag, char*unArchivo);		//DESARROLLADA
 void MD5DeArchivo();									//DESARROLLADA
 int VerBloque();										//DESARROLLADA
-void BorrarBloque();									//DESARROLLADA, falta persistencia
-void CopiarBloque();									//DESARROLLADA, falta persistencia
+void BorrarBloque();									//DESARROLLADA, falta persistencia      /ver que responden de bloque
+void CopiarBloque();									//DESARROLLADA, falta persistencia      /ver que responden de bloque
 void AgregarNodo();										//DESARROLLADA
 void EliminarNodo();  									//DESARROLLADA
 void eliminar_listas(t_list *archivos_l, t_list *directorios_d, t_list *nodos_n);	//DESARROLLADA
@@ -75,6 +75,7 @@ void eliminar_listas(t_list *archivos_l, t_list *directorios_d, t_list *nodos_n)
 int Menu();
 void DibujarMenu();
 void listar_archivos_subidos(t_list *archivos);
+int obtenerEstadoDelBloque(char *nodo,int bloqueNodo);
 void listar_directorios(void);
 int obtenerEstadoDelNodo(char* nodo);
 void obtenerNodosMasLibres(void);
