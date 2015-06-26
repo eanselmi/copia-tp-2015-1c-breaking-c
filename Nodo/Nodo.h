@@ -28,11 +28,14 @@ typedef struct estructura_archivosapareando{
 	char buffer[512];
 	char nombreArchivo[TAM_NOMFINAL];
 	int endOfFile; //0 si no llego, 1 si llego
+	char renglones[512]; //El proximo renglon del buffer
+	int posicionRenglon; //Posicion en el buffer de donde termina el renglon
 }t_archivoEnApareo;
 
 typedef struct estructura_archivoAbierto{
 	FILE* archivoAbierto;
 	char nombreArchivo[TAM_NOMFINAL];
+	int posicionBuffer;
 }t_archivoAbierto;
 
 //Declaración de funciones
@@ -52,10 +55,11 @@ char* crearBloqueFalso(); //Solo para uso interno, crea un bloque de 20MB
 char* crearBloqueAMediasFalso(); // Solo para uso interno, crea un bloque de 10MB
 void crearArchivoFalso();//Solo para uso interno, crea un archivo de 50MB en /tmp/archivoPrueba.txt (se puede regular el tamaño en multiplos de 10MB)
 void ejecutarReduce(t_list * listaArchivos, char* script,char* resultado);
-FILE* estaEnListaArchivosAbiertos(char* nombreArchivo);
+t_archivoAbierto* estaEnListaArchivosAbiertos(char* nombreArchivo);
 int no_llego_a_eof(t_archivoEnApareo* archivo); //condicion de que un archivo no llego a end of file
 void removerDeListaDeArchivosAbiertos(FILE* archivoARemover);
 static void eliminarArchivo(t_archivoAbierto* archivoAbierto);
+int buscarPosicionDeArchivoAbierto(FILE* archivo);
 
 
 

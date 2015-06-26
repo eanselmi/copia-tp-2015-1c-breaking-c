@@ -205,7 +205,9 @@ void *manejador_de_escuchas(){
 	pthread_t reducerThread;
 	char mensaje[BUF_SIZE]; //Mensaje que recivirá de los clientes
 	char archivoAPasar[TAM_NOMFINAL]; //Nombre del archivo que me pide otro nodo
-	char renglon[512]; //Renglon para otro nodo
+	char renglones[512]; //Renglones que entran en 512 bytes para otro nodo
+	char renglonTemporal[512];
+	char bufferRenglones[512];
 	int socketModificado,nbytes,newfd,addrlen,read_size;
 	struct sockaddr_in remote_client; //Direccion del cliente que se conectará
 	int* socketNodo; //para identificar los que son nodos conectados
@@ -358,38 +360,86 @@ void *manejador_de_escuchas(){
 					else{
 						/* -- el nodo envío un mensaje a tratar -- */
 
-						if(strncmp(mensaje,"Dame renglon",12)==0){ //Me pidio un renglon, espero el nombre de que archivo
-							memset(renglon,'\0',512);
+						if(strncmp(mensaje,"Dame renglones",14)==0){ //Me pidio un renglon, espero el nombre de que archivo
+
+							memset(renglones,'\0',512);
+							memset(bufferRenglones,'\0',512);
 							memset(archivoAPasar,'\0',TAM_NOMFINAL);
-							FILE* archParaPasar;
+							memset(renglonTemporal,'\0',512);
+							int posicionInicial;
+							int byteLeido;
+							int i;
+							t_archivoAbierto* archivoPedido;
 							recv(socketModificado,archivoAPasar,sizeof(archivoAPasar),MSG_WAITALL);
-							printf("Me pidio un renglón del archivo %s\n",archivoAPasar);
-							if((archParaPasar=estaEnListaArchivosAbiertos(archivoAPasar))==NULL){ //Si el archivo no está ya abierto, lo abro y leo un renglon
-								t_archivoAbierto* archAbierto=malloc(sizeof(t_archivoAbierto));
+							printf("Me pidio renglones del archivo %s\n",archivoAPasar);
+
+							if((archivoPedido=estaEnListaArchivosAbiertos(archivoAPasar))==NULL){ //Si el archivo no está ya abierto, lo abro y leo un renglon
+								t_archivoAbierto* archAbiertoNuevo=malloc(sizeof(t_archivoAbierto));
+								FILE* archParaPasar;
+
 								//Abro el nuevo archivo
 								archParaPasar=fopen(archivoAPasar,"r");
 								//Agrego al nuevo archivo abierto a la lista de archivos abiertos
-								archAbierto->archivoAbierto=archParaPasar;
-								strcpy(archAbierto->nombreArchivo,archivoAPasar);
-								list_add(archivosAbiertos,archAbierto);
-								//leo un renglon
-								fgets(renglon,512,archParaPasar);
-								if(feof(archParaPasar)){
-									fclose(archParaPasar);
-									strcpy(renglon,"Llego al EOF");
-									removerDeListaDeArchivosAbiertos(archParaPasar);
+								archAbiertoNuevo->archivoAbierto=archParaPasar;
+								strcpy(archAbiertoNuevo->nombreArchivo,archivoAPasar);
+								archAbiertoNuevo->posicionBuffer=0;
+								//Lee 512 bytes desde la posicion del archivo para pasar
+								fseek(archParaPasar,archAbiertoNuevo->posicionBuffer,SEEK_SET);
+								fread(bufferRenglones,sizeof(char),512,archParaPasar);
+								//va agregando los renglones al "renglon"
+								posicionInicial=archAbiertoNuevo->posicionBuffer;
+								i=0;
+								for(byteLeido=0;byteLeido<512;byteLeido++){
+									renglonTemporal[i]=bufferRenglones[byteLeido];
+									if(bufferRenglones[byteLeido]=='\n'){
+										archAbiertoNuevo->posicionBuffer=posicionInicial+byteLeido+1;
+										strcat(renglones,renglonTemporal);
+										memset(renglonTemporal,'\0',512);
+										i=-1;
+									}
+									i++;
+									if (bufferRenglones[byteLeido]=='\0') break;
+
 								}
+
+//								if(feof(archParaPasar)){
+//									fclose(archParaPasar);
+//									strcpy(renglones,"Llego al EOF");
+//									removerDeListaDeArchivosAbiertos(archParaPasar);
+//								}
+
+								list_add(archivosAbiertos,archAbiertoNuevo);
+
 							}
-							else{ //si ya esta abierto leo un renglon
-								fgets(renglon,512,archParaPasar);
-								if(feof(archParaPasar)){
-									fclose(archParaPasar);
-									strcpy(renglon,"Llego al EOF");
-									removerDeListaDeArchivosAbiertos(archParaPasar);
+							else{ //si ya esta abierto pregunto si quedo en eof
+								if(!feof(archivoPedido->archivoAbierto)){
+									//si no quedo en eof, voy a la posicion que tenia y leo 512, voy concatenando los renglones
+									fseek(archivoPedido->archivoAbierto,archivoPedido->posicionBuffer,SEEK_SET);
+									fread(bufferRenglones,sizeof(char),512,archivoPedido->archivoAbierto);
+									//va agregando los renglones al "renglon"
+									posicionInicial=archivoPedido->posicionBuffer;
+
+									i=0;
+									for(byteLeido=0;byteLeido<512;byteLeido++){
+										renglonTemporal[i]=bufferRenglones[byteLeido];
+										if(bufferRenglones[byteLeido]=='\n'){
+											archivoPedido->posicionBuffer=posicionInicial+byteLeido+1;
+											strcat(renglones,renglonTemporal);
+											memset(renglonTemporal,'\0',512);
+											i=-1;
+										}
+										i++;
+										if (bufferRenglones[byteLeido]=='\0') break;
+									}
+								}
+								else{
+									fclose(archivoPedido->archivoAbierto);
+									strcpy(renglones,"Llego al EOF\n");
+									removerDeListaDeArchivosAbiertos(archivoPedido->archivoAbierto);
 								}
 							}
 
-							send(socketModificado,renglon,sizeof(renglon),MSG_WAITALL);
+							send(socketModificado,renglones,sizeof(renglones),MSG_WAITALL);
 
 						}
 
@@ -440,14 +490,27 @@ void *manejador_de_escuchas(){
 	}
 }
 
-FILE* estaEnListaArchivosAbiertos(char* nombreArchivo){
+int buscarPosicionDeArchivoAbierto(FILE* archivoABuscar){
+	int tamanio=list_size(archivosAbiertos);
+	int indice=0;
+	t_archivoAbierto* unArchAbierto;
+	for(indice=0;indice<tamanio;indice++){
+		unArchAbierto=list_get(archivosAbiertos,indice);
+		if(unArchAbierto->archivoAbierto==archivoABuscar){
+			return unArchAbierto->posicionBuffer;
+		}
+	}
+	return -1;
+}
+
+t_archivoAbierto* estaEnListaArchivosAbiertos(char* nombreArchivo){
 	int tamanio=list_size(archivosAbiertos);
 	int indice=0;
 	t_archivoAbierto* unArchAbierto;
 	for(indice=0;indice<tamanio;indice++){
 		unArchAbierto=list_get(archivosAbiertos,indice);
 		if(strcmp(unArchAbierto->nombreArchivo,nombreArchivo)==0){
-			return unArchAbierto->archivoAbierto;
+			return unArchAbierto;
 		}
 	}
 	//No está abierto
@@ -920,6 +983,8 @@ void* rutinaReduce (int* sckReduce){
 			nuevoArchivoEnApareo->socket=-1;
 			strcpy(nuevoArchivoEnApareo->nombreArchivo,unArchivoReduce->archivoAAplicarReduce);
 			nuevoArchivoEnApareo->endOfFile=0;
+			nuevoArchivoEnApareo->posicionRenglon=0;
+			memset(nuevoArchivoEnApareo->renglones,'\0',512);
 			printf("Agrego el archivo local %s\n",unArchivoReduce->archivoAAplicarReduce);
 			list_add(archivosEnApareo,nuevoArchivoEnApareo);
 		}
@@ -964,6 +1029,8 @@ void* rutinaReduce (int* sckReduce){
 			nuevoArchivoEnApareo->socket=otroNodoSock;
 			strcpy(nuevoArchivoEnApareo->nombreArchivo,unArchivoReduce->archivoAAplicarReduce);
 			nuevoArchivoEnApareo->endOfFile=0;
+			nuevoArchivoEnApareo->posicionRenglon=0;
+			memset(nuevoArchivoEnApareo->renglones,'\0',512);
 			list_add(archivosEnApareo,nuevoArchivoEnApareo);
 		}
 	}
@@ -982,11 +1049,14 @@ void* rutinaReduce (int* sckReduce){
 void ejecutarReduce(t_list* archivosApareando,char* script,char* resultado){
 	int posicionLista;
 	int posicionDelMenor=0;
+	int byteActual=0;
 	int cantidadArchivos=list_size(archivosApareando);
-	char dameUnRenglon[BUF_SIZE];
+	char dameRenglones[BUF_SIZE];
 	char bufferMenor[512];
-	memset(dameUnRenglon,'\0',BUF_SIZE);
-	strcpy(dameUnRenglon,"Dame renglon");
+	char renglonTemporal[512];
+	memset(renglonTemporal,'\0',512);
+	memset(dameRenglones,'\0',BUF_SIZE);
+	strcpy(dameRenglones,"Dame renglones");
 	//Leer una linea de cada uno, guardar en el buffer
 	int outfd[2];
 	int bak,pid,archivo_resultado;
@@ -996,7 +1066,7 @@ void ejecutarReduce(t_list* archivosApareando,char* script,char* resultado){
 	sem_init(&terminoElReduce,0,1);
 	pipe(outfd); /* Donde escribe el padre */
 	if((pid=fork())==-1){
-		perror("fork mapper");
+		perror("fork reduce");
 	}
 	else if(pid==0)
 	{
@@ -1019,15 +1089,36 @@ void ejecutarReduce(t_list* archivosApareando,char* script,char* resultado){
 	else
 	{
 		close(outfd[0]); /* Estan siendo usados por el hijo */
+
+		//--- AGARRO LA PRIMER LINEA DE CADA ARCHIVO ---//
+
 		for(posicionLista=0;posicionLista<cantidadArchivos;posicionLista++){
 			t_archivoEnApareo* unArchivo;//=malloc(sizeof(t_archivoEnApareo));
 			unArchivo=list_get(archivosApareando,posicionLista);
 			if(unArchivo->archivo==NULL){ //Si es un archivo Remoto
-				send(unArchivo->socket,dameUnRenglon,sizeof(dameUnRenglon),MSG_WAITALL);
+				send(unArchivo->socket,dameRenglones,sizeof(dameRenglones),MSG_WAITALL);
 				send(unArchivo->socket,unArchivo->nombreArchivo,sizeof(unArchivo->nombreArchivo),MSG_WAITALL);
-				recv(unArchivo->socket,unArchivo->buffer,sizeof(unArchivo->buffer),MSG_WAITALL);
-				if(strcmp(unArchivo->buffer,"Llego al EOF")==0){
+				recv(unArchivo->socket,unArchivo->renglones,sizeof(unArchivo->renglones),MSG_WAITALL);
+				if(strcmp(unArchivo->renglones,"Llego al EOF\n")==0){
 					unArchivo->endOfFile=1;
+				}else{
+					//Busco el primer renglon que tenga el buffer desde la posicion en la que está (empieza en 0)
+					int posicionActual;
+					int i=0;
+					posicionActual=unArchivo->posicionRenglon;
+					memset(unArchivo->buffer,'\0',512);
+					for(byteActual=posicionActual;byteActual!=1000;byteActual++){ //1000 sera condicion de corte
+						renglonTemporal[i]=unArchivo->renglones[byteActual];
+						if(unArchivo->renglones[byteActual]=='\n'){
+							strcpy(unArchivo->buffer,renglonTemporal);
+							unArchivo->posicionRenglon=byteActual+1;
+							byteActual=999;
+						}
+						i++;
+//						if(unArchivo->renglones[byteActual]=='\0'){
+//							//LLEGO AL FINAL EL BUFFER DE RENGLONES
+//						}
+					}
 				}
 				//	printf("Recibi del nodo el renglon: %s",unArchivo->buffer);
 			}
@@ -1072,12 +1163,30 @@ void ejecutarReduce(t_list* archivosApareando,char* script,char* resultado){
 			//t_archivoEnApareo* unArchivo;
 			unArchivo=list_get(archivosApareando,posicionDelMenor);
 			if(unArchivo->archivo==NULL){ //Si es un archivo Remoto
-				send(unArchivo->socket,dameUnRenglon,sizeof(dameUnRenglon),MSG_WAITALL);
-				send(unArchivo->socket,unArchivo->nombreArchivo,sizeof(unArchivo->nombreArchivo),MSG_WAITALL);
-				recv(unArchivo->socket,unArchivo->buffer,sizeof(unArchivo->buffer),MSG_WAITALL);
-				//	printf("Recibi del nodo el renglon: %s",unArchivo->buffer);
-				if(strcmp(unArchivo->buffer,"Llego al EOF")==0){
-					unArchivo->endOfFile=1;
+
+				if(unArchivo->renglones[unArchivo->posicionRenglon]=='\0'){ //Leyo todos los renglones, hay que pedir mas
+					memset(unArchivo->renglones,'\0',512);
+					unArchivo->posicionRenglon=0;
+					send(unArchivo->socket,dameRenglones,sizeof(dameRenglones),MSG_WAITALL);
+					send(unArchivo->socket,unArchivo->nombreArchivo,sizeof(unArchivo->nombreArchivo),MSG_WAITALL);
+					recv(unArchivo->socket,unArchivo->renglones,sizeof(unArchivo->renglones),MSG_WAITALL);
+					if(strcmp(unArchivo->renglones,"Llego al EOF\n")==0){
+						unArchivo->endOfFile=1;
+					}
+				}
+				int posicionActual;
+				int i=0;
+				posicionActual=unArchivo->posicionRenglon;
+				memset(unArchivo->buffer,'\0',512);
+				memset(renglonTemporal,'\0',512);
+				for(byteActual=posicionActual;byteActual!=1000;byteActual++){ //1000 sera condicion de corte
+					renglonTemporal[i]=unArchivo->renglones[byteActual];
+					if(unArchivo->renglones[byteActual]=='\n'){
+						strcpy(unArchivo->buffer,renglonTemporal);
+						unArchivo->posicionRenglon=byteActual+1;
+						byteActual=999;
+					}
+					i++;
 				}
 			}
 			else{ //es un archivo local
