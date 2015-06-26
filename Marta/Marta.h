@@ -54,12 +54,13 @@ typedef struct estructura_respuesta {
 	char nombreArchivoTemporal[TAM_NOMFINAL];
 	int resultado; // 0 si salio bien , y 1 si salio mal el map
 }__attribute__((packed)) t_respuestaMap;
+
 //Estructura que va a tener marta para poder replanificar
 typedef struct estructura_replanificar_map {
 	char nombreArchivoTemporal[TAM_NOMFINAL];
 	char nombreArchivoDelJob[TAM_NOMFINAL];
 	int bloqueArchivo;
-	t_list* nodo_id;
+	t_list* lista_nodos;
 }t_replanificarMap;
 
 
@@ -67,8 +68,9 @@ typedef struct estructura_replanificar_map {
 //Prototipos de funciones
 void *connection_handler_jobs(); // Esta funcion escucha continuamente si recibo nuevos mensajes
 void *atenderJob(int*);
-t_list *buscarBloques (char*);
+t_list *buscarBloques (char*, uint32_t);
 void asignarMap(t_list *bloques,int socketJob);
 t_nodo* buscarCopiaEnNodos(t_copias *copia);
 bool ordenarSegunMapYReduce (t_nodo* menorCarga,t_nodo* mayorCarga);
 static void eliminarCopiasNodo(t_list *self);
+void sumarCantMapper(t_nodo* nodoASumar);
