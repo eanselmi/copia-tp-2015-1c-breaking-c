@@ -763,14 +763,8 @@ void *atenderJob (int *socketJob) {
 
 			//******************************************************************************
 			//Buscar nodoAux en la lista general comparando por nodo_id y sumarle cantMapper
-			int n;
-			for(n=0;nodo!=NULL;n++){
-				if(strcmp(nodo->nodo_id, nodoAux->nodo_id) == 0){
-					sumarCantMapper(nodoAux);
-				}
-			}
 			//*******************************************************************************
-
+			sumarCantMapper(nodoAux);
 			list_clean_and_destroy_elements(copiasNodo, (void*) eliminarCopiasNodo);
 		}
 	}
