@@ -10,7 +10,7 @@ typedef struct datos_y_bloque{
 
 //se creara una lista de archivos, que contendra elementos del tipo "t_archivo"
 typedef struct estructura_filesystem {
-	char nombre[100];
+	char nombre[200];
 	uint32_t padre;
 	uint32_t tamanio;
 	uint32_t estado;
@@ -79,6 +79,7 @@ int obtenerEstadoDelBloque(char *nodo,int bloqueNodo);
 void listar_directorios(void);
 int obtenerEstadoDelNodo(char* nodo);
 void obtenerNodosMasLibres(void);
+char *obtenerPath(char *nombre, int dir_id);
 int copiar_lista_de_nodos(t_list *destino,t_list* origen);
 int copiar_lista_de_archivos(t_list* destino, t_list* origen);
 bool nodos_mas_libres(t_nodo *vacio, t_nodo *mas_vacio);
