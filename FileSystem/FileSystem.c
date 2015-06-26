@@ -236,7 +236,8 @@ void DibujarMenu(void) {
 	printf("# 14) Copiar un bloque                                         #\n");
 	printf("# 15) Agregar un nodo de datos                                 #\n");
 	printf("# 16) Eliminar un nodo de datos                                #\n");
-	printf("# 17) Salir                                                    #\n");
+	printf("# 17) Listar Archivos en MDFS                                  #\n");
+	printf("# 18) Salir                                                    #\n");
 	printf("################################################################\n");
 }
 
@@ -244,7 +245,7 @@ int Menu(void) {
 	char opchar[2];
 	memset(opchar, '\0', 2);
 	int opcion = 0;
-	while (opcion != 17) {
+	while (opcion != 18) {
 		sleep(1);
 		opcion = 0;
 		memset(opchar, '\0', 2);
@@ -285,13 +286,15 @@ int Menu(void) {
 			AgregarNodo(); break;
 		case 16:
 			EliminarNodo();	break;
-			//case 17: printf("Eligió Salir\n"); break;
+		case 17:
+			listar_archivos_subidos(archivos);	break;
 
-		//case 17: listar_nodos_conectados(nodos); break;
-		//case 17: listar_archivos_subidos(archivos); break;
-		//case 17: listar_directorios(); break;
-		case 17: eliminar_listas(archivos,directorios,nodos); break;
-		default: printf("Opción incorrecta. Por favor ingrese una opción del 1 al 17\n"); break;
+		//case 18: printf("Eligió Salir\n"); break;
+		//case 18: listar_nodos_conectados(nodos); break;
+		//case 18: listar_archivos_subidos(archivos); break;
+		//case 18: listar_directorios(); break;
+		case 18: eliminar_listas(archivos,directorios,nodos); break;
+		default: printf("Opción incorrecta. Por favor ingrese una opción del 1 al 18\n"); break;
 		}
 	}
 	return 0;
@@ -447,6 +450,35 @@ void listar_archivos_subidos(t_list *archivos) {
 	t_bloque *bloque;
 	t_copias *copia;
 	cantidad_archivos = list_size(archivos);
+	if (cantidad_archivos!=0){
+		for (i = 0; i < cantidad_archivos; i++) {
+			elemento = list_get(archivos, i);
+			printf("\n\n");
+			printf("Archivo: %s Padre: %d Bloques: %d\n",elemento->nombre,elemento->padre,list_size(elemento->bloques));
+			cantidad_bloques=list_size(elemento->bloques);
+			for (j = 0; j < cantidad_bloques; j++){
+				bloque=list_get(elemento->bloques,j);
+				printf ("----- Bloque: %d\n",j);
+				cantidad_copias=list_size(bloque->copias);
+				for (k=0;k<cantidad_copias;k++){
+					copia=list_get(bloque->copias,k);
+					printf ("---------- Copia %d",k);
+					printf (" Nodo: %s Bloque: %d\n",copia->nodo,copia->bloqueNodo);
+				}
+			}
+		}
+	}else printf ("No hay archivos cargados en MDFS\n");
+}
+
+
+
+/*
+void listar_archivos_subidos(t_list *archivos) {    VERSION COMPLETA NO APTA PARA USUARIOS
+	int i,j,k,cantidad_archivos,cantidad_bloques,cantidad_copias;
+	t_archivo *elemento;
+	t_bloque *bloque;
+	t_copias *copia;
+	cantidad_archivos = list_size(archivos);
 	if (cantidad_archivos==0){
 		printf ("No hay archivos cargados en MDFS\n");
 		exit(1);
@@ -469,8 +501,8 @@ void listar_archivos_subidos(t_list *archivos) {
 			}
 		}
 	}
-	exit(0);
 }
+*/
 
 
 void *connection_handler_escucha(void) {
@@ -910,56 +942,71 @@ void FormatearFilesystem() {
 }
 
 void EliminarArchivo() {
-	t_archivo* archivo=malloc(sizeof(t_archivo));
-	t_bloque* bloque=malloc(sizeof(t_bloque));
-	t_copias* copia=malloc(sizeof(t_copias));
-	t_nodo* nodoBuscado=malloc(sizeof(t_nodo));
 	printf("Eligió  Eliminar archivo\n");
-	char* path = string_new();
-	char* directorio;
-	int i,j,m,posicionDirectorio=0;
-	char ** directoriosPorSeparado;
-	directorio=string_new();
-	printf("Ingrese el path del archivo \n");
-	scanf("%s", path);
-    directoriosPorSeparado=string_split(path,"/");
-    while(directoriosPorSeparado[posicionDirectorio+1]!=NULL){
-    	string_append(&directorio,"/");
-    	string_append(&directorio,directoriosPorSeparado[posicionDirectorio]);
-    	posicionDirectorio++;
-    }
-	uint32_t idPadre = BuscarPadre(directorio);
-	if (idPadre==-1){
-		printf("El archivo no existe\n");
-		Menu();
-	}
-	uint32_t posArchivo = BuscarArchivoPorNombre(path, idPadre);
-	archivo = list_get(archivos, posArchivo);
-	for (i=0;i<list_size(archivo->bloques);i++){
-		bloque=list_get(archivo->bloques,i);
-		for (j=0;j<list_size(bloque->copias);j++){
+	int i,cantidad_archivos;
+	t_archivo *elemento;
+	cantidad_archivos = list_size(archivos);
+	if (cantidad_archivos!=0){
+		printf ("Se listan los archivos existentes en MDFS:\n");
+		for (i = 0; i < cantidad_archivos; i++) {
+			elemento = list_get(archivos, i);
+			printf("\n");
+			printf(".....Archivo: %s Padre: %d Bloques: %d\n",elemento->nombre,elemento->padre,list_size(elemento->bloques));
+		}
+		//Si hay archivos luego de listarlos, el usuario procede
+		printf ("\n");
+		t_archivo* archivo=malloc(sizeof(t_archivo));
+		t_bloque* bloque=malloc(sizeof(t_bloque));
+		t_copias* copia=malloc(sizeof(t_copias));
+		t_nodo* nodoBuscado=malloc(sizeof(t_nodo));
+		char* path = string_new();
+		char* directorio;
+		int i,j,m,posicionDirectorio=0;
+		char ** directoriosPorSeparado;
+		directorio=string_new();
+		printf("Ingrese el path del archivo a eliminar:\n");
+		scanf("%s", path);
+		directoriosPorSeparado=string_split(path,"/");
+		while(directoriosPorSeparado[posicionDirectorio+1]!=NULL){
+			string_append(&directorio,"/");
+			string_append(&directorio,directoriosPorSeparado[posicionDirectorio]);
+			posicionDirectorio++;
+		}
+		int idPadre = BuscarPadre(directorio);
+		if (idPadre==-1){
+			printf("El directorio no existe\n");
+			Menu();
+		}
+		int posArchivo = BuscarArchivoPorNombre(path, idPadre);
+		if (posArchivo==-1){
+			printf("El archivo no existe\n");
+			Menu();
+		}
+		archivo = list_get(archivos, posArchivo);
+		for (i=0;i<list_size(archivo->bloques);i++){
+			bloque=list_get(archivo->bloques,i);
+			for (j=0;j<list_size(bloque->copias);j++){
 
-			copia=list_get(bloque->copias,j);
+				copia=list_get(bloque->copias,j);
 
-			for (m=0;m<list_size(nodos);m++){
-				nodoBuscado = list_get(nodos,m);
-				if (strcmp(nodoBuscado->nodo_id, copia->nodo)==0) {
-					nodoBuscado->bloques_libres++;
-					bitarray_clean_bit(nodoBuscado->bloques_del_nodo, copia->bloqueNodo);
-					//break;
+				for (m=0;m<list_size(nodos);m++){
+					nodoBuscado = list_get(nodos,m);
+					if (strcmp(nodoBuscado->nodo_id, copia->nodo)==0) {
+						nodoBuscado->bloques_libres++;
+						bitarray_clean_bit(nodoBuscado->bloques_del_nodo, copia->bloqueNodo);
+					}
 				}
 			}
+			for (j=0;j<list_size(bloque->copias);j++){
+				list_remove_and_destroy_element(bloque->copias,j,(void*)eliminar_lista_de_copias);
+			}
 		}
-
-		for (j=0;j<list_size(bloque->copias);j++){
-			list_remove_and_destroy_element(bloque->copias,j,(void*)eliminar_lista_de_copias);
+		for (i=0;i<list_size(archivo->bloques);i++){
+			list_remove_and_destroy_element(archivo->bloques,i,(void*)eliminar_lista_de_bloques);
 		}
-	}
-	for (i=0;i<list_size(archivo->bloques);i++){
-		list_remove_and_destroy_element(archivo->bloques,i,(void*)eliminar_lista_de_bloques);
-	}
-	list_remove_and_destroy_element(archivos,posArchivo,(void*)eliminar_lista_de_archivos);
-
+		list_remove_and_destroy_element(archivos,posArchivo,(void*)eliminar_lista_de_archivos);
+		printf ("Archivo eliminado exitosamente\n");
+	}else printf ("No hay archivos cargados en MDFS\n");
 	//TODO: ACTUALIZAR EL ARCHIVO ELIMINADO A MARTA
 }
 void RenombrarArchivo() {
