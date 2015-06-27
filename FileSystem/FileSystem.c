@@ -288,8 +288,9 @@ int Menu(void) {
 		//case 17: printf("Eligió Salir\n"); break;
 		//case 17: listar_nodos_conectados(nodos); break;
 		//case 17: listar_archivos_subidos(archivos); break;
+		case 17: listar_directorios_usuarios(); break;
 		//case 17: listar_directorios(); break;
-		case 17: eliminar_listas(archivos,directorios,nodos); break;
+		//case 17: eliminar_listas(archivos,directorios,nodos); break;
 		default: printf("Opción incorrecta. Por favor ingrese una opción del 1 al 17\n"); break;
 		}
 	}
@@ -307,6 +308,54 @@ void listar_directorios(){
 		dir=list_get(directorios,i);
 		printf ("ID: %d Nombre: %s Padre: %d\n",dir->id,dir->nombre,dir->padre);
 	}
+}
+int directorio_vacio(int id){
+	int i;
+	t_dir *elemento;
+	int cantidad=0;
+	for (i=0;i<list_size(directorios);i++){
+		elemento=list_get(directorios,i);
+		if (elemento->padre==id) cantidad++;
+	}
+	return cantidad;
+}
+
+void listar_directorios_usuarios(){
+	t_dir *directorio1;
+	t_dir *directorio2;
+	t_dir *directorio3;
+	int i,j,k;
+	int id=-1;
+	int cantidad;
+	if (list_size(directorios)!=0){
+		printf ("Listado de directorios en MDFS\n\n");
+		for (i=0;i<list_size(directorios);i++){
+			directorio1=list_get(directorios,i);
+			if (directorio1->padre==0){
+				printf ("\n/%s/",directorio1->nombre);
+				id=directorio1->id;
+				for (j=0;j<list_size(directorios);j++){
+					directorio2=list_get(directorios,j);
+					if (directorio2->padre==id){
+						printf("%s/",directorio2->nombre);
+						cantidad=0;
+						id=directorio2->id;
+						j=0;
+						while (cantidad<directorio_vacio(directorio2->id)){
+							for (k=0;k<list_size(directorios);k++){
+								directorio3=list_get(directorios,k);
+								if (directorio3->padre==directorio2->id){
+									printf("\n...%s/",directorio3->nombre);
+									id=directorio2->id;
+								}
+							}
+							cantidad++;
+						}
+					}
+				}
+			}
+		}
+	}else printf ("No hay directorios creados\n");
 }
 
 static t_nodo *agregar_nodo_a_lista(char nodo_id[6], int socket, int est, int est_red, char *ip, int port, int puerto_escucha, int bloques_lib,int bloques_tot) {

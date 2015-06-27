@@ -79,6 +79,8 @@ int obtenerEstadoDelBloque(char *nodo,int bloqueNodo);
 void listar_directorios(void);
 int obtenerEstadoDelNodo(char* nodo);
 void obtenerNodosMasLibres(void);
+void listar_directorios_usuarios(void);
+int directorio_vacio(int id);
 char *obtenerPath(char *nombre, int dir_id);
 int copiar_lista_de_nodos(t_list *destino,t_list* origen);
 int copiar_lista_de_archivos(t_list* destino, t_list* origen);
