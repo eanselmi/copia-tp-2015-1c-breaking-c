@@ -593,9 +593,9 @@ void *connection_handler_jobs(){
 
 void *atenderJob (int *socketJob) {
 	int cantBloques;
-	int i;
-	int j;
-	int k;
+	int posBloques;
+	int posCopia;
+	int posArray;
 	t_nodo *nodo;
 	int cantCopias;
 	char accion[BUF_SIZE];
@@ -659,10 +659,10 @@ void *atenderJob (int *socketJob) {
 		printf("Se debe trabajar en el archivo:%s\n",archivos[posicionArchivo]);
 		//Separo el nombre del archivo por barras
 	    arrayArchivo = string_split(archivos[posicionArchivo], "/");
-		for(k=0;arrayArchivo[k]!=NULL;k++){
-			if(arrayArchivo[k+1]==NULL){
+		for(posArray=0;arrayArchivo[posArray]!=NULL;posArray++){
+			if(arrayArchivo[posArray+1]==NULL){
 				//me quedo con el nombre del archivo
-				strcpy(nombreArchivo,arrayArchivo[k]);
+				strcpy(nombreArchivo,arrayArchivo[posArray]);
 			}
 		}
 	strcpy(mensaje_fs, "dame padre");
@@ -689,11 +689,11 @@ void *atenderJob (int *socketJob) {
 	 bloques=buscarBloques(nombreArchivo,padre);
 	//Enviamos rutina Map de cada bloque del archivo al Job que nos envio dicho archivo
 		cantBloques = list_size(bloques);
-		for(i=0; i<cantBloques; i++){ //recorremos los bloques del archivo que nos mando job
-			bloque = list_get(bloques,i);
+		for(posBloques=0; posBloques<cantBloques; posBloques++){ //recorremos los bloques del archivo que nos mando job
+			bloque = list_get(bloques,posBloques);
 			cantCopias = list_size(bloque->copias);
-			for(j=0;j<cantCopias;j++){ // Por cada bloque del archivo recorremos las copias de dicho archivo
-				copia = list_get(bloque->copias,j);
+			for(posCopia=0;posCopia<cantCopias;posCopia++){ // Por cada bloque del archivo recorremos las copias de dicho archivo
+				copia = list_get(bloque->copias,posCopia);
 				// Nos traemos cada nodo en donde esta cada una de las copias del archivo
 				nodo= buscarCopiaEnNodos(copia);
 				if(nodo->estado == 1){
@@ -714,8 +714,8 @@ void *atenderJob (int *socketJob) {
 			memset(mapper->nombreArchivoDelJob,'\0',TAM_NOMFINAL);
 			strcpy(datosMapper.ip_nodo,nodoAux->ip);
 			datosMapper.puerto_nodo= nodoAux->puerto_escucha_nodo;
-			for(j=0;j<cantCopias;j++){
-				copia = list_get(bloque->copias,j);
+			for(posCopia=0;posCopia<cantCopias;posCopia++){
+				copia = list_get(bloque->copias,posCopia);
 				if(strcmp(copia->nodo,nodoAux->nodo_id)==0){
 					datosMapper.bloque=copia->bloqueNodo;
 				}
@@ -751,7 +751,7 @@ void *atenderJob (int *socketJob) {
 			// y agregarlos a una lista de mappers que va a manejar marta q va a estar compuesta por las estructuras t_replanificarMap por cada map
 			//de bloque que haga
 
-			mapper->bloqueArchivo = i; //i es el bloque de archivo
+			mapper->bloqueArchivo = posBloques;
 			mapper->lista_nodos=list_create();
 			strcpy(mapper->nombreArchivoDelJob,archivos[posicionArchivo]);
 			strcpy(mapper->archivoResultadoMap,datosMapper.archivoResultadoMap);
