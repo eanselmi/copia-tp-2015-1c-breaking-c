@@ -20,7 +20,6 @@
 #include "Nodo.h"
 
 //Declaración de variables Globales
-//uint32_t n_bloque;
 t_datos_y_bloque combo;
 t_config* configurador;
 t_log* logger; //log en pantalla y archivo de log
@@ -33,8 +32,6 @@ int fdmax;//Numero maximo de descriptores de fichero
 int conectorFS; //socket para conectarse al FS
 int listener; //socket encargado de escuchar nuevas conexiones
 t_list* listaNodosConectados; //Lista con los nodos conectados
-t_list* listaMappersConectados; //Lista con los mappers conectados
-t_list* listaReducersConectados; //lista con los reducers conectados
 t_list* archivosAbiertos; //Archivos ya abiertos que otro nodo me pide que pase renglon
 char nodo_id[6];
 char bufGetArchivo[BLOCK_SIZE]; //Buffer para la funcion getFileContent
@@ -71,8 +68,6 @@ int main(int argc , char *argv[]){
 	memset(&filesystem, 0, sizeof(filesystem));
 	memset(identificacion,'\0',BUF_SIZE);
 	listaNodosConectados=list_create();
-	listaMappersConectados=list_create();
-	listaReducersConectados=list_create();
 	archivosAbiertos=list_create();
 
 
@@ -95,7 +90,7 @@ int main(int argc , char *argv[]){
 	strcpy(nodo_id,config_get_string_value(configurador,"NODO_ID"));
 	if ((conectorFS = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
 		perror ("socket");
-		log_error(logger,"FALLO la creacion del socket");
+		log_error(logger,"FALLO la creacion del socket de conexion con el FS");
 		exit (-1);
 	}
 	if (connect(conectorFS, (struct sockaddr *)&filesystem,sizeof(struct sockaddr)) == -1) {
@@ -113,7 +108,7 @@ int main(int argc , char *argv[]){
 			strcpy(identificacion,"nuevo");
 			if((send(conectorFS,identificacion,sizeof(identificacion),MSG_WAITALL))==-1) {
 					perror("send");
-					log_error(logger,"FALLO el envio del saludo al FS");
+					log_error(logger,"FALLO el envio del saludo (nodo nuevo) al FS");
 					exit(-1);
 			}
 			//envio cantidad de bloques totales
@@ -124,7 +119,7 @@ int main(int argc , char *argv[]){
 			}
 			if((send(conectorFS,puerto_escucha,sizeof(int),MSG_WAITALL))==-1){
 				perror("send");
-				log_error(logger,"FALLO el envío de la cantidad de bloques totales al FS");
+				log_error(logger,"FALLO el envío del puerto de escucha al FS");
 				exit(-1);
 			}
 			if((send(conectorFS,nodo_id,sizeof(nodo_id),MSG_WAITALL))==-1){
@@ -138,12 +133,12 @@ int main(int argc , char *argv[]){
 			strcpy(identificacion,"reconectado");
 			if((send(conectorFS,identificacion,sizeof(identificacion),MSG_WAITALL))==-1) {
 					perror("send");
-					log_error(logger,"FALLO el envio del saludo al FS");
+					log_error(logger,"FALLO el envio del saludo (nodo reconectado) al FS");
 					exit(-1);
 			}
 			if((send(conectorFS,nodo_id,sizeof(nodo_id),MSG_WAITALL))==-1){
 				perror("send");
-				log_error(logger,"FALLO el envío de la cantidad de bloques totales al FS");
+				log_error(logger,"FALLO el envío del ID del nodo al FS(nodo reconectado)");
 				exit(-1);
 			}
 		}
@@ -154,7 +149,7 @@ int main(int argc , char *argv[]){
 
 	if ((listener = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
 			perror("socket");
-			log_error(logger,"FALLO la creacion del socket");
+			log_error(logger,"FALLO la creacion del socket listener");
 			exit(-1);
 		}
 	// obviar el mensaje "address already in use" (la dirección ya se está usando)
@@ -189,7 +184,7 @@ int main(int argc , char *argv[]){
 	if( pthread_create(&escucha, NULL, manejador_de_escuchas, NULL) != 0 ) {
 		perror("pthread_create");
 		log_error(logger,"Fallo la creación del hilo manejador de escuchas");
-		return 1;
+		exit(1);
 	}
 
 
@@ -216,7 +211,7 @@ void *manejador_de_escuchas(){
 	int* bloqueParaFS;
 
 
-	printf("Nodo en la espera de conexiones/solicitudes del FS\n");
+	log_debug(logger,"Nodo en la espera de conexiones/solicitudes del FS");
 	while(1) {
 		read_fds = master;
 		if (select(fdmax+1, &read_fds, NULL, NULL, NULL) == -1) {
@@ -225,12 +220,7 @@ void *manejador_de_escuchas(){
 			exit(-1);
 		}
 		memset(mensaje,'\0',BUF_SIZE);
-//		socketMapper=malloc(sizeof(int));
-//		socketReducer=malloc(sizeof(int));
-//		socketNodo=malloc(sizeof(int));
 		memset(combo.buf_20mb,'\0',BLOCK_SIZE);
-
-		//memset(buffer,'\0',BLOCK_SIZE);
 
 		// explorar conexiones existentes en busca de datos que leer
 		for(socketModificado = 0; socketModificado <= fdmax; socketModificado++) {
@@ -243,12 +233,10 @@ void *manejador_de_escuchas(){
 					if ((newfd = accept(listener, (struct sockaddr*)&remote_client,(socklen_t*)&addrlen)) == -1) {
 						perror("accept");
 						log_error(logger,"FALLO el ACCEPT");
-						exit(-1);
 					} else {//llego una nueva conexion, se acepto y ahora tengo que tratarla
 						if((nbytes=recv(newfd,mensaje,sizeof(mensaje),MSG_WAITALL))<=0){ //error
 							perror("recive");
 							log_error(logger,"Falló el receive");
-							exit(-1);
 						}
 						else{
 							// el nuevo conectado me manda algo, se identifica como mapper, reducer o nodo
@@ -261,7 +249,7 @@ void *manejador_de_escuchas(){
 								if(newfd>fdmax){ //actualizar el máximo
 									fdmax=newfd;
 								}
-								log_info(logger,"Se conectó el nodo %s, puerto %d",inet_ntoa(remote_client.sin_addr),ntohs(remote_client.sin_port));
+								log_info(logger,"Se conectó el nodo %s, por el puerto %d",inet_ntoa(remote_client.sin_addr),ntohs(remote_client.sin_port));
 
 							}
 							if(nbytes>0 && strncmp(mensaje,"soy mapper",11)==0){
@@ -273,7 +261,7 @@ void *manejador_de_escuchas(){
 
 								if(pthread_create(&mapperThread,NULL,(void*)rutinaMap,socketMapper)!=0){
 									perror("pthread_create");
-									log_error(logger,"Fallo la creación del hilo manejador de escuchas");
+									log_error(logger,"Fallo la creación del hilo map");
 								}
 
 							}
@@ -286,7 +274,7 @@ void *manejador_de_escuchas(){
 
 								if(pthread_create(&reducerThread,NULL,(void*)rutinaReduce,socketReducer)!=0){
 									perror("pthread_create");
-									log_error(logger,"Fallo la creación del hilo manejador de escuchas");
+									log_error(logger,"Fallo la creación del hilo reduce");
 								}
 							}
 						}
@@ -298,10 +286,9 @@ void *manejador_de_escuchas(){
 				if(socketModificado==conectorFS){
 					if ((nbytes=recv(conectorFS,mensaje,sizeof(mensaje),MSG_WAITALL))==-1){ //da error
 						perror("recv");
-						log_error(logger,"Falló el receive");
-						exit(-1);
+						log_error(logger,"Falló el receive del handshake por parte del FS");
 					}
-					printf ("Recibi del handshake %d\n",nbytes);
+					log_debug(logger,"Recibi del handshake %d",nbytes);
 					if(nbytes==0){ //se desconectó
 						close(conectorFS);
 						FD_CLR(conectorFS,&master);
@@ -312,14 +299,14 @@ void *manejador_de_escuchas(){
 						/* -- el filesystem envío un mensaje a tratar -- */
 						if(strncmp(mensaje,"copiar_archivo",14)==0){
 							mensaje[14]=0;
-							printf ("Handshake: %s\n",mensaje);
+							log_debug(logger,"Handshake: %s",mensaje);
 							if ((read_size = recv(conectorFS, &combo, sizeof(combo),MSG_WAITALL)) <= 0) {
 								perror("recv");
-								log_error(logger, "FALLO el Recv de bloque");
-								exit(-1);
+								log_error(logger, "FALLO el Recv del combo bloque-datos para setear un bloque");
 							}
-							printf ("Recibi: %d\n",read_size);
-							printf ("Me mandaron un coso de 20MB para el bloque %d\n",combo.n_bloque);
+							log_debug(logger,"Recibi: %d",read_size);
+							log_debug(logger,"Me mandaron un coso de 20MB para el bloque %d",combo.n_bloque);
+
 							setBloque(combo.n_bloque,combo.buf_20mb); //esto deberia devolver algo que identifique si salio bien o no para informar al fs si fallo o fue exitosa la copai del bloque en el mdfs
 						}
 						if(strncmp(mensaje,"obtener bloque", 14) == 0){
@@ -328,16 +315,14 @@ void *manejador_de_escuchas(){
 							mensaje[14]=0;
 							if ((read_size = recv(conectorFS, bloqueParaFS, sizeof(int),0)) <= 0) {
 								perror("recv");
-								log_error(logger, "FALLO el Recv de bloque");
-								exit(-1);
+								log_error(logger, "FALLO el Recv de bloque para ver bloque");
 							}
-							printf("Voy a obtener el bloque:%d\n",*bloqueParaFS);
+							log_debug(logger,"Voy a obtener el bloque:%d",*bloqueParaFS);
 
 							// Envio el contenido del bloque que me pidio el FS
 							if (send(conectorFS, getBloque(*bloqueParaFS),BLOCK_SIZE, 0) == -1) {
 								perror("send");
-								log_error(logger, "FALLO el envio del bloque ");
-								exit(-1);
+								log_error(logger, "FALLO el envio del contenido del bloque al FS (en ver bloque)");
 							}
 							free(bloqueParaFS);
 						}
@@ -349,13 +334,19 @@ void *manejador_de_escuchas(){
 				if(estaEnListaNodos(socketModificado)==0){
 					if ((nbytes=recv(socketModificado,mensaje,sizeof(mensaje),MSG_WAITALL))==-1){ //da error
 						perror("recv");
-						log_error(logger,"Falló el receive");
-						exit(-1);
+						log_error(logger,"Falló el receive del handshake de un nodo");
 					}
 					if(nbytes==0){ //se desconectó
+						struct sockaddr_in addr_otronodo;
+						socklen_t len;
+						len=sizeof(addr_otronodo);
+						if(getpeername(socketModificado,(struct sockaddr*)&addr_otronodo,&len)==-1){
+							perror("getpeername:");
+							log_error(logger,"Fallo al recibir los datos del otro nodo");
+						}
+						log_info(logger,"Se desconectó el Nodo con ip %s conectado desde el puerto %d",inet_ntoa(addr_otronodo.sin_addr),ntohs(addr_otronodo.sin_port));
 						close(socketModificado);
 						FD_CLR(socketModificado,&master);
-						log_info(logger,"Se desconectó un Nodo");
 					}
 					else{
 						/* -- el nodo envío un mensaje a tratar -- */
@@ -371,7 +362,7 @@ void *manejador_de_escuchas(){
 							int i;
 							t_archivoAbierto* archivoPedido;
 							recv(socketModificado,archivoAPasar,sizeof(archivoAPasar),MSG_WAITALL);
-							printf("Me pidio renglones del archivo %s\n",archivoAPasar);
+							log_debug(logger,"Me pidio renglones del archivo %s",archivoAPasar);
 
 							if((archivoPedido=estaEnListaArchivosAbiertos(archivoAPasar))==NULL){ //Si el archivo no está ya abierto, lo abro y leo un renglon
 								t_archivoAbierto* archAbiertoNuevo=malloc(sizeof(t_archivoAbierto));
@@ -401,12 +392,6 @@ void *manejador_de_escuchas(){
 									if (bufferRenglones[byteLeido]=='\0') break;
 
 								}
-
-//								if(feof(archParaPasar)){
-//									fclose(archParaPasar);
-//									strcpy(renglones,"Llego al EOF");
-//									removerDeListaDeArchivosAbiertos(archParaPasar);
-//								}
 
 								list_add(archivosAbiertos,archAbiertoNuevo);
 
@@ -439,49 +424,12 @@ void *manejador_de_escuchas(){
 								}
 							}
 
-							send(socketModificado,renglones,sizeof(renglones),MSG_WAITALL);
+							if(send(socketModificado,renglones,sizeof(renglones),MSG_WAITALL)==-1){
+								perror("send");
+								log_error(logger,"Fallo el envío de todos los renglones que entran en 2048 bytes a otro nodo");
+							}
 
 						}
-
-					}
-				}
-
-				//-- Conexión con hilo mapper --//
-
-				if(estaEnListaMappers(socketModificado)==0){
-					if ((nbytes=recv(socketModificado,mensaje,sizeof(mensaje),MSG_WAITALL))==-1){ //da error
-						perror("recv");
-						log_error(logger,"Falló el receive");
-						exit(-1);
-					}
-					if(nbytes==0){ //se desconectó
-						close(socketModificado);
-						FD_CLR(socketModificado,&master);
-//						log_info(logger,"Se fue un mapper");
-					}
-					else{
-						/* -- el mapper envío un mensaje a tratar -- */
-
-
-					}
-				}
-
-
-				//-- Conexión con hilo reducer --//
-
-				if(estaEnListaReducers(socketModificado)==0){
-					if ((nbytes=recv(socketModificado,mensaje,sizeof(mensaje),MSG_WAITALL))==-1){ //da error
-						perror("recv");
-						log_error(logger,"Falló el receive");
-						exit(-1);
-					}
-					if(nbytes==0){ //se desconectó
-						close(socketModificado);
-						FD_CLR(socketModificado,&master);
-					}
-					else{
-
-						/* -- el reducer envío un mensaje a tratar -- */
 
 					}
 				}
@@ -577,8 +525,6 @@ void ordenarMapper(char* pathMapperTemporal, char* nombreMapperOrdenado){
 	else
 	{
 		close(outfd[0]); /* Estan siendo usados por el hijo */
-		//Se debe escribir el contenido de la rutina Map
-//		write(outfd[1],"Date;WBAN;DryBulbCelsius;Time\n20130101;03011;M;0000\n20130101;03011;M;0015\n",74);/* Escribe en el stdin del hijo el contenido del bloque*/
 		contenidoDelMapper=getFileContent(nombreMapperTemporal);
 		write(outfd[1],contenidoDelMapper,strlen(contenidoDelMapper));
 		close(outfd[1]);
@@ -623,9 +569,6 @@ void ejecutarMapper(char *script,int bloque,char *resultado){
 	else
 	{
 	close(outfd[0]); /* Estan siendo usados por el hijo */
-//	char *datoos=string_new();
-//	string_append(&datoos,"WBAN,Date,Time,StationType,SkyCondition,SkyConditionFlag,Visibility,VisibilityFlag,WeatherType,WeatherTypeFlag,DryBulbFarenheit,DryBulbFarenheitFlag,DryBulbCelsius,DryBulbCelsiusFlag,WetBulbFarenheit,WetBulbFarenheitFlag,WetBulbCelsius,WetBulbCelsiusFlag,DewPointFarenheit,DewPointFarenheitFlag,DewPointCelsius,DewPointCelsiusFlag,RelativeHumidity,RelativeHumidityFlag,WindSpeed,WindSpeedFlag,WindDirection,WindDirectionFlag,ValueForWindCharacter,ValueForWindCharacterFlag,StationPressure,StationPressureFlag,PressureTendency,PressureTendencyFlag,PressureChange,PressureChangeFlag,SeaLevelPressure,SeaLevelPressureFlag,RecordType,RecordTypeFlag,HourlyPrecip,HourlyPrecipFlag,Altimeter,AltimeterFlag\n03011,20130101,0000,0,OVC, , 5.00, , , ,M, ,M, ,M, ,M, ,M, ,M, ,M, , 5, ,120, , , ,M, , , , , ,M, ,AA, , , ,29.93, \n03011,20130101,0015,0,SCT011 SCT020, , 7.00, ,-SN, ,M, ,M, ,M, ,M, ,M, ,M, ,M, , 6, ,120, , , ,21.33, , , , , ,M, ,AA, , , ,29.93, \n03011,20130101,0035,0,CLR, ,10.00, , , ,M, ,M, ,M, ,M, ,M, ,M, ,M, , 6, ,120, , , ,21.33, , , , , ,M, ,AA, , , ,29.93, \n03011,20130101,0055,0,CLR, ,10.00, , , ,M, ,M, ,M, ,M, ,M, ,M, ,M, , 5, ,120, , , ,21.33, , , , , ,M, ,AA, , , ,29.93, \n");
-//	write(outfd[1],datoos,strlen(datoos));/* Escribe en el stdin del hijo el contenido del bloque*/
 	bloqueAMapear=getBloque(bloque);
 	write(outfd[1],bloqueAMapear,strlen(bloqueAMapear));/* Escribe en el stdin del hijo el contenido del bloque*/
 	close(outfd[1]);
@@ -648,43 +591,15 @@ int estaEnListaNodos(int socket){
 	return -1;
 }
 
-int estaEnListaMappers(int socket){
-	int i,tamanio;
-	int* mapperDeLaLista;
-	tamanio=list_size(listaMappersConectados);
-	for(i=0;i<tamanio;i++){
-		mapperDeLaLista=list_get(listaMappersConectados,i);
-		if(*mapperDeLaLista==socket){
-			return 0;
-		}
-	}
-	return -1;
-}
-
-int estaEnListaReducers(int socket){
-	int i,tamanio;
-	int* reducerDeLaLista;
-	tamanio=list_size(listaReducersConectados);
-	for(i=0;i<tamanio;i++){
-		reducerDeLaLista=list_get(listaReducersConectados,i);
-		if(*reducerDeLaLista==socket){
-			return 0;
-		}
-	}
-	return -1;
-}
-
-
 void setBloque(uint32_t numBloque,char* datosAEscribir){
 	/*
 	* El puntero ubicacionEnElFile, se va a posicionar en el bloque que se desea escribir el archivo
 	* datosAEscribir, recibido por parametro, tiene los datos que quiero escribir
 	* Con el memcpy a ubicacionEnElFile, escribo en ese bloque
 	*/
-	sem_wait(&semBloques[numBloque]);
 
+	sem_wait(&semBloques[numBloque]);
 	char *ubicacionEnElFile;
-	//ubicacionEnElFile=malloc(BLOCK_SIZE);
 	ubicacionEnElFile=fileDeDatos+(BLOCK_SIZE*(numBloque));
 	memcpy(ubicacionEnElFile,datosAEscribir,BLOCK_SIZE); //Copia el valor de BLOCK_SIZE bytes desde la direccion de memoria apuntada por datos a la direccion de memoria apuntada por fileDeDatos
 	log_info(logger_archivo,"Se escribió el bloque %d",numBloque);
@@ -701,14 +616,11 @@ char* getBloque(int numBloque){
 	*/
 
 	sem_wait(&semBloques[numBloque]);
-	//char* datosLeidos;
 	char *ubicacionEnElFile;
-	//datosLeidos=malloc(BLOCK_SIZE);
-	//ubicacionEnElFile=malloc(BLOCK_SIZE);
 	ubicacionEnElFile=fileDeDatos+(BLOCK_SIZE*(numBloque));
-	//memcpy(datosLeidos,ubicacionEnElFile,BLOCK_SIZE); //Copia el valor de BLOCK_SIZE bytes desde la direccion de memoria apuntada por fileDeDatos a la direccion de memoria apuntada por datosLeidos
 	log_info(logger_archivo,"Se leyó el bloque %d",numBloque);
 	sem_post(&semBloques[numBloque]);
+
 	return ubicacionEnElFile;
 }
 
@@ -732,6 +644,7 @@ char* getFileContent(char* nombreFile){
 		i++;
 	}
 	fclose(archivoLocal);
+	log_info(logger_archivo,"Se solicitó el contenido del archivo %s",nombreFile);
 	free(path);
 	return bufGetArchivo;
 }
@@ -751,12 +664,13 @@ char* mapearFileDeDatos(){
 		if (fileDescriptor==-1){
 			perror("open");
 			log_error(logger,"Fallo la apertura del file de datos");
-			exit(-1);
+			exit(1);
 		}
 	struct stat estadoDelFile; //declaro una estructura que guarda el estado de un archivo
 	if(fstat(fileDescriptor,&estadoDelFile)==-1){//guardo el estado del archivo de datos en la estructura
 		perror("fstat");
 		log_error(logger,"Falló el fstat");
+		exit(1);
 	}
 	sizeFileDatos=estadoDelFile.st_size; // guardo el tamaño (necesario para el mmap)
 
@@ -769,7 +683,7 @@ char* mapearFileDeDatos(){
 		if (fileDatos==MAP_FAILED){
 			perror("mmap");
 			log_error(logger,"Falló el mmap, no se pudo asignar la direccion de memoria para el archivo de datos");
-			exit(-1);
+			exit(1);
 		}
 	close(fileDescriptor); //Cierro el archivo
 	return fileDatos;
@@ -793,7 +707,7 @@ void* rutinaMap(int* sckMap){
 		pthread_exit((void*)0);
 	}
 
-	printf("Se aplicará la rutina mapper en el bloque %d\n",datosParaElMap.bloque);
+	log_debug(logger,"Se aplicará la rutina mapper en el bloque %d",datosParaElMap.bloque);
 
 	//printf("Se guardará el resultado del mapper en el archivo temporal %s\n",datosParaElMap.nomArchTemp);
 
@@ -819,8 +733,8 @@ void* rutinaMap(int* sckMap){
 
 	//Meto al nombre map final el ddirectorio temporal
 
-	printf("Nombre del map temporal(antes del sort):%s\n",resultadoTemporal);
-	printf("Nombre del map ordenado(luego del sort):%s\n",datosParaElMap.nomArchTemp);
+	log_debug(logger,"Nombre del map temporal(antes del sort):%s",resultadoTemporal);
+	log_debug(logger,"Nombre del map ordenado(luego del sort):%s",datosParaElMap.nomArchTemp);
 
 
 	if((scriptMap=fopen(pathNuevoMap,"w+"))==NULL){ //path donde guardara el script
@@ -854,7 +768,7 @@ void* rutinaMap(int* sckMap){
 		pthread_exit((void*)0);
 	}
 
-	printf("Se envío el resultado:%d \n",0);
+	log_debug(logger,"Se envío el resultado:%d",0);
 
 	free(arrayTiempo);
 	free(resultadoTemporal);
@@ -884,7 +798,6 @@ void* rutinaReduce (int* sckReduce){
 	char *nombreNuevoReduce=string_new(); //será el nombre del nuevo map
 	char *tiempo=string_new(); //string que tendrá la hora
 	char *pathNuevoReduce=string_new();//El path completo del nuevo Map
-//	t_datosReduce datosParaElReduce;
 
 	if(recv(*sckReduce,&nombreFinalReduce,TAM_NOMFINAL,MSG_WAITALL)==-1){
 		perror("recv");
@@ -892,7 +805,7 @@ void* rutinaReduce (int* sckReduce){
 		pthread_exit((void*)0);
 	}
 
-	printf("El resultado del reduce se guardará en: %s\n",nombreFinalReduce);
+	log_debug(logger,"El resultado del reduce se guardará en: %s",nombreFinalReduce);
 
 	if(recv(*sckReduce,rutinaReduce,sizeof(rutinaReduce),MSG_WAITALL)==-1){
 		perror("recv");
@@ -920,7 +833,7 @@ void* rutinaReduce (int* sckReduce){
 	}
 	fputs(rutinaReduce,scriptReduce);
 
-	printf("Nombre del nuevo reduce: %s\n",nombreNuevoReduce);
+	log_debug(logger,"Nombre del nuevo reduce: %s\n",nombreNuevoReduce);
 	// agrego permisos de ejecucion
 	if(chmod(pathNuevoReduce,S_IRWXU|S_IRWXG|S_IROTH|S_IXOTH)==-1){
 		perror("chmod");
@@ -935,7 +848,7 @@ void* rutinaReduce (int* sckReduce){
 		pthread_exit((void*)0);
 	}
 
-	printf("Se debe aplicar reduce en %d archivos\n",cantidadArchivos);
+	log_debug(logger,"Se debe aplicar reduce en %d archivos",cantidadArchivos);
 
 	for(indice=0;indice<cantidadArchivos;indice++){
 		t_archivosReduce archivoQueRecibo;
@@ -985,7 +898,7 @@ void* rutinaReduce (int* sckReduce){
 			nuevoArchivoEnApareo->endOfFile=0;
 			nuevoArchivoEnApareo->posicionRenglon=0;
 			memset(nuevoArchivoEnApareo->renglones,'\0',2048);
-			printf("Agrego el archivo local %s\n",unArchivoReduce->archivoAAplicarReduce);
+			log_debug(logger,"Agrego el archivo local %s",unArchivoReduce->archivoAAplicarReduce);
 			list_add(archivosEnApareo,nuevoArchivoEnApareo);
 		}
 
@@ -1172,6 +1085,15 @@ void ejecutarReduce(t_list* archivosApareando,char* script,char* resultado){
 					recv(unArchivo->socket,unArchivo->renglones,sizeof(unArchivo->renglones),MSG_WAITALL);
 					if(strcmp(unArchivo->renglones,"Llego al EOF\n")==0){
 						unArchivo->endOfFile=1;
+						struct sockaddr_in addr_otronodo;
+						socklen_t len;
+						len=sizeof(addr_otronodo);
+						if(getpeername(unArchivo->socket,(struct sockaddr*)&addr_otronodo,&len)==-1){
+							perror("getpeername:");
+							log_error(logger,"Fallo al recibir los datos del otro nodo");
+						}
+						log_info(logger,"Se desconectó del Nodo con ip %s conectado desde el puerto %d",inet_ntoa(addr_otronodo.sin_addr),ntohs(addr_otronodo.sin_port));
+						close(unArchivo->socket);
 					}
 				}
 				int posicionActual;
@@ -1205,7 +1127,7 @@ void ejecutarReduce(t_list* archivosApareando,char* script,char* resultado){
 	}
 
 
-	printf("Llegaron todos al EOF - Termino el reduce \n");
+	log_debug(logger,"Llegaron todos al EOF - Termino el reduce \n");
 
 
 }
