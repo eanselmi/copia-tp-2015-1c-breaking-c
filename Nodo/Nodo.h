@@ -28,7 +28,7 @@ typedef struct estructura_archivosapareando{
 	char buffer[512];
 	char nombreArchivo[TAM_NOMFINAL];
 	int endOfFile; //0 si no llego, 1 si llego
-	char renglones[512]; //El proximo renglon del buffer
+	char renglones[2048]; //El proximo renglon del buffer
 	int posicionRenglon; //Posicion en el buffer de donde termina el renglon
 }t_archivoEnApareo;
 
