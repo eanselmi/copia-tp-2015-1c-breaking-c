@@ -148,7 +148,7 @@ int main(void){
 						if(strncmp(accion,"ejecuta map",11)==0){
 							//datosMapper.
 							punteroMapper=malloc(sizeof(t_mapper));
-							memset(punteroMapper->nombreArchivoTemporal,'\0',TAM_NOMFINAL);
+							memset(punteroMapper->archivoResultadoMap,'\0',TAM_NOMFINAL);
 							memset(punteroMapper->ip_nodo,'\0',20);
 							printf("Marta me dijo %s\n",accion);
 
@@ -163,7 +163,7 @@ int main(void){
 							strcpy(punteroMapper->ip_nodo,datosMapper.ip_nodo);
 							punteroMapper->bloque=datosMapper.bloque;
 							punteroMapper->puerto_nodo=datosMapper.puerto_nodo;
-							strcpy(punteroMapper->nombreArchivoTemporal,datosMapper.nombreArchivoTemporal);
+							strcpy(punteroMapper->archivoResultadoMap,datosMapper.archivoResultadoMap);
 
 							if(pthread_create(&mapperThread,NULL,(void*)hilo_mapper,punteroMapper)!=0){
 								perror("pthread_create");
@@ -324,11 +324,11 @@ void* hilo_mapper(t_mapper* mapperStruct){
 	printf("Se conectara al nodo con ip: %s\n",(char*)mapperStruct->ip_nodo);
 	printf("En el puerto %d\n", mapperStruct->puerto_nodo);
 	printf("Ejecutará la rutina mapper en el bloque %d\n",mapperStruct->bloque);
-	printf("Guardará el resultado en el archivo %s\n",mapperStruct->nombreArchivoTemporal);
+	printf("Guardará el resultado en el archivo %s\n",mapperStruct->archivoResultadoMap);
 
 
 	datosParaNodo.bloque=mapperStruct->bloque;
-	strcpy(datosParaNodo.nomArchTemp,mapperStruct->nombreArchivoTemporal);
+	strcpy(datosParaNodo.nomArchTemp,mapperStruct->archivoResultadoMap);
 	strcpy(datosParaNodo.rutinaMap,getFileContent(config_get_string_value(configurador,"MAPPER")));
 
 	if((nodo_sock=socket(AF_INET,SOCK_STREAM,0))==-1){ //si función socket devuelve -1 es error
