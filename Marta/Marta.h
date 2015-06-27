@@ -5,7 +5,6 @@
 //estructura con la información de FileSystem
 typedef struct estructura_filesystem {
 	char* nombre;
-	//char* path; // Job le dira el path completo a Marta, ella se lo pregunta a FS y este le devuelve el padre
 	uint32_t padre;
 	uint32_t estado;
 	t_list *bloques; //Se debe crear una lista de tipo "t_bloque" y agregarla acá
@@ -29,9 +28,6 @@ typedef struct estructura_manejo_nodos {
 	uint32_t cantReducers;  //cantidad de reduce corriendo en el nodo
 } t_nodo;
 
-
-
-
 //Estructura para manejar los Jobs
 
 typedef struct estructura_job{
@@ -47,22 +43,34 @@ typedef struct estructura_mapper {
 	char ip_nodo[20];
 	int puerto_nodo;
 	int bloque;
-	char nombreArchivoTemporal[TAM_NOMFINAL];
+	char archivoResultadoMap[TAM_NOMFINAL];
 } __attribute__((packed)) t_mapper;
 
 typedef struct estructura_respuesta {
-	char nombreArchivoTemporal[TAM_NOMFINAL];
+	char archivoResultadoMap[TAM_NOMFINAL];
 	int resultado; // 0 si salio bien , y 1 si salio mal el map
 }__attribute__((packed)) t_respuestaMap;
 
 //Estructura que va a tener marta para poder replanificar
 typedef struct estructura_replanificar_map {
-	char nombreArchivoTemporal[TAM_NOMFINAL];
+	char archivoResultadoMap[TAM_NOMFINAL];
 	char nombreArchivoDelJob[TAM_NOMFINAL];
 	int bloqueArchivo;
 	t_list* lista_nodos;
 }t_replanificarMap;
 
+typedef struct estructura_reduce {
+	char ip_nodoPpal[20];
+	int puerto_nodoPpal;
+//	t_list* listaNodos; //una lista que tenga los otros nodos y archivos a donde aplicar reduce (lista de t_reduce_otrosnodos)
+	char nombreArchivoFinal[TAM_NOMFINAL];
+} __attribute__((packed)) t_reduce;
+
+typedef struct lista_nodos_reduce{
+	char ip_nodo[20];
+	int puerto_nodo;
+	char archivoAAplicarReduce[TAM_NOMFINAL];
+} __attribute__((packed)) t_archivosReduce;
 
 
 //Prototipos de funciones

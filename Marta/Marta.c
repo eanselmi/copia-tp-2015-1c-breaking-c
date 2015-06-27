@@ -61,7 +61,6 @@ int main(int argc, char**argv){
 	char nombreArchivo[100];
 	uint32_t padreArchivo;
 	uint32_t estadoArchivo;
-	char* nodoArchivo;
 	char nodoIdArchivo[6];
 	int bloqueNodoArchivo;
 	int cantidadBloquesArchivo;
@@ -710,8 +709,8 @@ void *atenderJob (int *socketJob) {
 			mapper=malloc(sizeof(t_replanificarMap));
 			t_mapper datosMapper;
 			memset(datosMapper.ip_nodo,'\0',20);
-			memset(datosMapper.nombreArchivoTemporal,'\0',TAM_NOMFINAL);
-			memset(mapper->nombreArchivoTemporal,'\0',TAM_NOMFINAL);
+			memset(datosMapper.archivoResultadoMap,'\0',TAM_NOMFINAL);
+			memset(mapper->archivoResultadoMap,'\0',TAM_NOMFINAL);
 			memset(mapper->nombreArchivoDelJob,'\0',TAM_NOMFINAL);
 			strcpy(datosMapper.ip_nodo,nodoAux->ip);
 			datosMapper.puerto_nodo= nodoAux->puerto_escucha_nodo;
@@ -731,7 +730,7 @@ void *atenderJob (int *socketJob) {
 			string_append(&nombreArchivoTemp,tiempo); //Concateno la fecha en formato hhmmssmmmm
 			string_append(&nombreArchivoTemp,".tmp");
 			string_append(&pathArchivoTemp,nombreArchivoTemp);
-			strcpy(datosMapper.nombreArchivoTemporal,pathArchivoTemp); //Falta generar un nombre
+			strcpy(datosMapper.archivoResultadoMap,pathArchivoTemp); //Falta generar un nombre
 
 			strcpy(accion,"ejecuta map");
 			//Le avisamos al job que vamos a mandarle rutina map
@@ -755,7 +754,7 @@ void *atenderJob (int *socketJob) {
 			mapper->bloqueArchivo = i; //i es el bloque de archivo
 			mapper->lista_nodos=list_create();
 			strcpy(mapper->nombreArchivoDelJob,archivos[posicionArchivo]);
-			strcpy(mapper->nombreArchivoTemporal,datosMapper.nombreArchivoTemporal);
+			strcpy(mapper->archivoResultadoMap,datosMapper.archivoResultadoMap);
 			char* nodoIdTemp=string_new();
 			string_append(&nodoIdTemp,nodoAux->nodo_id);
 			list_add(mapper->lista_nodos,nodoIdTemp);
@@ -780,7 +779,7 @@ void *atenderJob (int *socketJob) {
 		if(respuestaMap.resultado ==1){
 			printf("El map falló\n");
 			//PAM
-			//REPLANIFICAR BLOQUE (buscar t_respuestasMap.nombreArchivoTemporal con t_replanificarMap el archivo y bloque del archivo
+			//REPLANIFICAR BLOQUE (buscar t_respuestasMap.archivoResultadoMap con t_replanificarMap el archivo y bloque del archivo
 			// que no se pudo hacer el map recorrer sus copias y ordenar la sublista devuelta y mandar el map a el primer nodo de la sublista :)
 			//Agregar dicho nodo_id a la lista dentro de la estructura de ese map que se va a mandar
 			// y buscarlo en la lista gral de nodos restarle map al que me dio KO = 1 LE RESTO UN cantMap-- y le sumo al nuevo nodo que mando el map
