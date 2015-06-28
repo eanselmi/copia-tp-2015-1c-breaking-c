@@ -567,6 +567,7 @@ void ordenarMapper(char* pathMapperTemporal, char* nombreMapperOrdenado){
 	{
 		//Se debe escribir el contenido de la rutina Map
 		contenidoDelMapper=getFileContent(nombreMapperTemporal);
+		//printf("Tamaño del contenido que mando al sort: %d",strlen(contenidoDelMapper));
 		write(outfd[1],contenidoDelMapper,strlen(contenidoDelMapper));
 		close(outfd[0]); /* Estan siendo usados por el hijo */
 		close(outfd[1]);
@@ -716,8 +717,8 @@ char* getFileContent(char* nombreFile){
 	int i=0;
 	char* path;
 	char* contenido;
-	char linea[512];
-	memset(linea,'\0',512);
+	char buffer[1024];
+	memset(buffer,'\0',1024);
 	contenido=string_new();
 	path = string_new();
 	string_append(&path,config_get_string_value(configurador,"DIR_TEMP"));
@@ -726,11 +727,18 @@ char* getFileContent(char* nombreFile){
 	archivoLocal = fopen(path,"r");
 	fseek(archivoLocal,0,SEEK_SET);
 	while (!feof(archivoLocal)){
-		fgets(linea,512,archivoLocal);
-		if(!feof(archivoLocal)){
-			string_append(&contenido,linea);
+		fread(buffer,sizeof(char),1024,archivoLocal);
+		if(feof(archivoLocal)){
+			for(i=1023;i>=0;i--){
+				if(buffer[i]=='\n'){
+					strncat(contenido,buffer,i+1);
+					break;
+				}
+			}
+		}else{
+			string_append(&contenido,buffer);
 		}
-		i++;
+		memset(buffer,'\0',1024);
 	}
 	fclose(archivoLocal);
 	//printf("tamaño de contenido %d\n",strlen(contenido));
