@@ -82,3 +82,4 @@ t_nodo* buscarCopiaEnNodos(t_copias *copia);
 bool ordenarSegunMapYReduce (t_nodo* menorCarga,t_nodo* mayorCarga);
 static void eliminarCopiasNodo(t_list *self);
 void sumarCantMapper(t_nodo* nodoASumar);
+bool nodoIdMasRepetido(char*,char*);

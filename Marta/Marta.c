@@ -624,7 +624,7 @@ void *atenderJob (int *socketJob) {
 	char *nombreArchivoTemp=string_new();//Nombre del archivo que va a mandar a los nodos
 	char *pathArchivoTemp = string_new(); //Path donde va a guardar los archivos temporales
 	t_replanificarMap *mapper;
-	t_mapper datosMapper;
+	t_mapper *datosMapper;
 	//Recibe mensaje de si es o no combiner
 	if(recv(*socketJob,mensajeCombiner,sizeof(mensajeCombiner),MSG_WAITALL)==-1){
 		perror("recv");
@@ -689,7 +689,6 @@ void *atenderJob (int *socketJob) {
 
 	//De cada archivo que nos manda el Job buscamos y nos traemos los bloques
 	 bloques=buscarBloques(nombreArchivo,padre);
-	//Enviamos rutina Map de cada bloque del archivo al Job que nos envio dicho archivo
 		cantBloques = list_size(bloques);
 		for(posBloques=0; posBloques<cantBloques; posBloques++){ //recorremos los bloques del archivo que nos mando job
 			bloque = list_get(bloques,posBloques);
@@ -710,16 +709,16 @@ void *atenderJob (int *socketJob) {
 
 			mapper=malloc(sizeof(t_replanificarMap));
 
-			memset(datosMapper.ip_nodo,'\0',20);
-			memset(datosMapper.archivoResultadoMap,'\0',TAM_NOMFINAL);
+			memset(datosMapper->ip_nodo,'\0',20);
+			memset(datosMapper->archivoResultadoMap,'\0',TAM_NOMFINAL);
 			memset(mapper->archivoResultadoMap,'\0',TAM_NOMFINAL);
 			memset(mapper->nombreArchivoDelJob,'\0',TAM_NOMFINAL);
-			strcpy(datosMapper.ip_nodo,nodoAux->ip);
-			datosMapper.puerto_nodo= nodoAux->puerto_escucha_nodo;
+			strcpy(datosMapper->ip_nodo,nodoAux->ip);
+			datosMapper->puerto_nodo= nodoAux->puerto_escucha_nodo;
 			for(posCopia=0;posCopia<cantCopias;posCopia++){
 				copia = list_get(bloque->copias,posCopia);
 				if(strcmp(copia->nodo,nodoAux->nodo_id)==0){
-					datosMapper.bloque=copia->bloqueNodo;
+					datosMapper->bloque=copia->bloqueNodo;
 				}
 			}
 			strcpy(pathArchivoTemp,"/tmp/");
@@ -732,7 +731,7 @@ void *atenderJob (int *socketJob) {
 			string_append(&nombreArchivoTemp,tiempo); //Concateno la fecha en formato hhmmssmmmm
 			string_append(&nombreArchivoTemp,".tmp");
 			string_append(&pathArchivoTemp,nombreArchivoTemp);
-			strcpy(datosMapper.archivoResultadoMap,pathArchivoTemp);
+			strcpy(datosMapper->archivoResultadoMap,pathArchivoTemp);
 
 
 			strcpy(accion,"ejecuta map");
@@ -757,7 +756,7 @@ void *atenderJob (int *socketJob) {
 			mapper->bloqueArchivo = posBloques;
 			mapper->lista_nodos=list_create();
 			strcpy(mapper->nombreArchivoDelJob,archivos[posicionArchivo]);
-			strcpy(mapper->archivoResultadoMap,datosMapper.archivoResultadoMap);
+			strcpy(mapper->archivoResultadoMap,datosMapper->archivoResultadoMap);
 			char* nodoIdTemp=string_new();
 			string_append(&nodoIdTemp,nodoAux->nodo_id);
 			list_add(mapper->lista_nodos,nodoIdTemp);
@@ -770,8 +769,9 @@ void *atenderJob (int *socketJob) {
 			list_clean_and_destroy_elements(copiasNodo, (void*) eliminarCopiasNodo);
 		}
 	}
-
-	for(numeroResultado = 0; numeroResultado < list_size(listaMappers);numeroResultado ++) {
+	int cantMapper;
+	cantMapper = list_size(listaMappers);
+	for(numeroResultado = 0; numeroResultado < cantMapper;numeroResultado ++) {
 		t_respuestaMap respuestaMap;
 		//Recibo respuesta del Job de cada map
 		if(recv(*socketJob,&respuestaMap, sizeof(t_respuestaMap),MSG_WAITALL)==-1){
@@ -801,9 +801,9 @@ void *atenderJob (int *socketJob) {
 							nodoAnt = list_get(copiasNodo,0); //El nodo mas vacio, el que falló
 							nodoAux = list_get(copiasNodo,1); // Nos traemos el segundo nodo con menos carga ya que el primero fue el que falló
 
-							strcpy(datosMapper.ip_nodo, nodoAux->ip);
-							datosMapper.puerto_nodo = nodoAux->puerto_escucha_nodo;
-							datosMapper.bloque = mapper->bloqueArchivo;
+							strcpy(datosMapper->ip_nodo, nodoAux->ip);
+							datosMapper->puerto_nodo = nodoAux->puerto_escucha_nodo;
+							datosMapper->bloque = mapper->bloqueArchivo;
 
 							strcpy(pathArchivoTemp,"/tmp/");
 							strcpy(nombreArchivoTemp,"MapTemporal");
@@ -815,7 +815,7 @@ void *atenderJob (int *socketJob) {
 							string_append(&nombreArchivoTemp,tiempo); //Concateno la fecha en formato hhmmssmmmm
 							string_append(&nombreArchivoTemp,".tmp");
 							string_append(&pathArchivoTemp,nombreArchivoTemp);
-							strcpy(datosMapper.archivoResultadoMap,pathArchivoTemp);
+							strcpy(datosMapper->archivoResultadoMap,pathArchivoTemp);
 
 							strcpy(accion,"ejecuta map");
 							//Le avisamos al job que vamos a mandarle rutina map
@@ -873,10 +873,69 @@ void *atenderJob (int *socketJob) {
 		}
 	}
 
+	if(strcmp(mensajeCombiner, "NO")==0){
+		int posicionMapper;
+		t_replanificarMap *mapperOk;
+		mapperOk = malloc(sizeof(t_replanificarMap));
+		t_list* listaNodosId;
+		listaNodosId = malloc(sizeof(t_list));
+		listaNodosId = list_create();
+		int cantListaNodos;
+		char *ultimoNodoMapOk;
+		for (posicionMapper =0; posicionMapper < cantMapper; posicionMapper++){
+			mapperOk = list_get(listaMappers, posicionMapper);
+			cantListaNodos = list_size(mapperOk->lista_nodos);
+			ultimoNodoMapOk = list_get(mapperOk->lista_nodos,cantListaNodos -1);
+			list_add(listaNodosId,ultimoNodoMapOk);
+		}
+		int posicionNodo;
+		int cantNodosId;
+		cantNodosId = list_size(listaNodosId);
+		int mayorRepetido = 0;
+		int cantNodoIdRepetido;
+		char *nodoIdMasRepetido;
+		char *unNodoId;
+		for(posicionNodo = 0; posicionNodo < cantNodosId; posicionNodo++){
+			unNodoId = list_get(listaNodosId, posicionNodo);
+			cantNodoIdRepetido = list_count_satisfying(listaNodosId,(void*) nodoIdMasRepetido);
+			if(cantNodoIdRepetido > mayorRepetido){
+				mayorRepetido = cantNodoIdRepetido;
+				nodoIdMasRepetido = unNodoId;
+
+			}
+		}
+		int posicionNodoGlobal;
+		int cantNodosGlobal;
+		cantNodosGlobal = list_size(listaNodos);
+		t_nodo * nodoGlobal;
+		for(posicionNodoGlobal = 0; posicionNodoGlobal < cantNodosGlobal; posicionNodoGlobal++){
+			nodoGlobal = list_get(listaNodos,posicionNodoGlobal);
+			if(strcmp(nodoGlobal->nodo_id, unNodoId)== 0){
+				//Aca mandaria al job
+
+			}
+
+
+		}
+
+
+
+	}
+
+
 
 	pthread_exit((void*)0);
 
 }
+
+bool nodoIdMasRepetido (char* antNodoId, char* posNodoId){
+	bool esVerdadero;
+	if(strcmp(antNodoId,posNodoId)==0){
+		esVerdadero = true;
+	}
+	return esVerdadero;
+}
+
 
 //Busca y trae todos los bloques de un archivo
 t_list* buscarBloques (char *nombreArchivo, uint32_t padre){
