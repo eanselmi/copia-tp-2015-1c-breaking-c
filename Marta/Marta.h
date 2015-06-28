@@ -55,8 +55,10 @@ typedef struct estructura_respuesta {
 typedef struct estructura_replanificar_map {
 	char archivoResultadoMap[TAM_NOMFINAL];
 	char nombreArchivoDelJob[TAM_NOMFINAL];
+	int padreArchivoJob;
 	int bloqueArchivo;
-	t_list* lista_nodos;
+	char nodoId [6];
+	int resultado;
 }t_replanificarMap;
 
 typedef struct estructura_reduce {

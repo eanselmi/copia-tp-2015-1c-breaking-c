@@ -624,7 +624,7 @@ void *atenderJob (int *socketJob) {
 	char *nombreArchivoTemp=string_new();//Nombre del archivo que va a mandar a los nodos
 	char *pathArchivoTemp = string_new(); //Path donde va a guardar los archivos temporales
 	t_replanificarMap *mapper;
-	t_mapper *datosMapper;
+	t_mapper datosMapper;
 	//Recibe mensaje de si es o no combiner
 	if(recv(*socketJob,mensajeCombiner,sizeof(mensajeCombiner),MSG_WAITALL)==-1){
 		perror("recv");
@@ -660,35 +660,34 @@ void *atenderJob (int *socketJob) {
 	for(posicionArchivo=0;archivos[posicionArchivo]!=NULL;posicionArchivo++){
 		printf("Se debe trabajar en el archivo:%s\n",archivos[posicionArchivo]);
 		//Separo el nombre del archivo por barras
-	    arrayArchivo = string_split(archivos[posicionArchivo], "/");
+		arrayArchivo = string_split(archivos[posicionArchivo], "/");
 		for(posArray=0;arrayArchivo[posArray]!=NULL;posArray++){
 			if(arrayArchivo[posArray+1]==NULL){
 				//me quedo con el nombre del archivo
 				strcpy(nombreArchivo,arrayArchivo[posArray]);
 			}
 		}
-	strcpy(mensaje_fs, "dame padre");
-	 if(send(socket_fs,mensaje_fs, sizeof(mensaje_fs), MSG_WAITALL )==-1){
-	 perror("send");
-	 log_error(logger,"Fallo el dame padre");
-	 //exit(-1);
-	 }
-	 //Le mando el path a FS para que me mande el padre
-	 if(send(socket_fs,archivos[posicionArchivo],sizeof(TAM_NOMFINAL),MSG_WAITALL) == -1) {
-	 perror("send");
-	 log_error(logger,"Fallo el dame padre");
-	 //exit(-1);
-	 }
-	 //Recibe del FS el padre
-	 if(recv(socket_fs,&padre,sizeof(int),MSG_WAITALL)== -1){
-	 perror("recv");
-	 log_error(logger,"Fallo el recv del padre del FS");
-	 //exit(-1);
-	 }
+		strcpy(mensaje_fs, "dame padre");
+		if(send(socket_fs,mensaje_fs, sizeof(mensaje_fs), MSG_WAITALL )==-1){
+			perror("send");
+			log_error(logger,"Fallo el dame padre");
+			//exit(-1);
+		}
+		//Le mando el path a FS para que me mande el padre
+		if(send(socket_fs,archivos[posicionArchivo],sizeof(TAM_NOMFINAL),MSG_WAITALL) == -1) {
+			perror("send");
+			log_error(logger,"Fallo el envio del nombre de archivo al FS");
+			//exit(-1);
+		}
+		//Recibe del FS el padre
+		if(recv(socket_fs,&padre,sizeof(int),MSG_WAITALL)== -1){
+			perror("recv");
+			log_error(logger,"Fallo el recv del padre del FS");
+			//exit(-1);
+		}
 
-
-	//De cada archivo que nos manda el Job buscamos y nos traemos los bloques
-	 bloques=buscarBloques(nombreArchivo,padre);
+		//De cada archivo que nos manda el Job buscamos y nos traemos los bloques
+		bloques=buscarBloques(nombreArchivo,padre);
 		cantBloques = list_size(bloques);
 		for(posBloques=0; posBloques<cantBloques; posBloques++){ //recorremos los bloques del archivo que nos mando job
 			bloque = list_get(bloques,posBloques);
@@ -709,16 +708,16 @@ void *atenderJob (int *socketJob) {
 
 			mapper=malloc(sizeof(t_replanificarMap));
 
-			memset(datosMapper->ip_nodo,'\0',20);
-			memset(datosMapper->archivoResultadoMap,'\0',TAM_NOMFINAL);
+			memset(datosMapper.ip_nodo,'\0',20);
+			memset(datosMapper.archivoResultadoMap,'\0',TAM_NOMFINAL);
 			memset(mapper->archivoResultadoMap,'\0',TAM_NOMFINAL);
 			memset(mapper->nombreArchivoDelJob,'\0',TAM_NOMFINAL);
-			strcpy(datosMapper->ip_nodo,nodoAux->ip);
-			datosMapper->puerto_nodo= nodoAux->puerto_escucha_nodo;
+			strcpy(datosMapper.ip_nodo,nodoAux->ip);
+			datosMapper.puerto_nodo= nodoAux->puerto_escucha_nodo;
 			for(posCopia=0;posCopia<cantCopias;posCopia++){
 				copia = list_get(bloque->copias,posCopia);
 				if(strcmp(copia->nodo,nodoAux->nodo_id)==0){
-					datosMapper->bloque=copia->bloqueNodo;
+					datosMapper.bloque=copia->bloqueNodo;
 				}
 			}
 			strcpy(pathArchivoTemp,"/tmp/");
@@ -731,7 +730,7 @@ void *atenderJob (int *socketJob) {
 			string_append(&nombreArchivoTemp,tiempo); //Concateno la fecha en formato hhmmssmmmm
 			string_append(&nombreArchivoTemp,".tmp");
 			string_append(&pathArchivoTemp,nombreArchivoTemp);
-			strcpy(datosMapper->archivoResultadoMap,pathArchivoTemp);
+			strcpy(datosMapper.archivoResultadoMap,pathArchivoTemp);
 
 
 			strcpy(accion,"ejecuta map");
@@ -754,13 +753,17 @@ void *atenderJob (int *socketJob) {
 			//de bloque que haga
 
 			mapper->bloqueArchivo = posBloques;
-			mapper->lista_nodos=list_create();
-			strcpy(mapper->nombreArchivoDelJob,archivos[posicionArchivo]);
-			strcpy(mapper->archivoResultadoMap,datosMapper->archivoResultadoMap);
+			memset(mapper->nodoId,'\0',6);
+			strcpy(mapper->nombreArchivoDelJob,nombreArchivo);
+			strcpy(mapper->archivoResultadoMap,datosMapper.archivoResultadoMap);
 			char* nodoIdTemp=string_new();
 			string_append(&nodoIdTemp,nodoAux->nodo_id);
-			list_add(mapper->lista_nodos,nodoIdTemp);
+			strcpy(mapper->nodoId,nodoIdTemp);
+			mapper->resultado=2;
+			mapper->padreArchivoJob=padre;
 			list_add(listaMappers,mapper);
+
+
 
 			//******************************************************************************
 			//Buscar nodoAux en la lista general comparando por nodo_id y sumarle cantMapper
@@ -785,88 +788,82 @@ void *atenderJob (int *socketJob) {
 				break;
 			}
 		}
+		map->resultado = respuestaMap.resultado;
 
-		if(respuestaMap.resultado ==1){
+		if(map->resultado ==1){
 			printf("El map falló\n");
 			//PAM
 			//REPLANIFICAR BLOQUE (buscar t_respuestasMap.archivoResultadoMap con t_replanificarMap el archivo y bloque del archivo
 			// que no se pudo hacer el map recorrer sus copias y ordenar la sublista devuelta y mandar el map a el primer nodo de la sublista :)
 			//Agregar dicho nodo_id a la lista dentro de la estructura de ese map que se va a mandar
 			// y buscarlo en la lista gral de nodos restarle map al que me dio KO = 1 LE RESTO UN cantMap-- y le sumo al nuevo nodo que mando el maps
-			int posCopia;
-			int posNodo;
-			t_nodo* nodoAnt;
-					for(posCopia=0;copia!=NULL;posCopia++){ //Recorro la lista general de copias
-						if(mapper->bloqueArchivo == copia->bloqueNodo){ //comparo los ID de bloques
-							// Ordenamos la sublista segun la suma de la cantidad de map y reduce
-							list_sort(copiasNodo, (void*) ordenarSegunMapYReduce);
-							nodoAnt = list_get(copiasNodo,0); //El nodo mas vacio, el que falló
-							nodoAux = list_get(copiasNodo,1); // Nos traemos el segundo nodo con menos carga ya que el primero fue el que falló
 
-							strcpy(datosMapper->ip_nodo, nodoAux->ip);
-							datosMapper->puerto_nodo = nodoAux->puerto_escucha_nodo;
-							datosMapper->bloque = mapper->bloqueArchivo;
-
-							strcpy(pathArchivoTemp,"/tmp/");
-							strcpy(nombreArchivoTemp,"MapTemporal");
-							arrayTiempo=string_split(temporal_get_string_time(),":"); //creo array con hora minutos segundos y milisegundos separados
-							string_append(&tiempo,arrayTiempo[0]);//Agrego horas
-							string_append(&tiempo,arrayTiempo[1]);//Agrego minutos
-							string_append(&tiempo,arrayTiempo[2]);//Agrego segundos
-							string_append(&tiempo,arrayTiempo[3]);//Agrego milisegundos
-							string_append(&nombreArchivoTemp,tiempo); //Concateno la fecha en formato hhmmssmmmm
-							string_append(&nombreArchivoTemp,".tmp");
-							string_append(&pathArchivoTemp,nombreArchivoTemp);
-							strcpy(datosMapper->archivoResultadoMap,pathArchivoTemp);
-
-							strcpy(accion,"ejecuta map");
-							//Le avisamos al job que vamos a mandarle rutina map
-							if(send(*socketJob,accion,sizeof(accion),MSG_WAITALL)==-1){
-								perror("send");
-								log_error(logger,"Fallo el envio de los datos para el mapper");
-								exit(-1);
-							}
-							// Le mandamos los datos que necesita el job para aplicar map
-							if(send(*socketJob,&datosMapper,sizeof(t_mapper),MSG_WAITALL)==-1){
-								perror("send");
-								log_error(logger,"Fallo el envio de los datos para el mapper");
-								exit(-1);
-							}
-
-
-							for(posNodo=0;nodo!=NULL;posNodo++){ //Recorro la lista de nodo de Marta
-								if(strcmp(copia->nodo,nodoAnt->nodo_id)==0){ //comparo los id de los Nodos
-									nodo->cantMappers --; //Le resto cantidad de mappers al nodo que falló
-								}
-							}
-							for(posNodo=0;nodo!=NULL;posNodo++){ //Recorro la lista de nodo de Marta
-								if(strcmp(copia->nodo,nodoAux->nodo_id)==0){ //comparo los id de los Nodos
-									nodo->cantMappers ++; //Le sumo cantidad de mapper al nuevo nodo asignado
-								}
-							}
-
-						}
-
-
-			}
+//			int posNodo;
+//
+//
+//
+//
+//			if(map->nodoId){
+//				// Ordenamos la sublista segun la suma de la cantidad de map y reduce
+//				list_sort(copiasNodo, (void*) ordenarSegunMapYReduce);
+//
+//				strcpy(datosMapper->ip_nodo, nodoAux->ip);
+//				datosMapper->puerto_nodo = nodoAux->puerto_escucha_nodo;
+//				datosMapper->bloque = mapper->bloqueArchivo;
+//
+//				strcpy(pathArchivoTemp,"/tmp/");
+//				strcpy(nombreArchivoTemp,"MapTemporal");
+//				arrayTiempo=string_split(temporal_get_string_time(),":"); //creo array con hora minutos segundos y milisegundos separados
+//				string_append(&tiempo,arrayTiempo[0]);//Agrego horas
+//				string_append(&tiempo,arrayTiempo[1]);//Agrego minutos
+//				string_append(&tiempo,arrayTiempo[2]);//Agrego segundos
+//				string_append(&tiempo,arrayTiempo[3]);//Agrego milisegundos
+//				string_append(&nombreArchivoTemp,tiempo); //Concateno la fecha en formato hhmmssmmmm
+//				string_append(&nombreArchivoTemp,".tmp");
+//				string_append(&pathArchivoTemp,nombreArchivoTemp);
+//				strcpy(datosMapper->archivoResultadoMap,pathArchivoTemp);
+//
+//				strcpy(accion,"ejecuta map");
+//				//Le avisamos al job que vamos a mandarle rutina map
+//				if(send(*socketJob,accion,sizeof(accion),MSG_WAITALL)==-1){
+//					perror("send");
+//					log_error(logger,"Fallo el envio de los datos para el mapper");
+//					exit(-1);
+//				}
+//				// Le mandamos los datos que necesita el job para aplicar map
+//				if(send(*socketJob,&datosMapper,sizeof(t_mapper),MSG_WAITALL)==-1){
+//					perror("send");
+//					log_error(logger,"Fallo el envio de los datos para el mapper");
+//					exit(-1);
+//				}
+//
+//
+//				for(posNodo=0;nodo!=NULL;posNodo++){ //Recorro la lista de nodo de Marta
+//					if(strcmp(copia->nodo,nodoAnt->nodo_id)==0){ //comparo los id de los Nodos
+//						nodo->cantMappers --; //Le resto cantidad de mappers al nodo que falló
+//					}
+//				}
+//				for(posNodo=0;nodo!=NULL;posNodo++){ //Recorro la lista de nodo de Marta
+//					if(strcmp(copia->nodo,nodoAux->nodo_id)==0){ //comparo los id de los Nodos
+//						nodo->cantMappers ++; //Le sumo cantidad de mapper al nuevo nodo asignado
+//					}
+//				}
+//
+//
+//
+//
+//			}
 		}else {
 			printf("El map salio ok\n");
-		//Buscar el respuestaMap.nombreArchvioTemporal, con t_replanificarMap el archivo y bloque del archivo
 		// buscar en la lista del struct el nodo_id y luego buscarlo en la lista gral de nodos y restarle 1 a su catMappers
-			int posCopia;
 			int posNodo;
-			for(posCopia=0;copia!=NULL;posCopia++){ //Recorro la lista general de copias
-				if(mapper->bloqueArchivo == copia->bloqueNodo){ //comparo los ID de bloques
-					for(posNodo=0;nodo!=NULL;posNodo++){ //Recorro la lista de nodo de Marta
-						if(strcmp(copia->nodo,nodo->nodo_id)==0){ //comparo los id de los Nodos
-							nodo->cantMappers --;
-						}
-					}
-
+			t_nodo *nodoMapOK;
+			for(posNodo=0;posNodo<list_size(listaNodos);posNodo++){ //Recorro la lista de nodo de Marta
+				nodoMapOK = list_get(listaNodos,posNodo);
+				if(strcmp(nodoMapOK->nodo_id,map->nodoId)==0){ //comparo los id de los Nodos
+					nodoMapOK->cantMappers --;
 				}
 			}
-
-
 		}
 	}
 
@@ -879,8 +876,8 @@ void *atenderJob (int *socketJob) {
 		char *ultimoNodoMapOk;
 		for (posicionMapper =0; posicionMapper < list_size(listaMappers); posicionMapper++){
 			mapperOk = list_get(listaMappers, posicionMapper);
-			cantListaNodos = list_size(mapperOk->lista_nodos);
-			ultimoNodoMapOk = list_get(mapperOk->lista_nodos,cantListaNodos -1);
+//			cantListaNodos = list_size(mapperOk->lista_nodos);
+//			ultimoNodoMapOk = list_get(mapperOk->lista_nodos,cantListaNodos -1);
 			list_add(listaNodosId,ultimoNodoMapOk);
 		}
 		int posicionNodo;
@@ -941,7 +938,7 @@ t_list* buscarBloques (char *nombreArchivo, uint32_t padre){
 		archivoAux = list_get(listaArchivos,i);
 		if (strcmp(archivoAux->nombre,nombreArchivo) ==0 && archivoAux->padre==padre){ //compara el nomnre y padre del archivo del job con cada nombre y padre de archivo de la lista global
 			bloques = archivoAux->bloques;
-
+			break;
 		}
 	}
 	return bloques;
