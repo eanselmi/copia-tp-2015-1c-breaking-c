@@ -477,12 +477,32 @@ void actualizar_persistencia_directorio_movido(int idPadre, int nuevoPadre){
 	fclose(dir);
 	fclose(aux);
 }
-
-
-
-
-
-
+void persistir_archivo(t_archivo *archivo){
+	FILE* dir;
+	dir=fopen("archivos","a+");
+	t_bloque *bloque;
+	t_copias *copia;
+	int i,j;
+	fprintf (dir,"%s",archivo->nombre);
+	fprintf (dir,"%s",";");
+	fprintf (dir,"%d",archivo->padre);
+	fprintf (dir,"%s",";");
+	fprintf (dir,"%d",list_size(archivo->bloques));
+	for (i=0;i<list_size(archivo->bloques);i++){
+		bloque=list_get(archivo->bloques,i);
+		fprintf (dir,"%s",";");
+		fprintf (dir,"%d",list_size(bloque->copias));
+		for (j=0;j<list_size(bloque->copias);j++){
+			copia=list_get(bloque->copias,j);
+			fprintf (dir,"%s",";");
+			fprintf (dir,"%s",copia->nodo);
+			fprintf (dir,"%s",";");
+			fprintf (dir,"%d",copia->bloqueNodo);
+		}
+	}
+	fprintf (dir,"%s","\n");
+	fclose(dir);
+}
 void listar_directorios(){
 	t_dir *dir=malloc(sizeof(t_dir));
 	int i;
@@ -2109,6 +2129,7 @@ int CopiarArchivoAMDFS(){
     	archivo_temporal->tamanio=0; //para mi este campo esta al pedo
     	fclose(archivoLocal);
 
+    	persistir_archivo(archivo_temporal);
     	//Si llego hasta aca salio tod0 bien, actualizo la lista real de nodos
     	eliminar_listas(NULL,NULL,nodos);
     	nodos=list_create();
