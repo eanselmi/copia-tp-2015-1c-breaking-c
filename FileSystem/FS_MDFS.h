@@ -78,6 +78,8 @@ void listar_archivos_subidos(t_list *archivos);
 int obtenerEstadoDelBloque(char *nodo,int bloqueNodo);
 void listar_directorios(void);
 int obtenerEstadoDelNodo(char* nodo);
+void recuperar_persistencia(void);
+void persistir_directorio(t_dir *directorio);
 void obtenerNodosMasLibres(void);
 void listar_directorios_usuarios(void);
 int directorio_vacio(int id);

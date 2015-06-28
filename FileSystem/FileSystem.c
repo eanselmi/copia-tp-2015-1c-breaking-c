@@ -70,7 +70,9 @@ int main(int argc, char *argv[]) {
 	pthread_t escucha; //Hilo que va a manejar los mensajes recibidos
 	int newfd;
 	int addrlen;
-
+	FILE* dir;
+	archivos = list_create(); //Crea la lista de archivos
+	directorios = list_create(); //crea la lista de directorios
 //============= REVISO LA PERSISTENCIA Y EL ESTADO DE LA ULTIMA EJECUCUION DEL FILESYSTEM ===================
 	FILE* archivo_persistencia;
 	if((archivo_persistencia=fopen("persistencia","r+"))==NULL){
@@ -85,9 +87,15 @@ int main(int argc, char *argv[]) {
 	rewind(archivo_persistencia);
 	fprintf (archivo_persistencia,"%s","1");
 	fclose(archivo_persistencia);
-	if (strcmp(valor,"1")==0){
-		//Hay que restaurar la persistencia
+	if (atoi(valor)==1){
+		recuperar_persistencia(); //Hay que restaurar la persistencia
 	}
+	//Abro los archivos directorios y archivos en modo w para borrarlos
+	/*dir=fopen("directorios","w");
+	fclose(dir);
+	dir=fopen("archivos","w");
+	fclose(dir);*/
+
  // ================================= FIN CONTROL DE PERSISTENCIA ===================================
 
 	int yes = 1; // para setsockopt() SO_REUSEADDR, más abajo
@@ -199,10 +207,6 @@ int main(int argc, char *argv[]) {
 		log_error(logger,"Falló la creación del hilo que maneja las conexiones");
 		return 1;
 	}
-
-
-	archivos = list_create(); //Crea la lista de archivos
-	directorios = list_create(); //crea la lista de directorios
 	//inicializo los indices para los directorios, 0 si está libre, 1 ocupado.
 	for (j = 1; j < sizeof(indiceDirectorios); j++) {
 		indiceDirectorios[j] = 0;
@@ -290,13 +294,42 @@ int Menu(void) {
 		//case 17: listar_nodos_conectados(nodos); break;
 		//case 17: listar_archivos_subidos(archivos); break;
 		//case 17: listar_directorios_usuarios(); break;
-		//case 17: listar_directorios(); break;
-		case 17: eliminar_listas(archivos,directorios,nodos); break;
+		case 17: listar_directorios(); break;
+		//case 17: eliminar_listas(archivos,directorios,nodos); break;
 
 		default: printf("Opción incorrecta. Por favor ingrese una opción del 1 al 17\n"); break;
 		}
 	}
 	return 0;
+}
+
+void recuperar_persistencia(){
+	//Seccion de Directorios
+	t_dir *directorio;
+	FILE* dir;
+	dir=fopen("directorios","r");
+	char buffer[200];
+	memset(buffer,'\0',200);
+	char *saveptr;
+	char *nombre;
+	while (fgets(buffer, sizeof(buffer),dir) != NULL){
+		directorio=malloc(sizeof(t_dir));
+		directorio->id = atoi(strtok_r(buffer,";",&saveptr));
+		directorio->nombre=string_new();
+		nombre=string_new();
+		nombre = strtok_r(NULL,";",&saveptr);
+		directorio->nombre=strdup(nombre);
+		directorio->padre = atoi(strtok_r(NULL,";",&saveptr));
+		list_add(directorios,directorio);
+		memset(buffer,'\0',200);
+	}
+	if (feof(dir)){
+		// hit end of file
+	}else{
+		perror ("fgets de recuperar_persistencia");
+	}
+
+	fclose(dir);
 }
 
 void persistir_directorio(t_dir *directorio){
