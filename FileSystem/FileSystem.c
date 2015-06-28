@@ -497,6 +497,8 @@ void persistir_archivo(t_archivo *archivo){
 			fprintf (dir,"%s",";");
 			fprintf (dir,"%s",copia->nodo);
 			fprintf (dir,"%s",";");
+			fprintf (dir,"%s",copia->md5);
+			fprintf (dir,"%s",";");
 			fprintf (dir,"%d",copia->bloqueNodo);
 		}
 	}
@@ -861,11 +863,6 @@ void *connection_handler_escucha(void) {
 											exit(-1);
 										}
 										if ((send(marta_sock, &unArchivo->padre,sizeof(uint32_t), MSG_WAITALL)) == -1) {
-											perror("send");
-											log_error(logger, "FALLO el envio del ok a Marta");
-											exit(-1);
-										}
-										if ((send(marta_sock, &unArchivo->estado,sizeof(uint32_t), MSG_WAITALL)) == -1) {
 											perror("send");
 											log_error(logger, "FALLO el envio del ok a Marta");
 											exit(-1);
@@ -1803,7 +1800,6 @@ int copiar_lista_de_archivos(t_list* destino, t_list* origen){
 		t_archivo *copia=malloc(sizeof(t_archivo));
 		original=list_get(origen,i);
 		copia->bloques=original->bloques;
-		copia->estado=original->estado;
 		strcpy(copia->nombre,original->nombre);
 		copia->padre=original->padre;
 		copia->bloques=list_create();
@@ -2124,9 +2120,7 @@ int CopiarArchivoAMDFS(){
     	for (aux1=0;aux1<aux2-1;aux1++) nombre_del_archivo = strtok_r(NULL,"/",&saveptr);
     	memset(archivo_temporal->nombre,'\0',200);
     	strcpy(archivo_temporal->nombre,nombre_del_archivo);
-    	archivo_temporal->estado=1;
     	archivo_temporal->padre=idPadre; //modifico al path del archivo en el MDFS
-    	archivo_temporal->tamanio=0; //para mi este campo esta al pedo
     	fclose(archivoLocal);
 
     	persistir_archivo(archivo_temporal);
