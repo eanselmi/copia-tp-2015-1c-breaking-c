@@ -1700,9 +1700,15 @@ void MoverDirectorio() {
 		padreViejo = BuscarPadre(pathOriginal);
 		printf("Ingrese el path del directorio al que desea moverlo, desde raíz ejemplo /home/tp \n");
 		scanf("%s", pathNuevo);
-		padreNuevo = BuscarPadre(pathNuevo);
+		if (strcmp(pathNuevo,"/")==0){
+			padreNuevo = 0;
+		}
+		else{
+			padreNuevo = BuscarPadre(pathNuevo);
+			vectorPathNuevo = string_split((char*) pathNuevo, "/");
+		}
+		//padreNuevo = BuscarPadre(pathNuevo);
 		vectorPathOriginal = string_split((char*) pathOriginal, "/");
-		vectorPathNuevo = string_split((char*) pathNuevo, "/");
 		while (vectorPathOriginal[i] != NULL && idEncontrado != -1) {
 			if (i == 0) {
 				idEncontrado = 0; //el primero que cuelga de raiz
@@ -1717,12 +1723,17 @@ void MoverDirectorio() {
 			strcpy(nombreDirAMover, vectorPathOriginal[(i - 1)]); //revisar, puse -1 porque avancé hasta el NULL.
 			idEncontrado = 0;
 			i = 0;
-			while (vectorPathNuevo[i] != NULL && idEncontrado != -1) {
-				if (i == 0) {
-					idEncontrado = 0; //el primero que cuelga de raiz
+			if (padreNuevo == 0){
+				idEncontrado = 0;
+			}
+			else{
+				while (vectorPathNuevo[i] != NULL && idEncontrado != -1) {
+					if (i == 0) {
+						idEncontrado = 0; //el primero que cuelga de raiz
+					}
+					idEncontrado = ExisteEnLaLista(directorios, vectorPathNuevo[i],idEncontrado);
+					i++;
 				}
-				idEncontrado = ExisteEnLaLista(directorios, vectorPathNuevo[i],idEncontrado);
-				i++;
 			}
 			if (idEncontrado == -1) {
 				printf("No existe el path al que desea moverlo \n");
