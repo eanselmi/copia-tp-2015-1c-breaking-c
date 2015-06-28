@@ -37,8 +37,6 @@ t_list* listaMappersConectados; //Lista con los mappers conectados
 t_list* listaReducersConectados; //lista con los reducers conectados
 t_list* archivosAbiertos; //Archivos ya abiertos que otro nodo me pide que pase renglon
 char nodo_id[6];
-char bufGetArchivo[BLOCK_SIZE]; //Buffer para la funcion getFileContent
-//char buffer[BLOCK_SIZE]; //Buffer que tiene un bloque que llega del filesystem
 sem_t semBloques[205]; //Soporta nodos de hasta 4GB 205 *20MB = 4100 MB --> ~4GB  (serían 205 bloques)
 sem_t semSort; // Un sort a la vez porque llama a bash
 //char bufFalso[BLOCK_SIZE]; //Buffer si voy a crear un bloque falso (para pruebas) 20MB
@@ -540,7 +538,6 @@ void ordenarMapper(char* pathMapperTemporal, char* nombreMapperOrdenado){
 	char** pathMapperSeparado;
 	char* nombreMapperTemporal;
 	char* contenidoDelMapper;
-	struct stat estadoDelFile; //declaro una estructura que guarda el estado de un archivo
 	sem_t terminoSort;
 	sem_wait(&semSort);
 	sem_init(&terminoSort,0,1);
@@ -555,7 +552,6 @@ void ordenarMapper(char* pathMapperTemporal, char* nombreMapperOrdenado){
 	else if(pid==0)
 	{
 		archivo_resultado=open(nombreMapperOrdenado,O_RDWR|O_CREAT,S_IRWXU|S_IRWXG); //abro file resultado, si no esta lo crea, asigno permisos
-		fstat(archivo_resultado,&estadoDelFile);
 		fflush(stdout);
 		bak=dup(STDOUT_FILENO);
 		dup2(archivo_resultado,STDOUT_FILENO); //STDOUT de este proceso se grabara en el file resultado
@@ -564,26 +560,19 @@ void ordenarMapper(char* pathMapperTemporal, char* nombreMapperOrdenado){
 		dup2(outfd[0], STDIN_FILENO); //STDIN de este proceso será STDOUT del proceso padre
 		close(outfd[0]); /* innecesarios para el hijo */
 		close(outfd[1]);
-	    char *name[] = {
-	        "/bin/sh",
-			"-c",
-	        "sort",
-			//nombreMapperTemporal,
-	        NULL
-	    };
-	    execvp(name[0], name);
+		execlp("/usr/bin/sort","sort",NULL);
 	    sem_post(&terminoSort);
 	}
 	else
 	{
-		close(outfd[0]); /* Estan siendo usados por el hijo */
 		//Se debe escribir el contenido de la rutina Map
-//		write(outfd[1],"Date;WBAN;DryBulbCelsius;Time\n20130101;03011;M;0000\n20130101;03011;M;0015\n",74);/* Escribe en el stdin del hijo el contenido del bloque*/
 		contenidoDelMapper=getFileContent(nombreMapperTemporal);
 		write(outfd[1],contenidoDelMapper,strlen(contenidoDelMapper));
+		close(outfd[0]); /* Estan siendo usados por el hijo */
 		close(outfd[1]);
-		dup2(bak,STDOUT_FILENO);
+		free(contenidoDelMapper);
 		sem_wait(&terminoSort);
+		dup2(bak,STDOUT_FILENO);
 		sem_post(&semSort);
 	}
 }
@@ -726,24 +715,27 @@ char* getFileContent(char* nombreFile){
 	FILE * archivoLocal;
 	int i=0;
 	char* path;
-	char car;
+	char* contenido;
+	char linea[512];
+	memset(linea,'\0',512);
+	contenido=string_new();
 	path = string_new();
 	string_append(&path,config_get_string_value(configurador,"DIR_TEMP"));
 	string_append(&path,"/");
 	string_append(&path,nombreFile);
-	memset(bufGetArchivo,'\0',BLOCK_SIZE);
 	archivoLocal = fopen(path,"r");
 	fseek(archivoLocal,0,SEEK_SET);
 	while (!feof(archivoLocal)){
-		car = (char) fgetc(archivoLocal);
-		if(car!=EOF){
-			bufGetArchivo[i]=car;
+		fgets(linea,512,archivoLocal);
+		if(!feof(archivoLocal)){
+			string_append(&contenido,linea);
 		}
 		i++;
 	}
 	fclose(archivoLocal);
+	//printf("tamaño de contenido %d\n",strlen(contenido));
 	free(path);
-	return bufGetArchivo;
+	return contenido;
 }
 
 char* mapearFileDeDatos(){
@@ -1122,7 +1114,7 @@ void ejecutarReduce(t_list* archivosApareando,char* script,char* resultado){
 						if(unArchivo->renglones[byteActual]=='\n'){
 							strcpy(unArchivo->buffer,renglonTemporal);
 							unArchivo->posicionRenglon=byteActual+1;
-							byteActual=2449;
+							byteActual=2499;
 						}
 						i++;
 //						if(unArchivo->renglones[byteActual]=='\0'){
@@ -1194,7 +1186,7 @@ void ejecutarReduce(t_list* archivosApareando,char* script,char* resultado){
 					if(unArchivo->renglones[byteActual]=='\n'){
 						strcpy(unArchivo->buffer,renglonTemporal);
 						unArchivo->posicionRenglon=byteActual+1;
-						byteActual=2449;
+						byteActual=2499;
 					}
 					i++;
 				}
