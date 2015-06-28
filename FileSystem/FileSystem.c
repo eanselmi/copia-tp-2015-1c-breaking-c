@@ -1410,6 +1410,10 @@ void CrearDirectorio() {
 	printf("Ingrese el path del directorio desde raíz ejemplo /home/utnso \n");
 	memset(path,'\0',200);
 	scanf("%s", path);
+	if (strcmp(path,"/")==0){
+		printf("No puede crearlo porque ese directorio ya es raíz \n");
+		return;
+	}
 	directorioNuevo = string_split((char*) path, "/"); //Devuelve un array del path del directorio a crear
 	//int indiceVectorDirNuevo=1;
 	int indiceVectorDirNuevo = 0; //empiezo por el primero del split
@@ -1550,6 +1554,10 @@ void EliminarDirectorio() {
 		int posicionElementoAEliminar;
 		printf("Ingrese el path del directorio que desea eliminar, desde raíz ejemplo /home/utnso \n");
 		scanf("%s", pathAEliminar);
+		if (strcmp(pathAEliminar,"/")==0){
+			printf("No se puede puede eliminar la raíz \n");
+			return;
+		}
 		strcpy(copia_pathAEliminar,pathAEliminar);
 		int idPadre = BuscarPadre(copia_pathAEliminar);
 		vectorpathAEliminar = string_split((char*) pathAEliminar, "/");
@@ -1608,7 +1616,7 @@ void EliminarDirectorio() {
 			}
 		}
 	} else {
-		Menu();
+		return;
 	}
 }
 
@@ -1666,7 +1674,7 @@ void RenombrarDirectorio() {
 			listarDirectoriosCreados();
 		}
 	} else {
-		Menu();
+		return;
 	}
 }
 
@@ -1760,7 +1768,7 @@ void MoverDirectorio() {
 		}
 	}
 	else {
-		Menu();
+		return;
 	}
 }
 
