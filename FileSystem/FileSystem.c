@@ -16,11 +16,6 @@
 #include <commons/config.h>
 #include <commons/string.h>
 #include <commons/bitarray.h>
-
-
-//Includes para mongo
-#include <bson.h>
-#include <mongoc.h>
 #include "FS_MDFS.h"
 
 //Variables globales
@@ -57,14 +52,6 @@ int j; //variable para recorrer el vector de indices
 int *puerto_escucha_nodo;
 char nodo_id[6];
 
-//=========== Variables para la persistencia con mongo ===============
-mongoc_client_t *client;
-mongoc_collection_t *collection;
-mongoc_cursor_t *cursor;
-bson_error_t error;
-bson_oid_t oid;
-bson_t *doc;
-
 int main(int argc, char *argv[]) {
 
 	pthread_t escucha; //Hilo que va a manejar los mensajes recibidos
@@ -97,11 +84,6 @@ int main(int argc, char *argv[]) {
 	logger = log_create("fsLog.log", "FileSystem", false, LOG_LEVEL_INFO);
 	FD_ZERO(&master); // borra los conjuntos maestro y temporal
 	FD_ZERO(&read_fds);
-
-	mongoc_init();
-	client = mongoc_client_new("mongodb://localhost:27017/");
-	collection = mongoc_client_get_collection(client, "NODOS", "lista_nodos");
-	bson_oid_init(&oid, NULL);
 
 	if ((listener = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
 		perror("socket");
@@ -463,25 +445,7 @@ static t_nodo *agregar_nodo_a_lista(char nodo_id[6], int socket, int est, int es
 	for (i = 8; i < bloques_tot; i += 8);
 	nodo_temporal->bloques_bitarray = malloc(i / 8);
 	nodo_temporal->bloques_del_nodo = bitarray_create(nodo_temporal->bloques_bitarray, i / 8);
-	for (i = 0; i < nodo_temporal->bloques_totales; i++)
-		bitarray_clean_bit(nodo_temporal->bloques_del_nodo, i);
-
-	//===================== FIN DEL AGREGAR NODO, INICIA LA PERSISTENCIA A MONGO ==========================
-
-	char *tmp_bl_lib = string_new();
-	char *tmp_bl_tot = string_new();
-	sprintf(tmp_bl_lib, "%d", bloques_lib);
-	sprintf(tmp_bl_tot, "%d", bloques_tot);
-	//Persistencia del nodo agregado a la base de mongo
-	doc = BCON_NEW("Nodo_ID", nodo_id, "Bloques_Libres",tmp_bl_lib, "Bloques_Totales", tmp_bl_tot);
-	if (!mongoc_collection_insert(collection, MONGOC_INSERT_NONE, doc, NULL,&error)) {
-		printf("%s\n", error.message);
-	}
-	free(tmp_bl_lib);
-	free(tmp_bl_tot);
-
-	//==================================== FIN PERSISTENCIA ===============================================
-
+	for (i = 0; i < nodo_temporal->bloques_totales; i++) bitarray_clean_bit(nodo_temporal->bloques_del_nodo, i);
 	return nodo_temporal;
 }
 
