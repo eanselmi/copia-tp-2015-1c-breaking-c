@@ -591,7 +591,7 @@ void ordenarMapper(char* pathMapperTemporal, char* nombreMapperOrdenado){
 
 void ejecutarMapper(char *script,int bloque,char *resultado){
 	int outfd[2];
-	int bak,pid,archivo_resultado;
+	int bak,pid,archivo_resultado,tamanioAMapear;
 	bak=0;
 	char *path;
 	char *bloqueAMapear;
@@ -617,22 +617,32 @@ void ejecutarMapper(char *script,int bloque,char *resultado){
 	string_append(&path,config_get_string_value(configurador,"PATHMAPPERS"));
 	string_append(&path,"/");
 	string_append(&path,script);
-	execlp(path,script,NULL); //Ejecuto el script
+	char *ejecucion []={path,script,NULL};
+	if(execvp(ejecucion[0],ejecucion)==-1){
+		perror("Ejecucion map:");
+		log_error(logger,"Error en la ejecucion de un map");
+	}
 	sem_post(&terminoElMap);
 	}
 	else
 	{
-	close(outfd[0]); /* Estan siendo usados por el hijo */
-//	char *datoos=string_new();
-//	string_append(&datoos,"WBAN,Date,Time,StationType,SkyCondition,SkyConditionFlag,Visibility,VisibilityFlag,WeatherType,WeatherTypeFlag,DryBulbFarenheit,DryBulbFarenheitFlag,DryBulbCelsius,DryBulbCelsiusFlag,WetBulbFarenheit,WetBulbFarenheitFlag,WetBulbCelsius,WetBulbCelsiusFlag,DewPointFarenheit,DewPointFarenheitFlag,DewPointCelsius,DewPointCelsiusFlag,RelativeHumidity,RelativeHumidityFlag,WindSpeed,WindSpeedFlag,WindDirection,WindDirectionFlag,ValueForWindCharacter,ValueForWindCharacterFlag,StationPressure,StationPressureFlag,PressureTendency,PressureTendencyFlag,PressureChange,PressureChangeFlag,SeaLevelPressure,SeaLevelPressureFlag,RecordType,RecordTypeFlag,HourlyPrecip,HourlyPrecipFlag,Altimeter,AltimeterFlag\n03011,20130101,0000,0,OVC, , 5.00, , , ,M, ,M, ,M, ,M, ,M, ,M, ,M, , 5, ,120, , , ,M, , , , , ,M, ,AA, , , ,29.93, \n03011,20130101,0015,0,SCT011 SCT020, , 7.00, ,-SN, ,M, ,M, ,M, ,M, ,M, ,M, ,M, , 6, ,120, , , ,21.33, , , , , ,M, ,AA, , , ,29.93, \n03011,20130101,0035,0,CLR, ,10.00, , , ,M, ,M, ,M, ,M, ,M, ,M, ,M, , 6, ,120, , , ,21.33, , , , , ,M, ,AA, , , ,29.93, \n03011,20130101,0055,0,CLR, ,10.00, , , ,M, ,M, ,M, ,M, ,M, ,M, ,M, , 5, ,120, , , ,21.33, , , , , ,M, ,AA, , , ,29.93, \n");
-//	write(outfd[1],datoos,strlen(datoos));/* Escribe en el stdin del hijo el contenido del bloque*/
-	bloqueAMapear=getBloque(bloque);
-	write(outfd[1],bloqueAMapear,strlen(bloqueAMapear));/* Escribe en el stdin del hijo el contenido del bloque*/
-	close(outfd[1]);
-	dup2(bak,STDOUT_FILENO);
-	sem_wait(&terminoElMap);
 
+	bloqueAMapear=getBloque(bloque);
+
+	for(tamanioAMapear=BLOCK_SIZE;tamanioAMapear>=0;tamanioAMapear--){
+		if(bloqueAMapear[tamanioAMapear]=='\n'){
+			break;
+		}
 	}
+
+	write(outfd[1],bloqueAMapear,tamanioAMapear);/* Escribe en el stdin del hijo el contenido del bloque*/
+
+	close(outfd[0]); /* Estan siendo usados por el hijo */
+	close(outfd[1]);
+	sem_wait(&terminoElMap);
+	dup2(bak,STDOUT_FILENO);
+	}
+
 }
 
 int estaEnListaNodos(int socket){
