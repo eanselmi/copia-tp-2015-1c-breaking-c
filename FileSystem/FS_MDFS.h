@@ -47,6 +47,7 @@ typedef struct estructura_directorio{
 	uint32_t padre;
 }t_dir;
 
+
 //----------------------------------------------------------------------------------------
 //------------------------------ FUNCIONES PRINCIPALES DE CONSOLA ------------------------
 //----------------------------------------------------------------------------------------
@@ -56,8 +57,8 @@ void RenombrarArchivo();								//DESARROLLADA, falta persistencia      1. manda
 void MoverArchivo();									//DESARROLLADA, falta persistencia      revisar si cambio el padre / 1. mov_arch 2. nom 3. padre_viejo  4. padre_nuevo
 void CrearDirectorio();									//DESARROLLADA
 void EliminarDirectorio();								//DESARROLLADA
-void RenombrarDirectorio();								//DESARROLLADA, falta persistencia
-void MoverDirectorio();									//DESARROLLADA, falta persistencia
+void RenombrarDirectorio();								//DESARROLLADA
+void MoverDirectorio();									//DESARROLLADA
 int CopiarArchivoAMDFS();								//DESARROLLADA, falta persistencia      1. mandar nuevo_arch --- mandar casi igual que al principio
 int CopiarArchivoDelMDFS(int flag, char*unArchivo);		//DESARROLLADA
 void MD5DeArchivo();									//DESARROLLADA
@@ -81,6 +82,7 @@ int obtenerEstadoDelNodo(char* nodo);
 void recuperar_persistencia(void);
 void actualizar_persistencia_directorio_eliminado(int idPadre);
 void persistir_directorio(t_dir *directorio);
+void actualizar_persistencia_directorio_movido(int idPadre, int nuevoPadre);
 void actualizar_persistencia_directorio_renombrado(int idPadre, char*nuevoNombre);
 void obtenerNodosMasLibres(void);
 void listarDirectoriosCreados();

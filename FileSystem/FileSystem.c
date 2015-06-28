@@ -301,19 +301,21 @@ void recuperar_persistencia(){
 	int idYaUsado=0;
 	indiceDirectorios[idYaUsado]= 1; //reservo raíz
 	while (fgets(buffer, sizeof(buffer),dir) != NULL){
-		directorio=malloc(sizeof(t_dir));
-		directorio->id = atoi(strtok_r(buffer,";",&saveptr));
-		idYaUsado = directorio->id;  //para actualizar vector de indices utilizados de vectores
-		directorio->nombre=string_new();
-		nombre=string_new();
-		nombre = strtok_r(NULL,";",&saveptr);
-		directorio->nombre=strdup(nombre);
-		directorio->padre = atoi(strtok_r(NULL,";",&saveptr));
-		list_add(directorios,directorio);
-		//actualizo los indices ocupados de los directorios existentes en archivo de persistencia
-		indiceDirectorios[idYaUsado]= 1;
-		directoriosDisponibles = (MAX_DIRECTORIOS - 1);
-		memset(buffer,'\0',200);
+		if (strcmp(buffer,"\n")!=0){
+			directorio=malloc(sizeof(t_dir));
+			directorio->id = atoi(strtok_r(buffer,";",&saveptr));
+			idYaUsado = directorio->id;  //para actualizar vector de indices utilizados de vectores
+			directorio->nombre=string_new();
+			nombre=string_new();
+			nombre = strtok_r(NULL,";",&saveptr);
+			directorio->nombre=strdup(nombre);
+			directorio->padre = atoi(strtok_r(NULL,";",&saveptr));
+			list_add(directorios,directorio);
+			//actualizo los indices ocupados de los directorios existentes en archivo de persistencia
+			indiceDirectorios[idYaUsado]= 1;
+			directoriosDisponibles = (MAX_DIRECTORIOS - 1);
+			memset(buffer,'\0',200);
+		}
 	}
 	if (feof(dir)){
 		// hit end of file
@@ -427,6 +429,57 @@ void actualizar_persistencia_directorio_renombrado(int idPadre, char*nuevoNombre
 	fclose(dir);
 	fclose(aux);
 }
+
+
+
+void actualizar_persistencia_directorio_movido(int idPadre, int nuevoPadre){
+	//Seccion de Directorios
+	FILE* dir;
+	FILE* aux;
+	dir=fopen("directorios","r");
+	aux=fopen("auxiliar","w");
+	char buffer[200];
+	char copia_buffer[200];
+	char nueva_copia[200];
+	memset(nueva_copia,'\0',200);
+	memset(buffer,'\0',200);
+	memset(copia_buffer,'\0',200);
+	char *saveptr;
+	char* id=string_new();
+	char* nombre=string_new();
+	char* padre=string_new();
+	while (fgets(buffer, sizeof(buffer),dir) != NULL){
+		strcpy(copia_buffer,buffer);
+		id = strtok_r(buffer,";",&saveptr);
+		nombre = strtok_r(NULL,";",&saveptr);
+		padre = strtok_r(NULL,";",&saveptr);
+		if (atoi(id)==idPadre){
+			strcat(nueva_copia,id);
+			strcat(nueva_copia,";");
+			strcat(nueva_copia,nombre);
+			strcat(nueva_copia,";");
+			strcat(nueva_copia,string_itoa(nuevoPadre));
+			strcat(nueva_copia,"\n");
+			fprintf (aux,"%s",nueva_copia);
+		}else fprintf (aux,"%s",copia_buffer);
+		memset(buffer,'\0',200);
+		memset(copia_buffer,'\0',200);
+	}
+	fclose(dir);
+	fclose(aux);
+	dir=fopen("directorios","w");
+	aux=fopen("auxiliar","r");
+	memset(buffer,'\0',200);
+	while (fgets(buffer, sizeof(buffer),aux) != NULL){
+		fprintf (dir,"%s",buffer);
+		memset(buffer,'\0',200);
+	}
+	fclose(dir);
+	fclose(aux);
+}
+
+
+
 
 
 
@@ -1618,7 +1671,6 @@ void RenombrarDirectorio() {
 }
 
 void MoverDirectorio() {
-	//TODO falta hacer persistencia para MoverDirectorio
 	//printf("Eligió Mover directorios\n");
 	listarDirectoriosCreados();
 	int tamanioLista = list_size(directorios);
@@ -1640,11 +1692,15 @@ void MoverDirectorio() {
 		uint32_t idDirAMover;
 		uint32_t idNuevoPadre;
 		long idEncontrado = 0;
+		int padreViejo;
+		int padreNuevo;
 		char encontrado; //0 si no lo encontro, 1 si lo encontro
 		printf("Ingrese el path del directorio que desea mover, desde raíz ejemplo /home/utnso \n");
 		scanf("%s", pathOriginal);
+		padreViejo = BuscarPadre(pathOriginal);
 		printf("Ingrese el path del directorio al que desea moverlo, desde raíz ejemplo /home/tp \n");
 		scanf("%s", pathNuevo);
+		padreNuevo = BuscarPadre(pathNuevo);
 		vectorPathOriginal = string_split((char*) pathOriginal, "/");
 		vectorPathNuevo = string_split((char*) pathNuevo, "/");
 		while (vectorPathOriginal[i] != NULL && idEncontrado != -1) {
@@ -1684,6 +1740,7 @@ void MoverDirectorio() {
 						i++;
 					}
 					printf("El directorio se ha movido satisfactoriamente \n");
+					actualizar_persistencia_directorio_movido(padreViejo, padreNuevo);
 					listarDirectoriosCreados();
 				} else {
 					printf("El directorio no está vacío \n");
