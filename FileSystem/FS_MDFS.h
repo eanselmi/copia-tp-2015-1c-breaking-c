@@ -83,7 +83,7 @@ void actualizar_persistencia_directorio_eliminado(int idPadre);
 void persistir_directorio(t_dir *directorio);
 void obtenerNodosMasLibres(void);
 void listarDirectoriosCreados();
-t_dir* obtenerHijos(int);
+t_list* obtenerHijos(int);
 void listarDirectoriosCreadosRecursiva(int id, char path[200]);
 char *obtenerPath(char *nombre, int dir_id);
 int copiar_lista_de_nodos(t_list *destino,t_list* origen);

@@ -395,8 +395,8 @@ void listar_directorios(){
 }
 
 //Armo una lista auxiliar de subdirectorios de un directorio
-t_dir* obtenerHijos(int idPadre){
-	t_dir* listaHijos;
+t_list* obtenerHijos(int idPadre){
+	t_list* listaHijos;
 	listaHijos = list_create();
 	t_dir* hijoAAgregar;
 	t_dir* dirAEvaluar;
@@ -420,10 +420,12 @@ void listarDirectoriosCreados(){
 	cantDirectorios = list_size(directorios);
 	char path[200];
 	int i;
+	int cantidadHijosDeRaiz = 0;;
 	if (cantDirectorios > 0){
-		t_dir* listaHijosDeRaiz = obtenerHijos(0);
+		t_list* listaHijosDeRaiz =list_create();
+		listaHijosDeRaiz = obtenerHijos(0);
 		printf ("Listado de directorios en MDFS\n\n");
-		int cantidadHijosDeRaiz = list_size(listaHijosDeRaiz);
+		cantidadHijosDeRaiz = list_size(listaHijosDeRaiz);
 		for (i = 0; i < cantidadHijosDeRaiz; i++){
 			memset(path,'\0',200);
 			//Seteo la / inicial de raiz
@@ -437,13 +439,14 @@ void listarDirectoriosCreados(){
 }
 
 void listarDirectoriosCreadosRecursiva(int id, char path[200]){
-	t_dir* listaHijos = obtenerHijos(id);
+	t_list* listaHijos = list_create();
+	listaHijos = obtenerHijos(id);
 	int cantidadHijos = list_size(listaHijos);
 	int i;
 	char auxPath[200];
 	if(cantidadHijos == 0){
 		//imprimo
-	    printf("%s \n" , path);
+		printf("%s \n" , path);
 	}
 	else{
 		//para cada hijo vuelvo a llamar a esta funcion
