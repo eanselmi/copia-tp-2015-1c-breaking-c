@@ -285,12 +285,13 @@ int Menu(void) {
 			AgregarNodo(); break;
 		case 16:
 			EliminarNodo();	break;
+			
 		//case 17: printf("Eligió Salir\n"); break;
 		//case 17: listar_nodos_conectados(nodos); break;
 		//case 17: listar_archivos_subidos(archivos); break;
-		case 17: listar_directorios_usuarios(); break;
+		//case 17: listar_directorios_usuarios(); break;
 		//case 17: listar_directorios(); break;
-		//case 17: eliminar_listas(archivos,directorios,nodos); break;
+		case 17: eliminar_listas(archivos,directorios,nodos); break;
 		default: printf("Opción incorrecta. Por favor ingrese una opción del 1 al 17\n"); break;
 		}
 	}
@@ -1997,10 +1998,14 @@ void MD5DeArchivo() {
 		int childpid;
 		pipe(fd);
 		char result[50];
-		char *path=string_new();
-		char *ruta=string_new();
+		char path[200];
+		memset(result,'\0',50);
+		memset(path,'\0',200);
+		char ruta[200];
+		memset(ruta,'\0',200);
 		char *nombre_del_archivo=string_new();
-		char *ruta_local=string_new();
+		char ruta_local[100];
+		memset(ruta_local,'\0',100);
 		int aux1,aux2=0;
 		char *saveptr;
 		printf ("\nIngrese el path del archivo en MDFS:\n");
@@ -2017,8 +2022,6 @@ void MD5DeArchivo() {
 		for (aux1=0;aux1<aux2-1;aux1++) nombre_del_archivo = strtok_r(NULL,"/",&saveptr);
 		strcpy(ruta_local,"/tmp/");
 		strcat(ruta_local,nombre_del_archivo);
-
-		memset(result,'\0',50);
 		if ( (childpid = fork() ) == -1){
 			fprintf(stderr, "FORK failed");
 		} else if( childpid == 0) {
