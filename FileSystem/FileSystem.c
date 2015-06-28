@@ -75,7 +75,16 @@ int main(int argc, char *argv[]) {
 	fclose(archivo_persistencia);
 	if (atoi(valor)==1){
 		recuperar_persistencia(); //Hay que restaurar la persistencia
+	}else {
+		//como no hay persistencia inicializo los indices para los directorios, 0 si está libre, 1 ocupado.
+		for (j = 1; j < sizeof(indiceDirectorios); j++) {
+			indiceDirectorios[j] = 0;
+		}
+		indiceDirectorios[0] = 1; //raiz queda reservado como ocupado
+		directoriosDisponibles = (MAX_DIRECTORIOS - 1);
 	}
+
+
 
  // ================================= FIN CONTROL DE PERSISTENCIA ===================================
 
@@ -183,12 +192,15 @@ int main(int argc, char *argv[]) {
 		log_error(logger,"Falló la creación del hilo que maneja las conexiones");
 		return 1;
 	}
+/*//ya no va más acá porque tengo persistencia y hay ids creados para directorios ojo!
 	//inicializo los indices para los directorios, 0 si está libre, 1 ocupado.
+	//TODO ahora que se agrega persistencia esto no lo puedo hacer porque pongo en 0 los indices libres de algo que en el archivo directorios esta ocupado
 	for (j = 1; j < sizeof(indiceDirectorios); j++) {
 		indiceDirectorios[j] = 0;
 	}
 	indiceDirectorios[0] = 1; //raiz queda reservado como ocupado
 	directoriosDisponibles = (MAX_DIRECTORIOS - 1);
+*/
 
 	Menu();
 	log_destroy(logger);
@@ -287,15 +299,21 @@ void recuperar_persistencia(){
 	memset(buffer,'\0',200);
 	char *saveptr;
 	char *nombre;
+	int idYaUsado=0;
+	indiceDirectorios[idYaUsado]= 1; //reservo raíz
 	while (fgets(buffer, sizeof(buffer),dir) != NULL){
 		directorio=malloc(sizeof(t_dir));
 		directorio->id = atoi(strtok_r(buffer,";",&saveptr));
+		idYaUsado = directorio->id;  //para actualizar vector de indices utilizados de vectores
 		directorio->nombre=string_new();
 		nombre=string_new();
 		nombre = strtok_r(NULL,";",&saveptr);
 		directorio->nombre=strdup(nombre);
 		directorio->padre = atoi(strtok_r(NULL,";",&saveptr));
 		list_add(directorios,directorio);
+		//actualizo los indices ocupados de los directorios existentes en archivo de persistencia
+		indiceDirectorios[idYaUsado]= 1;
+		directoriosDisponibles = (MAX_DIRECTORIOS - 1);
 		memset(buffer,'\0',200);
 	}
 	if (feof(dir)){
@@ -1301,6 +1319,7 @@ void CrearDirectorio() {
 		if (idAValidar != -1) {  //quiere decir que existe
 			if (directorioNuevo[indiceVectorDirNuevo + 1] == NULL) {
 				printf("El directorio ingresado ya existe. No se realizara ninguna accion \n");
+				listarDirectoriosCreados();
 			} else {
 				idPadre = (uint32_t) idAValidar; //actualizo valor del padre con el que existe y avanzo en split para ver el siguiente directorio
 			}
@@ -1327,9 +1346,11 @@ void CrearDirectorio() {
 
 				}
 				printf("El directorio se ha creado satisfactoriamente \n");
+				listarDirectoriosCreados();
 			} else {
 				printf("No se puede crear el directorio ya que sobrepasaría el límite máximo de directorios permitidos: %d\n",MAX_DIRECTORIOS);
 				//No puede pasarse de 1024 directorios
+				listarDirectoriosCreados();
 			}
 		}
 	}
