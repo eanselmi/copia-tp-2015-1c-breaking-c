@@ -769,31 +769,33 @@ void *atenderJob (int *socketJob) {
 			list_clean_and_destroy_elements(copiasNodo, (void*) eliminarCopiasNodo);
 		}
 	}
-	int cantMapper;
-	cantMapper = list_size(listaMappers);
-	for(numeroResultado = 0; numeroResultado < cantMapper;numeroResultado ++) {
+	for(numeroResultado = 0; numeroResultado < list_size(listaMappers);numeroResultado ++) {
 		t_respuestaMap respuestaMap;
+		t_replanificarMap *map;
+		int posMapper;
 		//Recibo respuesta del Job de cada map
 		if(recv(*socketJob,&respuestaMap, sizeof(t_respuestaMap),MSG_WAITALL)==-1){
 		perror("recv");
 		log_error(logger,"Fallo al recibir el ok del job");
 		//exit(-1);
 		}
+		for(posMapper = 0; posMapper < list_size(listaMappers); posMapper++){
+			map = list_get(listaMappers, numeroResultado);
+			if(strcmp(map->archivoResultadoMap,respuestaMap.archivoResultadoMap)==0){
+				break;
+			}
+		}
+
 		if(respuestaMap.resultado ==1){
 			printf("El map falló\n");
 			//PAM
 			//REPLANIFICAR BLOQUE (buscar t_respuestasMap.archivoResultadoMap con t_replanificarMap el archivo y bloque del archivo
 			// que no se pudo hacer el map recorrer sus copias y ordenar la sublista devuelta y mandar el map a el primer nodo de la sublista :)
 			//Agregar dicho nodo_id a la lista dentro de la estructura de ese map que se va a mandar
-			// y buscarlo en la lista gral de nodos restarle map al que me dio KO = 1 LE RESTO UN cantMap-- y le sumo al nuevo nodo que mando el map
-			int posMapper;
+			// y buscarlo en la lista gral de nodos restarle map al que me dio KO = 1 LE RESTO UN cantMap-- y le sumo al nuevo nodo que mando el maps
 			int posCopia;
 			int posNodo;
-			int cantMapper;
 			t_nodo* nodoAnt;
-			cantMapper = list_size(listaMappers);
-			for(posMapper=0;posMapper<cantMapper;posMapper++){ //Recorro la lista de t_replanificarMap mapper
-				if(strcmp(mapper->archivoResultadoMap,respuestaMap.archivoResultadoMap)==0){ //comparo los archivos resultado
 					for(posCopia=0;copia!=NULL;posCopia++){ //Recorro la lista general de copias
 						if(mapper->bloqueArchivo == copia->bloqueNodo){ //comparo los ID de bloques
 							// Ordenamos la sublista segun la suma de la cantidad de map y reduce
@@ -844,45 +846,38 @@ void *atenderJob (int *socketJob) {
 							}
 
 						}
-					}
-				}
+
+
 			}
 		}else {
 			printf("El map salio ok\n");
 		//Buscar el respuestaMap.nombreArchvioTemporal, con t_replanificarMap el archivo y bloque del archivo
 		// buscar en la lista del struct el nodo_id y luego buscarlo en la lista gral de nodos y restarle 1 a su catMappers
-			int posMapper;
 			int posCopia;
 			int posNodo;
-			int cantMapper;
-			cantMapper = list_size(listaMappers);
-			for(posMapper=0;posMapper<cantMapper;posMapper++){ //Recorro la lista de t_replanificarMap mapper
-				if(strcmp(mapper->archivoResultadoMap,respuestaMap.archivoResultadoMap)==0){ //comparo los archivos resultado
-					for(posCopia=0;copia!=NULL;posCopia++){ //Recorro la lista general de copias
-						if(mapper->bloqueArchivo == copia->bloqueNodo){ //comparo los ID de bloques
-							for(posNodo=0;nodo!=NULL;posNodo++){ //Recorro la lista de nodo de Marta
-								if(strcmp(copia->nodo,nodo->nodo_id)==0){ //comparo los id de los Nodos
-									nodo->cantMappers --;
-								}
-							}
-
+			for(posCopia=0;copia!=NULL;posCopia++){ //Recorro la lista general de copias
+				if(mapper->bloqueArchivo == copia->bloqueNodo){ //comparo los ID de bloques
+					for(posNodo=0;nodo!=NULL;posNodo++){ //Recorro la lista de nodo de Marta
+						if(strcmp(copia->nodo,nodo->nodo_id)==0){ //comparo los id de los Nodos
+							nodo->cantMappers --;
 						}
 					}
+
 				}
 			}
+
+
 		}
 	}
 
 	if(strcmp(mensajeCombiner, "NO")==0){
 		int posicionMapper;
 		t_replanificarMap *mapperOk;
-		mapperOk = malloc(sizeof(t_replanificarMap));
 		t_list* listaNodosId;
-		listaNodosId = malloc(sizeof(t_list));
 		listaNodosId = list_create();
 		int cantListaNodos;
 		char *ultimoNodoMapOk;
-		for (posicionMapper =0; posicionMapper < cantMapper; posicionMapper++){
+		for (posicionMapper =0; posicionMapper < list_size(listaMappers); posicionMapper++){
 			mapperOk = list_get(listaMappers, posicionMapper);
 			cantListaNodos = list_size(mapperOk->lista_nodos);
 			ultimoNodoMapOk = list_get(mapperOk->lista_nodos,cantListaNodos -1);
