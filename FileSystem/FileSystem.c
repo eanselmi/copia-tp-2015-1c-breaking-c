@@ -90,11 +90,6 @@ int main(int argc, char *argv[]) {
 	if (atoi(valor)==1){
 		recuperar_persistencia(); //Hay que restaurar la persistencia
 	}
-	//Abro los archivos directorios y archivos en modo w para borrarlos
-	/*dir=fopen("directorios","w");
-	fclose(dir);
-	dir=fopen("archivos","w");
-	fclose(dir);*/
 
  // ================================= FIN CONTROL DE PERSISTENCIA ===================================
 
@@ -302,7 +297,6 @@ int Menu(void) {
 	}
 	return 0;
 }
-
 void recuperar_persistencia(){
 	//Seccion de Directorios
 	t_dir *directorio;
@@ -355,6 +349,35 @@ void persistir_directorio(t_dir *directorio){
 	free(id);
 	free(padre);
 	free(nom);
+}
+
+void actualizar_persistencia_directorio_eliminado(int idPadre){
+	//Seccion de Directorios
+	FILE* dir;
+	FILE* aux;
+	dir=fopen("directorios","r");
+	aux=fopen("auxiliar","w");
+	char buffer[200];
+	char copia_buffer[200];
+	memset(buffer,'\0',200);
+	memset(copia_buffer,'\0',200);
+	char *saveptr;
+	int id;
+	while (fgets(buffer, sizeof(buffer),dir) != NULL){
+		strcpy(copia_buffer,buffer);
+		id = atoi(strtok_r(buffer,";",&saveptr));
+		if (id!=idPadre) fprintf (aux,"%s",copia_buffer);
+		memset(buffer,'\0',200);
+		memset(copia_buffer,'\0',200);
+	}
+	if (feof(dir)){
+		// hit end of file
+	}else{
+		perror ("fgets de recuperar_persistencia");
+	}
+
+	fclose(dir);
+	fclose(aux);
 }
 
 void listar_directorios(){
@@ -1331,6 +1354,8 @@ static void directorio_destroy(t_dir* self) {
 
 void eliminar_listas(t_list *archivos_l, t_list *directorios_l, t_list *nodos_l){
 	int i,j,k;
+	FILE* dir;
+
 	//=====================================================================
 	//======================= LIBERAR PARTE 1 =============================
 	//==================ELIMINO LA LISTA DE ARCHIVOS=======================
@@ -1380,6 +1405,11 @@ void eliminar_listas(t_list *archivos_l, t_list *directorios_l, t_list *nodos_l)
 		}
 		fprintf (archivo_persistencia,"%s","0");
 		fclose(archivo_persistencia);
+		//Abro los archivos directorios y archivos en modo w para borrarlos
+		dir=fopen("directorios","w");
+		fclose(dir);
+		dir=fopen("archivos","w");
+		fclose(dir);
 		exit(0);
 	}
 
@@ -1388,6 +1418,7 @@ void eliminar_listas(t_list *archivos_l, t_list *directorios_l, t_list *nodos_l)
 void EliminarDirectorio() {
 	//printf("Eligió Eliminar directorios\n");
 	char* pathAEliminar =  string_new();
+	char *copia_pathAEliminar=string_new();
 	char** vectorpathAEliminar;
 	t_dir* elementoDeMiListaDir;
 	elementoDeMiListaDir = malloc(sizeof(t_dir));
@@ -1403,6 +1434,8 @@ void EliminarDirectorio() {
 	int posicionElementoAEliminar;
 	printf("Ingrese el path a eliminar desde raíz ejemplo /home/utnso \n");
 	scanf("%s", pathAEliminar);
+	strcpy(copia_pathAEliminar,pathAEliminar);
+	int idPadre = BuscarPadre(copia_pathAEliminar);
 	vectorpathAEliminar = string_split((char*) pathAEliminar, "/");
 	while (vectorpathAEliminar[i] != NULL && idEncontrado != -1) {
 		if (i == 0) {
@@ -1453,6 +1486,7 @@ void EliminarDirectorio() {
 				list_remove_and_destroy_element(directorios,posicionElementoAEliminar, (void*) directorio_destroy);
 				indiceDirectorios[idAEliminar] = 0; //Desocupo el indice en vector de indices disponibles para poder usar ese id en el futuro
 				directoriosDisponibles++; //Incremento la cantidad de directorios libres
+				actualizar_persistencia_directorio_eliminado(idPadre);
 				printf("El directorio se ha eliminado correctamente. \n");
 			}
 		}
