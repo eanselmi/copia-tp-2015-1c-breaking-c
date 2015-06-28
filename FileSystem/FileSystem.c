@@ -477,12 +477,32 @@ void actualizar_persistencia_directorio_movido(int idPadre, int nuevoPadre){
 	fclose(dir);
 	fclose(aux);
 }
-
-
-
-
-
-
+void persistir_archivo(t_archivo *archivo){
+	FILE* dir;
+	dir=fopen("archivos","a+");
+	t_bloque *bloque;
+	t_copias *copia;
+	int i,j;
+	fprintf (dir,"%s",archivo->nombre);
+	fprintf (dir,"%s",";");
+	fprintf (dir,"%d",archivo->padre);
+	fprintf (dir,"%s",";");
+	fprintf (dir,"%d",list_size(archivo->bloques));
+	for (i=0;i<list_size(archivo->bloques);i++){
+		bloque=list_get(archivo->bloques,i);
+		fprintf (dir,"%s",";");
+		fprintf (dir,"%d",list_size(bloque->copias));
+		for (j=0;j<list_size(bloque->copias);j++){
+			copia=list_get(bloque->copias,j);
+			fprintf (dir,"%s",";");
+			fprintf (dir,"%s",copia->nodo);
+			fprintf (dir,"%s",";");
+			fprintf (dir,"%d",copia->bloqueNodo);
+		}
+	}
+	fprintf (dir,"%s","\n");
+	fclose(dir);
+}
 void listar_directorios(){
 	t_dir *dir=malloc(sizeof(t_dir));
 	int i;
@@ -1410,6 +1430,10 @@ void CrearDirectorio() {
 	printf("Ingrese el path del directorio desde raíz ejemplo /home/utnso \n");
 	memset(path,'\0',200);
 	scanf("%s", path);
+	if (strcmp(path,"/")==0){
+		printf("No puede crearlo porque ese directorio ya es raíz \n");
+		return;
+	}
 	directorioNuevo = string_split((char*) path, "/"); //Devuelve un array del path del directorio a crear
 	//int indiceVectorDirNuevo=1;
 	int indiceVectorDirNuevo = 0; //empiezo por el primero del split
@@ -1550,6 +1574,10 @@ void EliminarDirectorio() {
 		int posicionElementoAEliminar;
 		printf("Ingrese el path del directorio que desea eliminar, desde raíz ejemplo /home/utnso \n");
 		scanf("%s", pathAEliminar);
+		if (strcmp(pathAEliminar,"/")==0){
+			printf("No se puede puede eliminar la raíz \n");
+			return;
+		}
 		strcpy(copia_pathAEliminar,pathAEliminar);
 		int idPadre = BuscarPadre(copia_pathAEliminar);
 		vectorpathAEliminar = string_split((char*) pathAEliminar, "/");
@@ -1608,7 +1636,7 @@ void EliminarDirectorio() {
 			}
 		}
 	} else {
-		Menu();
+		return;
 	}
 }
 
@@ -1666,7 +1694,7 @@ void RenombrarDirectorio() {
 			listarDirectoriosCreados();
 		}
 	} else {
-		Menu();
+		return;
 	}
 }
 
@@ -1700,9 +1728,15 @@ void MoverDirectorio() {
 		padreViejo = BuscarPadre(pathOriginal);
 		printf("Ingrese el path del directorio al que desea moverlo, desde raíz ejemplo /home/tp \n");
 		scanf("%s", pathNuevo);
-		padreNuevo = BuscarPadre(pathNuevo);
+		if (strcmp(pathNuevo,"/")==0){
+			padreNuevo = 0;
+		}
+		else{
+			padreNuevo = BuscarPadre(pathNuevo);
+			vectorPathNuevo = string_split((char*) pathNuevo, "/");
+		}
+		//padreNuevo = BuscarPadre(pathNuevo);
 		vectorPathOriginal = string_split((char*) pathOriginal, "/");
-		vectorPathNuevo = string_split((char*) pathNuevo, "/");
 		while (vectorPathOriginal[i] != NULL && idEncontrado != -1) {
 			if (i == 0) {
 				idEncontrado = 0; //el primero que cuelga de raiz
@@ -1717,12 +1751,17 @@ void MoverDirectorio() {
 			strcpy(nombreDirAMover, vectorPathOriginal[(i - 1)]); //revisar, puse -1 porque avancé hasta el NULL.
 			idEncontrado = 0;
 			i = 0;
-			while (vectorPathNuevo[i] != NULL && idEncontrado != -1) {
-				if (i == 0) {
-					idEncontrado = 0; //el primero que cuelga de raiz
+			if (padreNuevo == 0){
+				idEncontrado = 0;
+			}
+			else{
+				while (vectorPathNuevo[i] != NULL && idEncontrado != -1) {
+					if (i == 0) {
+						idEncontrado = 0; //el primero que cuelga de raiz
+					}
+					idEncontrado = ExisteEnLaLista(directorios, vectorPathNuevo[i],idEncontrado);
+					i++;
 				}
-				idEncontrado = ExisteEnLaLista(directorios, vectorPathNuevo[i],idEncontrado);
-				i++;
 			}
 			if (idEncontrado == -1) {
 				printf("No existe el path al que desea moverlo \n");
@@ -1749,7 +1788,7 @@ void MoverDirectorio() {
 		}
 	}
 	else {
-		Menu();
+		return;
 	}
 }
 
@@ -2090,6 +2129,7 @@ int CopiarArchivoAMDFS(){
     	archivo_temporal->tamanio=0; //para mi este campo esta al pedo
     	fclose(archivoLocal);
 
+    	persistir_archivo(archivo_temporal);
     	//Si llego hasta aca salio tod0 bien, actualizo la lista real de nodos
     	eliminar_listas(NULL,NULL,nodos);
     	nodos=list_create();
