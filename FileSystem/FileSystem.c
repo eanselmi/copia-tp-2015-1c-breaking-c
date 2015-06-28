@@ -289,7 +289,6 @@ int Menu(void) {
 		//case 17: printf("Eligió Salir\n"); break;
 		//case 17: listar_nodos_conectados(nodos); break;
 		//case 17: listar_archivos_subidos(archivos); break;
-
 		//case 17: listar_directorios_usuarios(); break;
 		//case 17: listar_directorios(); break;
 		case 17: eliminar_listas(archivos,directorios,nodos); break;
@@ -298,6 +297,31 @@ int Menu(void) {
 		}
 	}
 	return 0;
+}
+
+void persistir_directorio(t_dir *directorio){
+	FILE* dir;
+	dir=fopen("directorios","a+");
+	char *id=string_new();
+	id=string_itoa((int)directorio->id);
+	char *padre=string_new();
+	padre=string_itoa((int)directorio->padre);
+	char *nom=string_new();
+	strcpy(nom,directorio->nombre);
+	char persistir_directorio[200];
+	memset(persistir_directorio,'\0',200);
+
+	strcat(persistir_directorio,id);
+	strcat(persistir_directorio,";");
+	strcat(persistir_directorio,nom);
+	strcat(persistir_directorio,";");
+	strcat(persistir_directorio,padre);
+	strcat(persistir_directorio,"\n");
+	fprintf (dir,"%s",persistir_directorio);
+	fclose(dir);
+	free(id);
+	free(padre);
+	free(nom);
 }
 
 void listar_directorios(){
@@ -1255,6 +1279,7 @@ void CrearDirectorio() {
 					idPadre = directorioACrear->id;
 					list_add(directorios, directorioACrear);
 					indiceVectorDirNuevo++;
+					persistir_directorio(directorioACrear);
 
 				}
 				printf("El directorio se ha creado satisfactoriamente \n");
@@ -2307,7 +2332,7 @@ int VerBloque() {
 			}
 			enviarNumeroDeBloqueANodo(socket_nodo, nroBloque);
 			bloqueParaVer = recibirBloque(socket_nodo);
-			archivoParaVerPath = fopen("./archBloqueParaVer.txt", "a+");
+			archivoParaVerPath = fopen("./archBloqueParaVer.txt", "w");
 			fprintf(archivoParaVerPath, "%s", bloqueParaVer);
 			printf ("El md5 del bloque que traje es: %s\n",obtener_md5(bloqueParaVer));
 			printf("El bloque se copio en el archivo: ./archBloqueParaVer.txt\n");
