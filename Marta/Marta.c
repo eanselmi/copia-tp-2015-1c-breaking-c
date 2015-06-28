@@ -623,6 +623,7 @@ void *atenderJob (int *socketJob) {
 	char *tiempo=string_new(); //string que tendrá la hora
 	char *nombreArchivoTemp=string_new();//Nombre del archivo que va a mandar a los nodos
 	char *pathArchivoTemp = string_new(); //Path donde va a guardar los archivos temporales
+	t_replanificarMap *mapper;
 	//Recibe mensaje de si es o no combiner
 	if(recv(*socketJob,mensajeCombiner,sizeof(mensajeCombiner),MSG_WAITALL)==-1){
 		perror("recv");
@@ -705,7 +706,7 @@ void *atenderJob (int *socketJob) {
 			list_sort(copiasNodo, (void*) ordenarSegunMapYReduce);
 			nodoAux = list_get(copiasNodo,0); // Nos traemos el nodo con menos carga
 			//Del nodo que nos trajimos agarramos los datos que necesitamos para mandarle al job
-			t_replanificarMap *mapper;
+
 			mapper=malloc(sizeof(t_replanificarMap));
 			t_mapper datosMapper;
 			memset(datosMapper.ip_nodo,'\0',20);
@@ -787,8 +788,26 @@ void *atenderJob (int *socketJob) {
 			printf("El map salio ok\n");
 		//Buscar el respuestaMap.nombreArchvioTemporal, con t_replanificarMap el archivo y bloque del archivo
 		// buscar en la lista del struct el nodo_id y luego buscarlo en la lista gral de nodos y restarle 1 a su catMappers
-		}
+			int posMapper;
+			int posCopia;
+			int posNodo;
+			int cantMapper;
+			cantMapper = list_size(listaMappers);
+			for(posMapper=0;posMapper<cantMapper;posMapper++){ //Recorro la lista de t_replanificarMap mapper
+				if(strcmp(mapper->archivoResultadoMap,respuestaMap.archivoResultadoMap)==0){ //comparo los archivos resultado
+					for(posCopia=0;copia!=NULL;posCopia++){ //Recorro la lista general de copias
+						if(mapper->bloqueArchivo == copia->bloqueNodo){ //comparo los ID de bloques
+							for(posNodo=0;nodo!=NULL;posNodo++){ //Recorro la lista de nodo de Marta
+								if(strcmp(copia->nodo,nodo->nodo_id)==0){ //comparo los id de los Nodos
+									nodo->cantMappers --;
+								}
+							}
 
+						}
+					}
+				}
+			}
+		}
 	}
 
 
@@ -818,13 +837,13 @@ static void eliminarCopiasNodo(t_list *self){
 
 //Buscamos los nodos de la lista global en los que esta cada copia
 t_nodo* buscarCopiaEnNodos(t_copias *copia){
-	int i;
+	int posNodo;
 	int cantNodos;
 	t_nodo *nodo;
 	t_nodo *nodoAux;
 	cantNodos = list_size(listaNodos);
-	for(i=0; i<cantNodos; i++){ //Recorremos la lista de nodos global
-		nodo = list_get(listaNodos,i);
+	for(posNodo=0; posNodo<cantNodos; posNodo++){ //Recorremos la lista de nodos global
+		nodo = list_get(listaNodos,posNodo);
 		if(strcmp(nodo->nodo_id, copia->nodo)==0){ //Comparamos el nodo de la copia con cada nodo la lista global
 			nodoAux = nodo;
 			break;
