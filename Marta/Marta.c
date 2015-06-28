@@ -57,10 +57,8 @@ int main(int argc, char**argv){
 	//para recibir la informacion de los archivos
 	int j, k, l;
 	int cantArchivos;
-	//char* pathArchivo;
 	char nombreArchivo[100];
 	uint32_t padreArchivo;
-	uint32_t estadoArchivo;
 	char nodoIdArchivo[6];
 	int bloqueNodoArchivo;
 	int cantidadBloquesArchivo;
@@ -393,16 +391,10 @@ int main(int argc, char**argv){
 			log_error(logger,"FALLO el Recv del padre del archivo");
 			exit(-1);
 		}
-		if ((nbytes = recv(socket_fs, &estadoArchivo, sizeof(uint32_t), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
-			perror("recv");
-			log_error(logger,"FALLO el Recv del estado del archivo");
-			exit(-1);
-		}
 		archivoTemporal->nombre=string_new();
 		strcpy(archivoTemporal->nombre, nombreArchivo);
 		//strcpy(archivoTemporal->path, pathArchivo);
 		archivoTemporal->padre = padreArchivo;
-		archivoTemporal->estado =estadoArchivo;
 
 		if ((nbytes = recv(socket_fs, &cantidadBloquesArchivo, sizeof(int), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
 			perror("recv");
