@@ -75,7 +75,16 @@ int main(int argc, char *argv[]) {
 	fclose(archivo_persistencia);
 	if (atoi(valor)==1){
 		recuperar_persistencia(); //Hay que restaurar la persistencia
+	}else {
+		//como no hay persistencia inicializo los indices para los directorios, 0 si está libre, 1 ocupado.
+		for (j = 1; j < sizeof(indiceDirectorios); j++) {
+			indiceDirectorios[j] = 0;
+		}
+		indiceDirectorios[0] = 1; //raiz queda reservado como ocupado
+		directoriosDisponibles = (MAX_DIRECTORIOS - 1);
 	}
+
+
 
  // ================================= FIN CONTROL DE PERSISTENCIA ===================================
 
@@ -183,12 +192,14 @@ int main(int argc, char *argv[]) {
 		log_error(logger,"Falló la creación del hilo que maneja las conexiones");
 		return 1;
 	}
+/*//ya no va más acá porque tengo persistencia y hay ids creados para directorios
 	//inicializo los indices para los directorios, 0 si está libre, 1 ocupado.
 	for (j = 1; j < sizeof(indiceDirectorios); j++) {
 		indiceDirectorios[j] = 0;
 	}
 	indiceDirectorios[0] = 1; //raiz queda reservado como ocupado
 	directoriosDisponibles = (MAX_DIRECTORIOS - 1);
+*/
 
 	Menu();
 	log_destroy(logger);
@@ -287,15 +298,21 @@ void recuperar_persistencia(){
 	memset(buffer,'\0',200);
 	char *saveptr;
 	char *nombre;
+	int idYaUsado=0;
+	indiceDirectorios[idYaUsado]= 1; //reservo raíz
 	while (fgets(buffer, sizeof(buffer),dir) != NULL){
 		directorio=malloc(sizeof(t_dir));
 		directorio->id = atoi(strtok_r(buffer,";",&saveptr));
+		idYaUsado = directorio->id;  //para actualizar vector de indices utilizados de vectores
 		directorio->nombre=string_new();
 		nombre=string_new();
 		nombre = strtok_r(NULL,";",&saveptr);
 		directorio->nombre=strdup(nombre);
 		directorio->padre = atoi(strtok_r(NULL,";",&saveptr));
 		list_add(directorios,directorio);
+		//actualizo los indices ocupados de los directorios existentes en archivo de persistencia
+		indiceDirectorios[idYaUsado]= 1;
+		directoriosDisponibles = (MAX_DIRECTORIOS - 1);
 		memset(buffer,'\0',200);
 	}
 	if (feof(dir)){
@@ -364,6 +381,55 @@ void actualizar_persistencia_directorio_eliminado(int idPadre){
 	fclose(aux);
 }
 
+
+
+void actualizar_persistencia_directorio_renombrado(int idPadre, char*nuevoNombre){
+	//Seccion de Directorios
+	FILE* dir;
+	FILE* aux;
+	dir=fopen("directorios","r");
+	aux=fopen("auxiliar","w");
+	char buffer[200];
+	char copia_buffer[200];
+	char nueva_copia[200];
+	memset(nueva_copia,'\0',200);
+	memset(buffer,'\0',200);
+	memset(copia_buffer,'\0',200);
+	char *saveptr;
+	char* id=string_new();
+	char* padre=string_new();
+	while (fgets(buffer, sizeof(buffer),dir) != NULL){
+		strcpy(copia_buffer,buffer);
+		id = strtok_r(buffer,";",&saveptr);
+		padre = strtok_r(NULL,";",&saveptr);
+		padre = strtok_r(NULL,";",&saveptr);
+		if (atoi(id)==idPadre){
+			strcat(nueva_copia,id);
+			strcat(nueva_copia,";");
+			strcat(nueva_copia,nuevoNombre);
+			strcat(nueva_copia,";");
+			strcat(nueva_copia,padre);
+			strcat(nueva_copia,"\n");
+			fprintf (aux,"%s",nueva_copia);
+		}else fprintf (aux,"%s",copia_buffer);
+		memset(buffer,'\0',200);
+		memset(copia_buffer,'\0',200);
+	}
+	fclose(dir);
+	fclose(aux);
+	dir=fopen("directorios","w");
+	aux=fopen("auxiliar","r");
+	memset(buffer,'\0',200);
+	while (fgets(buffer, sizeof(buffer),aux) != NULL){
+		fprintf (dir,"%s",buffer);
+		memset(buffer,'\0',200);
+	}
+	fclose(dir);
+	fclose(aux);
+}
+
+
+
 void listar_directorios(){
 	t_dir *dir=malloc(sizeof(t_dir));
 	int i;
@@ -378,8 +444,8 @@ void listar_directorios(){
 }
 
 //Armo una lista auxiliar de subdirectorios de un directorio
-t_dir* obtenerHijos(int idPadre){
-	t_dir* listaHijos;
+t_list* obtenerHijos(int idPadre){
+	t_list* listaHijos;
 	listaHijos = list_create();
 	t_dir* hijoAAgregar;
 	t_dir* dirAEvaluar;
@@ -403,10 +469,12 @@ void listarDirectoriosCreados(){
 	cantDirectorios = list_size(directorios);
 	char path[200];
 	int i;
+	int cantidadHijosDeRaiz = 0;;
 	if (cantDirectorios > 0){
-		t_dir* listaHijosDeRaiz = obtenerHijos(0);
+		t_list* listaHijosDeRaiz =list_create();
+		listaHijosDeRaiz = obtenerHijos(0);
 		printf ("Listado de directorios en MDFS\n\n");
-		int cantidadHijosDeRaiz = list_size(listaHijosDeRaiz);
+		cantidadHijosDeRaiz = list_size(listaHijosDeRaiz);
 		for (i = 0; i < cantidadHijosDeRaiz; i++){
 			memset(path,'\0',200);
 			//Seteo la / inicial de raiz
@@ -420,13 +488,14 @@ void listarDirectoriosCreados(){
 }
 
 void listarDirectoriosCreadosRecursiva(int id, char path[200]){
-	t_dir* listaHijos = obtenerHijos(id);
+	t_list* listaHijos = list_create();
+	listaHijos = obtenerHijos(id);
 	int cantidadHijos = list_size(listaHijos);
 	int i;
 	char auxPath[200];
 	if(cantidadHijos == 0){
 		//imprimo
-	    printf("%s \n" , path);
+		printf("%s \n" , path);
 	}
 	else{
 		//para cada hijo vuelvo a llamar a esta funcion
@@ -1301,6 +1370,7 @@ void CrearDirectorio() {
 		if (idAValidar != -1) {  //quiere decir que existe
 			if (directorioNuevo[indiceVectorDirNuevo + 1] == NULL) {
 				printf("El directorio ingresado ya existe. No se realizara ninguna accion \n");
+				listarDirectoriosCreados();
 			} else {
 				idPadre = (uint32_t) idAValidar; //actualizo valor del padre con el que existe y avanzo en split para ver el siguiente directorio
 			}
@@ -1327,9 +1397,11 @@ void CrearDirectorio() {
 
 				}
 				printf("El directorio se ha creado satisfactoriamente \n");
+				listarDirectoriosCreados();
 			} else {
 				printf("No se puede crear el directorio ya que sobrepasaría el límite máximo de directorios permitidos: %d\n",MAX_DIRECTORIOS);
 				//No puede pasarse de 1024 directorios
+				listarDirectoriosCreados();
 			}
 		}
 	}
@@ -1405,190 +1477,222 @@ void eliminar_listas(t_list *archivos_l, t_list *directorios_l, t_list *nodos_l)
 
 void EliminarDirectorio() {
 	//printf("Eligió Eliminar directorios\n");
-	char pathAEliminar[200];
-	memset(pathAEliminar, '\0', 200);
-	char copia_pathAEliminar[200];
-	memset(copia_pathAEliminar, '\0', 200);
-	char** vectorpathAEliminar;
-	t_dir* elementoDeMiListaDir;
-	t_archivo* elementoDeMiListaArch;
+	listarDirectoriosCreados();
 	int tamanioListaDir = list_size(directorios);
-	int tamanioListaArch = list_size(archivos);
-	int i = 0;
-	uint32_t idAEliminar;
-	long idEncontrado = 0;
-	char encontrePos; //0 si no lo encuentra en la lista de directorios, 1 si lo encuentra
-	char tieneDirOArch; //0 si no tiene, 1 si tiene subdirectorio o archivo
-	int posicionElementoAEliminar;
-	printf("Ingrese el path a eliminar desde raíz ejemplo /home/utnso \n");
-	scanf("%s", pathAEliminar);
-	strcpy(copia_pathAEliminar,pathAEliminar);
-	int idPadre = BuscarPadre(copia_pathAEliminar);
-	vectorpathAEliminar = string_split((char*) pathAEliminar, "/");
-	while (vectorpathAEliminar[i] != NULL && idEncontrado != -1) {
-		if (i == 0) {
-			idEncontrado = 0; //el primero que cuelga de raiz
-		}
-		idEncontrado = ExisteEnLaLista(directorios, vectorpathAEliminar[i],idEncontrado);
-		i++;
-	}
-	if (idEncontrado == -1) {
-		printf("No existe el directorio para eliminar \n");
-	} else {
-		tieneDirOArch = 0;
-		idAEliminar = idEncontrado;
-		i = 0;
-		while (tieneDirOArch == 0 && i < tamanioListaDir) {
-			elementoDeMiListaDir = list_get(directorios, i);
-			if (elementoDeMiListaDir->padre == idAEliminar) { //Si tengo directorios que tengan como padre al dir que quiero eliminar
-				tieneDirOArch = 1;
+	if (tamanioListaDir > 0){
+
+		char pathAEliminar[200];
+		memset(pathAEliminar, '\0', 200);
+		char copia_pathAEliminar[200];
+		memset(copia_pathAEliminar, '\0', 200);
+		char** vectorpathAEliminar;
+		t_dir* elementoDeMiListaDir;
+		t_archivo* elementoDeMiListaArch;
+		int tamanioListaArch = list_size(archivos);
+		int i = 0;
+		uint32_t idAEliminar;
+		long idEncontrado = 0;
+		char encontrePos; //0 si no lo encuentra en la lista de directorios, 1 si lo encuentra
+		char tieneDirOArch; //0 si no tiene, 1 si tiene subdirectorio o archivo
+		int posicionElementoAEliminar;
+		printf("Ingrese el path del directorio que desea eliminar, desde raíz ejemplo /home/utnso \n");
+		scanf("%s", pathAEliminar);
+		strcpy(copia_pathAEliminar,pathAEliminar);
+		int idPadre = BuscarPadre(copia_pathAEliminar);
+		vectorpathAEliminar = string_split((char*) pathAEliminar, "/");
+		while (vectorpathAEliminar[i] != NULL && idEncontrado != -1) {
+			if (i == 0) {
+				idEncontrado = 0; //el primero que cuelga de raiz
 			}
+			idEncontrado = ExisteEnLaLista(directorios, vectorpathAEliminar[i],idEncontrado);
 			i++;
 		}
-		if (tieneDirOArch == 1) {
-			printf(
-					"El directorio que desea eliminar no puede ser eliminado ya que posee subdirectorios \n");
+		if (idEncontrado == -1) {
+			printf("No existe el directorio para eliminar \n");
 		} else {
+			tieneDirOArch = 0;
+			idAEliminar = idEncontrado;
 			i = 0;
-			while (tieneDirOArch == 0 && i < tamanioListaArch) {
-				elementoDeMiListaArch = list_get(archivos, i);
-				if (elementoDeMiListaArch->padre == idAEliminar) {
+			while (tieneDirOArch == 0 && i < tamanioListaDir) {
+				elementoDeMiListaDir = list_get(directorios, i);
+				if (elementoDeMiListaDir->padre == idAEliminar) { //Si tengo directorios que tengan como padre al dir que quiero eliminar
 					tieneDirOArch = 1;
 				}
 				i++;
 			}
 			if (tieneDirOArch == 1) {
-				printf("El directorio que desea eliminar no puede ser eliminado ya que posee archivos \n");
+				printf(
+						"El directorio que desea eliminar no puede ser eliminado ya que posee subdirectorios \n");
 			} else {
 				i = 0;
-				encontrePos = 0; //no lo encontre
-				while (encontrePos == 0 && i < tamanioListaDir) {
-					elementoDeMiListaDir = list_get(directorios, i);
-					if (elementoDeMiListaDir->id == idAEliminar) {
-						encontrePos = 1;
+				while (tieneDirOArch == 0 && i < tamanioListaArch) {
+					elementoDeMiListaArch = list_get(archivos, i);
+					if (elementoDeMiListaArch->padre == idAEliminar) {
+						tieneDirOArch = 1;
 					}
 					i++;
 				}
-				posicionElementoAEliminar = i - 1;
-				//list_remove_and_destroy_element(t_list *, int index, void(*element_destroyer)(void*));
-				list_remove_and_destroy_element(directorios,posicionElementoAEliminar, (void*) directorio_destroy);
-				indiceDirectorios[idAEliminar] = 0; //Desocupo el indice en vector de indices disponibles para poder usar ese id en el futuro
-				directoriosDisponibles++; //Incremento la cantidad de directorios libres
-				actualizar_persistencia_directorio_eliminado(idPadre);
-				printf("El directorio se ha eliminado correctamente. \n");
+				if (tieneDirOArch == 1) {
+					printf("El directorio que desea eliminar no puede ser eliminado ya que posee archivos \n");
+				} else {
+					i = 0;
+					encontrePos = 0; //no lo encontre
+					while (encontrePos == 0 && i < tamanioListaDir) {
+						elementoDeMiListaDir = list_get(directorios, i);
+						if (elementoDeMiListaDir->id == idAEliminar) {
+							encontrePos = 1;
+						}
+						i++;
+					}
+					posicionElementoAEliminar = i - 1;
+					//list_remove_and_destroy_element(t_list *, int index, void(*element_destroyer)(void*));
+					list_remove_and_destroy_element(directorios,posicionElementoAEliminar, (void*) directorio_destroy);
+					indiceDirectorios[idAEliminar] = 0; //Desocupo el indice en vector de indices disponibles para poder usar ese id en el futuro
+					directoriosDisponibles++; //Incremento la cantidad de directorios libres
+					actualizar_persistencia_directorio_eliminado(idPadre);
+					printf("El directorio se ha eliminado correctamente. \n");
+				}
 			}
 		}
+	} else {
+		Menu();
 	}
 }
 
 void RenombrarDirectorio() {
 	//printf("Eligió Renombrar directorios\n");
-	//char* pathOriginal = string_new();
-	char pathOriginal[200];
-	memset(pathOriginal, '\0', 200);
-	char** vectorPathOriginal;
-	//char* pathNuevo = string_new();
-	char pathNuevo[200];
-	memset(pathNuevo, '\0', 200);
-	t_dir* elementoDeMiLista;
-	elementoDeMiLista = malloc(sizeof(t_dir));
+	listarDirectoriosCreados();
 	int tamanioLista = list_size(directorios);
-	int i = 0;
-	uint32_t idARenombrar;
-	long idEncontrado = 0;
-	char encontrado; //0 si no lo encontro, 1 si lo encontro
-	printf("Ingrese el path del original desde raíz ejemplo /home/utnso \n");
-	scanf("%s", pathOriginal);
-	printf("Ingrese el nuevo nombre de directorio \n");
-	scanf("%s", pathNuevo);
-	vectorPathOriginal = string_split((char*) pathOriginal, "/");
-	while (vectorPathOriginal[i] != NULL && idEncontrado != -1) {
-		if (i == 0) {
-			idEncontrado = 0; //el primero que cuelga de raiz
-		}
-		idEncontrado = ExisteEnLaLista(directorios, vectorPathOriginal[i],idEncontrado);
-		i++;
-	}
-	if (idEncontrado == -1) {
-		printf("No existe el directorio para renombrar \n");
-	} else {
-		i = 0;
-		encontrado = 0;
-		idARenombrar = idEncontrado;
-		while (encontrado == 0 && i < tamanioLista) {
-			elementoDeMiLista = list_get(directorios, i);
-			if (elementoDeMiLista->id == idARenombrar) {
-				encontrado = 1;
-				strcpy(elementoDeMiLista->nombre, pathNuevo);
+	if (tamanioLista > 0){
+		//char* pathOriginal = string_new();
+		char pathOriginal[200];
+		memset(pathOriginal, '\0', 200);
+		char copiaPath[200];
+		memset(copiaPath, '\0', 200);
+		char** vectorPathOriginal;
+		//char* pathNuevo = string_new();
+		char pathNuevo[200];
+		memset(pathNuevo, '\0', 200);
+		t_dir* elementoDeMiLista;
+		//elementoDeMiLista = malloc(sizeof(t_dir));
+		int i = 0;
+		int idParaRenombrar;
+		uint32_t idARenombrar;
+		long idEncontrado = 0;
+		char encontrado; //0 si no lo encontro, 1 si lo encontro
+		printf("Ingrese el path del directorio que desea renombrar, desde raíz ejemplo /home/utnso \n");
+		scanf("%s", pathOriginal);
+		strcpy(copiaPath,pathOriginal);
+		idParaRenombrar=BuscarPadre(copiaPath);
+		printf("Ingrese el nuevo nombre de directorio sin barras \n");
+		scanf("%s", pathNuevo);
+		vectorPathOriginal = string_split((char*) pathOriginal, "/");
+		while (vectorPathOriginal[i] != NULL && idEncontrado != -1) {
+			if (i == 0) {
+				idEncontrado = 0; //el primero que cuelga de raiz
 			}
+			idEncontrado = ExisteEnLaLista(directorios, vectorPathOriginal[i],idEncontrado);
 			i++;
 		}
-		printf("El directorio se ha renombrado exitosamente. \n");
+		if (idEncontrado == -1) {
+			printf("No existe el directorio para renombrar \n");
+		} else {
+			i = 0;
+			encontrado = 0;
+			idARenombrar = idEncontrado;
+			while (encontrado == 0 && i < tamanioLista) {
+				elementoDeMiLista = list_get(directorios, i);
+				if (elementoDeMiLista->id == idARenombrar) {
+					encontrado = 1;
+					strcpy(elementoDeMiLista->nombre, pathNuevo);
+				}
+				i++;
+			}
+			printf("El directorio se ha renombrado exitosamente. \n");
+			actualizar_persistencia_directorio_renombrado(idParaRenombrar,pathNuevo);
+			listarDirectoriosCreados();
+		}
+	} else {
+		Menu();
 	}
 }
 
 void MoverDirectorio() {
+	//TODO falta hacer persistencia para MoverDirectorio
 	//printf("Eligió Mover directorios\n");
-	char* pathOriginal = string_new();
-	char** vectorPathOriginal;
-	char* pathNuevo = string_new();
-	char** vectorPathNuevo;
-	char* nombreDirAMover = string_new();
-	t_dir* elementoDeMiLista;
-	elementoDeMiLista = malloc(sizeof(t_dir));
+	listarDirectoriosCreados();
 	int tamanioLista = list_size(directorios);
-	int i = 0;
-	uint32_t idDirAMover;
-	uint32_t idNuevoPadre;
-	long idEncontrado = 0;
-	char encontrado; //0 si no lo encontro, 1 si lo encontro
-	printf("Ingrese el path original desde raíz ejemplo /home/utnso \n");
-	scanf("%s", pathOriginal);
-	printf("Ingrese el path del directorio al que desea moverlo desde raíz ejemplo /home/tp \n");
-	scanf("%s", pathNuevo);
-	vectorPathOriginal = string_split((char*) pathOriginal, "/");
-	vectorPathNuevo = string_split((char*) pathNuevo, "/");
-	while (vectorPathOriginal[i] != NULL && idEncontrado != -1) {
-		if (i == 0) {
-			idEncontrado = 0; //el primero que cuelga de raiz
-		}
-		idEncontrado = ExisteEnLaLista(directorios, vectorPathOriginal[i],idEncontrado);
-		i++;
-	}
-	if (idEncontrado == -1) {
-		printf("No existe el path original \n");
-	} else {
-		idDirAMover = idEncontrado;
-		strcpy(nombreDirAMover, vectorPathOriginal[(i - 1)]); //revisar, puse -1 porque avancé hasta el NULL.
-		idEncontrado = 0;
-		i = 0;
-		while (vectorPathNuevo[i] != NULL && idEncontrado != -1) {
+	if (tamanioLista > 0){
+		//char* pathOriginal = string_new();
+		char pathOriginal[200];
+		memset(pathOriginal, '\0', 200);
+		char** vectorPathOriginal;
+		//char* pathNuevo = string_new();
+		char pathNuevo[200];
+		memset(pathNuevo, '\0', 200);
+		char** vectorPathNuevo;
+		//char* nombreDirAMover = string_new();
+		char nombreDirAMover[200];
+		memset(nombreDirAMover, '\0', 200);
+		t_dir* elementoDeMiLista;
+		elementoDeMiLista = malloc(sizeof(t_dir));
+		int i = 0;
+		uint32_t idDirAMover;
+		uint32_t idNuevoPadre;
+		long idEncontrado = 0;
+		char encontrado; //0 si no lo encontro, 1 si lo encontro
+		printf("Ingrese el path del directorio que desea mover, desde raíz ejemplo /home/utnso \n");
+		scanf("%s", pathOriginal);
+		printf("Ingrese el path del directorio al que desea moverlo, desde raíz ejemplo /home/tp \n");
+		scanf("%s", pathNuevo);
+		vectorPathOriginal = string_split((char*) pathOriginal, "/");
+		vectorPathNuevo = string_split((char*) pathNuevo, "/");
+		while (vectorPathOriginal[i] != NULL && idEncontrado != -1) {
 			if (i == 0) {
 				idEncontrado = 0; //el primero que cuelga de raiz
 			}
-			idEncontrado = ExisteEnLaLista(directorios, vectorPathNuevo[i],idEncontrado);
+			idEncontrado = ExisteEnLaLista(directorios, vectorPathOriginal[i],idEncontrado);
 			i++;
 		}
 		if (idEncontrado == -1) {
-			printf("No existe el path al que desea moverlo \n");
+			printf("No existe el path original \n");
 		} else {
-			idNuevoPadre = idEncontrado;
-			if (ExisteEnLaLista(directorios, nombreDirAMover, idNuevoPadre)	== -1) { //ver si el padre no tiene hijos que se llamen igual que el directorio a mover
-				i = 0;
-				encontrado = 0;
-				while (encontrado == 0 && i < tamanioLista) {
-					elementoDeMiLista = list_get(directorios, i);
-					if (elementoDeMiLista->id == idDirAMover) {
-						encontrado = 1;
-						elementoDeMiLista->padre = idNuevoPadre;
-					}
-					i++;
+			idDirAMover = idEncontrado;
+			strcpy(nombreDirAMover, vectorPathOriginal[(i - 1)]); //revisar, puse -1 porque avancé hasta el NULL.
+			idEncontrado = 0;
+			i = 0;
+			while (vectorPathNuevo[i] != NULL && idEncontrado != -1) {
+				if (i == 0) {
+					idEncontrado = 0; //el primero que cuelga de raiz
 				}
-				printf("El directorio se ha movido satisfactoriamente \n");
+				idEncontrado = ExisteEnLaLista(directorios, vectorPathNuevo[i],idEncontrado);
+				i++;
+			}
+			if (idEncontrado == -1) {
+				printf("No existe el path al que desea moverlo \n");
 			} else {
-				printf("El directorio no está vacío \n");
+				idNuevoPadre = idEncontrado;
+				if (ExisteEnLaLista(directorios, nombreDirAMover, idNuevoPadre)	== -1) { //ver si el padre no tiene hijos que se llamen igual que el directorio a mover
+					i = 0;
+					encontrado = 0;
+					while (encontrado == 0 && i < tamanioLista) {
+						elementoDeMiLista = list_get(directorios, i);
+						if (elementoDeMiLista->id == idDirAMover) {
+							encontrado = 1;
+							elementoDeMiLista->padre = idNuevoPadre;
+						}
+						i++;
+					}
+					printf("El directorio se ha movido satisfactoriamente \n");
+					listarDirectoriosCreados();
+				} else {
+					printf("El directorio no está vacío \n");
+				}
 			}
 		}
+	}
+	else {
+		Menu();
 	}
 }
 
