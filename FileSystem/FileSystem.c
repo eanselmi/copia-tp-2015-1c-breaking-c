@@ -70,7 +70,6 @@ int main(int argc, char *argv[]) {
 	pthread_t escucha; //Hilo que va a manejar los mensajes recibidos
 	int newfd;
 	int addrlen;
-	FILE* dir;
 	archivos = list_create(); //Crea la lista de archivos
 	directorios = list_create(); //crea la lista de directorios
 //============= REVISO LA PERSISTENCIA Y EL ESTADO DE LA ULTIMA EJECUCUION DEL FILESYSTEM ===================
@@ -370,12 +369,15 @@ void actualizar_persistencia_directorio_eliminado(int idPadre){
 		memset(buffer,'\0',200);
 		memset(copia_buffer,'\0',200);
 	}
-	if (feof(dir)){
-		// hit end of file
-	}else{
-		perror ("fgets de recuperar_persistencia");
+	fclose(dir);
+	fclose(aux);
+	dir=fopen("directorios","w");
+	aux=fopen("auxiliar","r");
+	memset(buffer,'\0',200);
+	while (fgets(buffer, sizeof(buffer),aux) != NULL){
+		fprintf (dir,"%s",buffer);
+		memset(buffer,'\0',200);
 	}
-
 	fclose(dir);
 	fclose(aux);
 }
@@ -1417,13 +1419,13 @@ void eliminar_listas(t_list *archivos_l, t_list *directorios_l, t_list *nodos_l)
 
 void EliminarDirectorio() {
 	//printf("Eligió Eliminar directorios\n");
-	char* pathAEliminar =  string_new();
-	char *copia_pathAEliminar=string_new();
+	char pathAEliminar[200];
+	memset(pathAEliminar, '\0', 200);
+	char copia_pathAEliminar[200];
+	memset(copia_pathAEliminar, '\0', 200);
 	char** vectorpathAEliminar;
 	t_dir* elementoDeMiListaDir;
-	elementoDeMiListaDir = malloc(sizeof(t_dir));
 	t_archivo* elementoDeMiListaArch;
-	elementoDeMiListaArch = malloc(sizeof(t_archivo));
 	int tamanioListaDir = list_size(directorios);
 	int tamanioListaArch = list_size(archivos);
 	int i = 0;
