@@ -430,6 +430,57 @@ void actualizar_persistencia_directorio_renombrado(int idPadre, char*nuevoNombre
 
 
 
+void actualizar_persistencia_directorio_movido(int idPadre, int nuevoPadre){
+	//Seccion de Directorios
+	FILE* dir;
+	FILE* aux;
+	dir=fopen("directorios","r");
+	aux=fopen("auxiliar","w");
+	char buffer[200];
+	char copia_buffer[200];
+	char nueva_copia[200];
+	memset(nueva_copia,'\0',200);
+	memset(buffer,'\0',200);
+	memset(copia_buffer,'\0',200);
+	char *saveptr;
+	char* id=string_new();
+	char* nombre=string_new();
+	char* padre=string_new();
+	while (fgets(buffer, sizeof(buffer),dir) != NULL){
+		strcpy(copia_buffer,buffer);
+		id = strtok_r(buffer,";",&saveptr);
+		nombre = strtok_r(NULL,";",&saveptr);
+		padre = strtok_r(NULL,";",&saveptr);
+		if (atoi(id)==idPadre){
+			strcat(nueva_copia,id);
+			strcat(nueva_copia,";");
+			strcat(nueva_copia,nombre);
+			strcat(nueva_copia,";");
+			strcat(nueva_copia,string_itoa(nuevoPadre));
+			strcat(nueva_copia,"\n");
+			fprintf (aux,"%s",nueva_copia);
+		}else fprintf (aux,"%s",copia_buffer);
+		memset(buffer,'\0',200);
+		memset(copia_buffer,'\0',200);
+	}
+	fclose(dir);
+	fclose(aux);
+	dir=fopen("directorios","w");
+	aux=fopen("auxiliar","r");
+	memset(buffer,'\0',200);
+	while (fgets(buffer, sizeof(buffer),aux) != NULL){
+		fprintf (dir,"%s",buffer);
+		memset(buffer,'\0',200);
+	}
+	fclose(dir);
+	fclose(aux);
+}
+
+
+
+
+
+
 void listar_directorios(){
 	t_dir *dir=malloc(sizeof(t_dir));
 	int i;
@@ -1618,7 +1669,6 @@ void RenombrarDirectorio() {
 }
 
 void MoverDirectorio() {
-	//TODO falta hacer persistencia para MoverDirectorio
 	//printf("Eligió Mover directorios\n");
 	listarDirectoriosCreados();
 	int tamanioLista = list_size(directorios);
@@ -1640,11 +1690,15 @@ void MoverDirectorio() {
 		uint32_t idDirAMover;
 		uint32_t idNuevoPadre;
 		long idEncontrado = 0;
+		int padreViejo;
+		int padreNuevo;
 		char encontrado; //0 si no lo encontro, 1 si lo encontro
 		printf("Ingrese el path del directorio que desea mover, desde raíz ejemplo /home/utnso \n");
 		scanf("%s", pathOriginal);
+		padreViejo = BuscarPadre(pathOriginal);
 		printf("Ingrese el path del directorio al que desea moverlo, desde raíz ejemplo /home/tp \n");
 		scanf("%s", pathNuevo);
+		padreNuevo = BuscarPadre(pathNuevo);
 		vectorPathOriginal = string_split((char*) pathOriginal, "/");
 		vectorPathNuevo = string_split((char*) pathNuevo, "/");
 		while (vectorPathOriginal[i] != NULL && idEncontrado != -1) {
@@ -1684,6 +1738,7 @@ void MoverDirectorio() {
 						i++;
 					}
 					printf("El directorio se ha movido satisfactoriamente \n");
+					actualizar_persistencia_directorio_movido(padreViejo, padreNuevo);
 					listarDirectoriosCreados();
 				} else {
 					printf("El directorio no está vacío \n");
