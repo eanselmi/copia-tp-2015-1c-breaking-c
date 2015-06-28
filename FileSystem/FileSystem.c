@@ -301,19 +301,21 @@ void recuperar_persistencia(){
 	int idYaUsado=0;
 	indiceDirectorios[idYaUsado]= 1; //reservo raíz
 	while (fgets(buffer, sizeof(buffer),dir) != NULL){
-		directorio=malloc(sizeof(t_dir));
-		directorio->id = atoi(strtok_r(buffer,";",&saveptr));
-		idYaUsado = directorio->id;  //para actualizar vector de indices utilizados de vectores
-		directorio->nombre=string_new();
-		nombre=string_new();
-		nombre = strtok_r(NULL,";",&saveptr);
-		directorio->nombre=strdup(nombre);
-		directorio->padre = atoi(strtok_r(NULL,";",&saveptr));
-		list_add(directorios,directorio);
-		//actualizo los indices ocupados de los directorios existentes en archivo de persistencia
-		indiceDirectorios[idYaUsado]= 1;
-		directoriosDisponibles = (MAX_DIRECTORIOS - 1);
-		memset(buffer,'\0',200);
+		if (strcmp(buffer,"\n")!=0){
+			directorio=malloc(sizeof(t_dir));
+			directorio->id = atoi(strtok_r(buffer,";",&saveptr));
+			idYaUsado = directorio->id;  //para actualizar vector de indices utilizados de vectores
+			directorio->nombre=string_new();
+			nombre=string_new();
+			nombre = strtok_r(NULL,";",&saveptr);
+			directorio->nombre=strdup(nombre);
+			directorio->padre = atoi(strtok_r(NULL,";",&saveptr));
+			list_add(directorios,directorio);
+			//actualizo los indices ocupados de los directorios existentes en archivo de persistencia
+			indiceDirectorios[idYaUsado]= 1;
+			directoriosDisponibles = (MAX_DIRECTORIOS - 1);
+			memset(buffer,'\0',200);
+		}
 	}
 	if (feof(dir)){
 		// hit end of file
