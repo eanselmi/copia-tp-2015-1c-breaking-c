@@ -909,6 +909,7 @@ void *atenderJob (int *socketJob) {
 		}
 	}
 
+
 	if(strcmp(mensajeCombiner, "NO")==0){
 		int posicionMapper;
 		t_replanificarMap *mapperOk;
@@ -955,7 +956,19 @@ void *atenderJob (int *socketJob) {
 
 
 	}
+	if(strcmp(mensajeCombiner,"SI")==0){
+		//Recorrer la lista t_replanificarMap
+		// Avisarle a JOB que tiene que ejecutar Reduce
+		//Le mando a JOB t_reduce que se va a ejecutar
+		// le mando al job la cantidad de archivos a los que que hay que aplicarle Reduce
+		//Le mando los datos de cada uno de los archivos: IP Nodo, Puerto Nodo, nombreArchivo resultado de map (t_archivosReduce)
+		//Recibir la respuesta del JOB confirmando que termino con los reduce
+		// Avisarle a JOB que tiene que ejecutar Reduce
+		//Le mando a JOB t_reduce que se va a ejecutar
+		// le mando al job la cantidad de archivos a los que que hay que aplicarle Reduce
+		//Le mando los datos de cada uno de los archivos: IP Nodo, Puerto Nodo, nombreArchivo resultado de map (t_archivosReduce)
 
+	}
 
 
 	pthread_exit((void*)0);
