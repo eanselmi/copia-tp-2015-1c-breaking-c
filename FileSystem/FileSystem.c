@@ -1426,79 +1426,85 @@ void eliminar_listas(t_list *archivos_l, t_list *directorios_l, t_list *nodos_l)
 
 void EliminarDirectorio() {
 	//printf("Eligió Eliminar directorios\n");
-	char pathAEliminar[200];
-	memset(pathAEliminar, '\0', 200);
-	char copia_pathAEliminar[200];
-	memset(copia_pathAEliminar, '\0', 200);
-	char** vectorpathAEliminar;
-	t_dir* elementoDeMiListaDir;
-	t_archivo* elementoDeMiListaArch;
+	listarDirectoriosCreados();
 	int tamanioListaDir = list_size(directorios);
-	int tamanioListaArch = list_size(archivos);
-	int i = 0;
-	uint32_t idAEliminar;
-	long idEncontrado = 0;
-	char encontrePos; //0 si no lo encuentra en la lista de directorios, 1 si lo encuentra
-	char tieneDirOArch; //0 si no tiene, 1 si tiene subdirectorio o archivo
-	int posicionElementoAEliminar;
-	printf("Ingrese el path a eliminar desde raíz ejemplo /home/utnso \n");
-	scanf("%s", pathAEliminar);
-	strcpy(copia_pathAEliminar,pathAEliminar);
-	int idPadre = BuscarPadre(copia_pathAEliminar);
-	vectorpathAEliminar = string_split((char*) pathAEliminar, "/");
-	while (vectorpathAEliminar[i] != NULL && idEncontrado != -1) {
-		if (i == 0) {
-			idEncontrado = 0; //el primero que cuelga de raiz
-		}
-		idEncontrado = ExisteEnLaLista(directorios, vectorpathAEliminar[i],idEncontrado);
-		i++;
-	}
-	if (idEncontrado == -1) {
-		printf("No existe el directorio para eliminar \n");
-	} else {
-		tieneDirOArch = 0;
-		idAEliminar = idEncontrado;
-		i = 0;
-		while (tieneDirOArch == 0 && i < tamanioListaDir) {
-			elementoDeMiListaDir = list_get(directorios, i);
-			if (elementoDeMiListaDir->padre == idAEliminar) { //Si tengo directorios que tengan como padre al dir que quiero eliminar
-				tieneDirOArch = 1;
+	if (tamanioListaDir > 0){
+
+		char pathAEliminar[200];
+		memset(pathAEliminar, '\0', 200);
+		char copia_pathAEliminar[200];
+		memset(copia_pathAEliminar, '\0', 200);
+		char** vectorpathAEliminar;
+		t_dir* elementoDeMiListaDir;
+		t_archivo* elementoDeMiListaArch;
+		int tamanioListaArch = list_size(archivos);
+		int i = 0;
+		uint32_t idAEliminar;
+		long idEncontrado = 0;
+		char encontrePos; //0 si no lo encuentra en la lista de directorios, 1 si lo encuentra
+		char tieneDirOArch; //0 si no tiene, 1 si tiene subdirectorio o archivo
+		int posicionElementoAEliminar;
+		printf("Ingrese el path a eliminar desde raíz ejemplo /home/utnso \n");
+		scanf("%s", pathAEliminar);
+		strcpy(copia_pathAEliminar,pathAEliminar);
+		int idPadre = BuscarPadre(copia_pathAEliminar);
+		vectorpathAEliminar = string_split((char*) pathAEliminar, "/");
+		while (vectorpathAEliminar[i] != NULL && idEncontrado != -1) {
+			if (i == 0) {
+				idEncontrado = 0; //el primero que cuelga de raiz
 			}
+			idEncontrado = ExisteEnLaLista(directorios, vectorpathAEliminar[i],idEncontrado);
 			i++;
 		}
-		if (tieneDirOArch == 1) {
-			printf(
-					"El directorio que desea eliminar no puede ser eliminado ya que posee subdirectorios \n");
+		if (idEncontrado == -1) {
+			printf("No existe el directorio para eliminar \n");
 		} else {
+			tieneDirOArch = 0;
+			idAEliminar = idEncontrado;
 			i = 0;
-			while (tieneDirOArch == 0 && i < tamanioListaArch) {
-				elementoDeMiListaArch = list_get(archivos, i);
-				if (elementoDeMiListaArch->padre == idAEliminar) {
+			while (tieneDirOArch == 0 && i < tamanioListaDir) {
+				elementoDeMiListaDir = list_get(directorios, i);
+				if (elementoDeMiListaDir->padre == idAEliminar) { //Si tengo directorios que tengan como padre al dir que quiero eliminar
 					tieneDirOArch = 1;
 				}
 				i++;
 			}
 			if (tieneDirOArch == 1) {
-				printf("El directorio que desea eliminar no puede ser eliminado ya que posee archivos \n");
+				printf(
+						"El directorio que desea eliminar no puede ser eliminado ya que posee subdirectorios \n");
 			} else {
 				i = 0;
-				encontrePos = 0; //no lo encontre
-				while (encontrePos == 0 && i < tamanioListaDir) {
-					elementoDeMiListaDir = list_get(directorios, i);
-					if (elementoDeMiListaDir->id == idAEliminar) {
-						encontrePos = 1;
+				while (tieneDirOArch == 0 && i < tamanioListaArch) {
+					elementoDeMiListaArch = list_get(archivos, i);
+					if (elementoDeMiListaArch->padre == idAEliminar) {
+						tieneDirOArch = 1;
 					}
 					i++;
 				}
-				posicionElementoAEliminar = i - 1;
-				//list_remove_and_destroy_element(t_list *, int index, void(*element_destroyer)(void*));
-				list_remove_and_destroy_element(directorios,posicionElementoAEliminar, (void*) directorio_destroy);
-				indiceDirectorios[idAEliminar] = 0; //Desocupo el indice en vector de indices disponibles para poder usar ese id en el futuro
-				directoriosDisponibles++; //Incremento la cantidad de directorios libres
-				actualizar_persistencia_directorio_eliminado(idPadre);
-				printf("El directorio se ha eliminado correctamente. \n");
+				if (tieneDirOArch == 1) {
+					printf("El directorio que desea eliminar no puede ser eliminado ya que posee archivos \n");
+				} else {
+					i = 0;
+					encontrePos = 0; //no lo encontre
+					while (encontrePos == 0 && i < tamanioListaDir) {
+						elementoDeMiListaDir = list_get(directorios, i);
+						if (elementoDeMiListaDir->id == idAEliminar) {
+							encontrePos = 1;
+						}
+						i++;
+					}
+					posicionElementoAEliminar = i - 1;
+					//list_remove_and_destroy_element(t_list *, int index, void(*element_destroyer)(void*));
+					list_remove_and_destroy_element(directorios,posicionElementoAEliminar, (void*) directorio_destroy);
+					indiceDirectorios[idAEliminar] = 0; //Desocupo el indice en vector de indices disponibles para poder usar ese id en el futuro
+					directoriosDisponibles++; //Incremento la cantidad de directorios libres
+					actualizar_persistencia_directorio_eliminado(idPadre);
+					printf("El directorio se ha eliminado correctamente. \n");
+				}
 			}
 		}
+	} else {
+		Menu();
 	}
 }
 
