@@ -381,6 +381,55 @@ void actualizar_persistencia_directorio_eliminado(int idPadre){
 	fclose(aux);
 }
 
+
+
+void actualizar_persistencia_directorio_renombrado(int idPadre, char*nuevoNombre){
+	//Seccion de Directorios
+	FILE* dir;
+	FILE* aux;
+	dir=fopen("directorios","r");
+	aux=fopen("auxiliar","w");
+	char buffer[200];
+	char copia_buffer[200];
+	char nueva_copia[200];
+	memset(nueva_copia,'\0',200);
+	memset(buffer,'\0',200);
+	memset(copia_buffer,'\0',200);
+	char *saveptr;
+	char* id=string_new();
+	char* padre=string_new();
+	while (fgets(buffer, sizeof(buffer),dir) != NULL){
+		strcpy(copia_buffer,buffer);
+		id = strtok_r(buffer,";",&saveptr);
+		padre = strtok_r(NULL,";",&saveptr);
+		padre = strtok_r(NULL,";",&saveptr);
+		if (atoi(id)==idPadre){
+			strcat(nueva_copia,id);
+			strcat(nueva_copia,";");
+			strcat(nueva_copia,nuevoNombre);
+			strcat(nueva_copia,";");
+			strcat(nueva_copia,padre);
+			strcat(nueva_copia,"\n");
+			fprintf (aux,"%s",nueva_copia);
+		}else fprintf (aux,"%s",copia_buffer);
+		memset(buffer,'\0',200);
+		memset(copia_buffer,'\0',200);
+	}
+	fclose(dir);
+	fclose(aux);
+	dir=fopen("directorios","w");
+	aux=fopen("auxiliar","r");
+	memset(buffer,'\0',200);
+	while (fgets(buffer, sizeof(buffer),aux) != NULL){
+		fprintf (dir,"%s",buffer);
+		memset(buffer,'\0',200);
+	}
+	fclose(dir);
+	fclose(aux);
+}
+
+
+
 void listar_directorios(){
 	t_dir *dir=malloc(sizeof(t_dir));
 	int i;
@@ -1511,7 +1560,6 @@ void EliminarDirectorio() {
 }
 
 void RenombrarDirectorio() {
-	//TODO falta hacer persistencia para RenombrarDirectorio
 	//printf("Eligió Renombrar directorios\n");
 	listarDirectoriosCreados();
 	int tamanioLista = list_size(directorios);
@@ -1519,6 +1567,8 @@ void RenombrarDirectorio() {
 		//char* pathOriginal = string_new();
 		char pathOriginal[200];
 		memset(pathOriginal, '\0', 200);
+		char copiaPath[200];
+		memset(copiaPath, '\0', 200);
 		char** vectorPathOriginal;
 		//char* pathNuevo = string_new();
 		char pathNuevo[200];
@@ -1526,11 +1576,14 @@ void RenombrarDirectorio() {
 		t_dir* elementoDeMiLista;
 		//elementoDeMiLista = malloc(sizeof(t_dir));
 		int i = 0;
+		int idParaRenombrar;
 		uint32_t idARenombrar;
 		long idEncontrado = 0;
 		char encontrado; //0 si no lo encontro, 1 si lo encontro
 		printf("Ingrese el path del directorio que desea renombrar, desde raíz ejemplo /home/utnso \n");
 		scanf("%s", pathOriginal);
+		strcpy(copiaPath,pathOriginal);
+		idParaRenombrar=BuscarPadre(copiaPath);
 		printf("Ingrese el nuevo nombre de directorio sin barras \n");
 		scanf("%s", pathNuevo);
 		vectorPathOriginal = string_split((char*) pathOriginal, "/");
@@ -1556,6 +1609,7 @@ void RenombrarDirectorio() {
 				i++;
 			}
 			printf("El directorio se ha renombrado exitosamente. \n");
+			actualizar_persistencia_directorio_renombrado(idParaRenombrar,pathNuevo);
 			listarDirectoriosCreados();
 		}
 	} else {
