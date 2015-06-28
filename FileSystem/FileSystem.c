@@ -289,9 +289,11 @@ int Menu(void) {
 		//case 17: printf("Eligió Salir\n"); break;
 		//case 17: listar_nodos_conectados(nodos); break;
 		//case 17: listar_archivos_subidos(archivos); break;
+
 		//case 17: listar_directorios_usuarios(); break;
 		//case 17: listar_directorios(); break;
 		case 17: eliminar_listas(archivos,directorios,nodos); break;
+
 		default: printf("Opción incorrecta. Por favor ingrese una opción del 1 al 17\n"); break;
 		}
 	}
@@ -1213,7 +1215,7 @@ void CrearDirectorio() {
 	char** directorioNuevo;
 	t_dir* directorioACrear;
 	int cantDirACrear = 0;
-	directorioACrear = malloc(sizeof(t_dir));
+	//directorioACrear = malloc(sizeof(t_dir));
 	long idAValidar; //uso este tipo para cubrir rango de uint32_t y el -1,  deberia mejorar el nombre de la variable
 	printf("Ingrese el path del directorio desde raíz ejemplo /home/utnso \n");
 	memset(path,'\0',200);
