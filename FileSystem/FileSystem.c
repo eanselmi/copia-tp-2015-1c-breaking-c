@@ -51,7 +51,7 @@ int directoriosDisponibles; //reservo raiz
 int j; //variable para recorrer el vector de indices
 int *puerto_escucha_nodo;
 char nodo_id[6];
-char *valor_persistencia;
+int valor_persistencia=0;
 int main(int argc, char *argv[]) {
 
 	pthread_t escucha; //Hilo que va a manejar los mensajes recibidos
@@ -60,7 +60,9 @@ int main(int argc, char *argv[]) {
 	archivos = list_create(); //Crea la lista de archivos
 	directorios = list_create(); //crea la lista de directorios
 //============= REVISO LA PERSISTENCIA Y EL ESTADO DE LA ULTIMA EJECUCUION DEL FILESYSTEM ===================
-	FILE* archivo_persistencia;
+
+
+	/*FILE* archivo_persistencia;
 	if((archivo_persistencia=fopen("persistencia","r+"))==NULL){
 		log_error(logger,"El archivo de persistencia no existe en el filesystem local");
 		perror("fopen");
@@ -77,16 +79,19 @@ int main(int argc, char *argv[]) {
 		recuperar_persistencia(); //Hay que restaurar la persistencia
 	}else {
 		//como no hay persistencia inicializo los indices para los directorios, 0 si está libre, 1 ocupado.
-		for (j = 1; j < sizeof(indiceDirectorios); j++) {
-			indiceDirectorios[j] = 0;
-		}
-		indiceDirectorios[0] = 1; //raiz queda reservado como ocupado
-		directoriosDisponibles = (MAX_DIRECTORIOS - 1);
+
+	}*/
+	int estado_recupero = recuperar_persistencia();
+	if (estado_recupero==0){
+		printf ("EL Filesystem inicia en estado nuevo - no existe persistencia que recuperar \n");
 	}
-
-
-
- // ================================= FIN CONTROL DE PERSISTENCIA ===================================
+	if (estado_recupero==1){
+		printf ("El Filesystem inicia recuperando solo directorios \n");
+	}
+	if (estado_recupero==2){
+		printf ("El Filesysten inicia recuperando directorios y archivos \n");
+	}
+	// ================================= FIN CONTROL DE PERSISTENCIA ===================================
 
 	int yes = 1; // para setsockopt() SO_REUSEADDR, más abajo
 	configurador = config_create("resources/fsConfig.conf"); //se asigna el archivo de configuración especificado en la ruta
@@ -279,84 +284,101 @@ int Menu(void) {
 			
 		//case 17: printf("Eligió Salir\n"); break;
 		//case 17: listar_nodos_conectados(nodos); break;
-		case 17: listar_archivos_subidos(archivos); break;
+		//case 17: listar_archivos_subidos(archivos); break;
 		//case 17: listarDirectoriosCreados();break;
 		//case 17: listar_directorios(); break;
-		//case 17: eliminar_listas(archivos,directorios,nodos); break;
+		case 17: eliminar_listas(archivos,directorios,nodos); break;
 		default: printf("Opción incorrecta. Por favor ingrese una opción del 1 al 17\n"); break;
 		}
 	}
 	return 0;
 }
-void recuperar_persistencia(){
+int recuperar_persistencia(){
 	//Seccion de Directorios
 	t_dir *directorio;
 	FILE* dir;
-	dir=fopen("directorios","r");
 	char buffer[200];
 	memset(buffer,'\0',200);
 	char *saveptr;
 	char *nombre;
 	int idYaUsado=0;
 	char *md5;
-	indiceDirectorios[idYaUsado]= 1; //reservo raíz
-	while (fgets(buffer, sizeof(buffer),dir) != NULL){
-		if (strcmp(buffer,"\n")!=0){
-			directorio=malloc(sizeof(t_dir));
-			directorio->id = atoi(strtok_r(buffer,";",&saveptr));
-			idYaUsado = directorio->id;  //para actualizar vector de indices utilizados de vectores
-			directorio->nombre=string_new();
-			nombre=string_new();
-			nombre = strtok_r(NULL,";",&saveptr);
-			directorio->nombre=strdup(nombre);
-			directorio->padre = atoi(strtok_r(NULL,";",&saveptr));
-			list_add(directorios,directorio);
-			//actualizo los indices ocupados de los directorios existentes en archivo de persistencia
-			indiceDirectorios[idYaUsado]= 1;
-			directoriosDisponibles = (MAX_DIRECTORIOS - 1);
-			memset(buffer,'\0',200);
+	int recupero_directorios=0;
+	int recupero_archivos=0;
+	dir=fopen("directorios","r");
+	if (dir!=NULL){
+		indiceDirectorios[idYaUsado]= 1; //reservo raíz
+		while (fgets(buffer, sizeof(buffer),dir) != NULL){
+			if (strcmp(buffer,"\n")!=0){
+				recupero_directorios=1;
+				directorio=malloc(sizeof(t_dir));
+				directorio->id = atoi(strtok_r(buffer,";",&saveptr));
+				idYaUsado = directorio->id;  //para actualizar vector de indices utilizados de vectores
+				directorio->nombre=string_new();
+				nombre=string_new();
+				nombre = strtok_r(NULL,";",&saveptr);
+				directorio->nombre=strdup(nombre);
+				directorio->padre = atoi(strtok_r(NULL,";",&saveptr));
+				list_add(directorios,directorio);
+				//actualizo los indices ocupados de los directorios existentes en archivo de persistencia
+				indiceDirectorios[idYaUsado]= 1;
+				directoriosDisponibles = (MAX_DIRECTORIOS - 1);
+				memset(buffer,'\0',200);
+			}
 		}
+		fclose(dir);
 	}
-	fclose(dir);
+	if (list_size(archivos)==0){ //No hay directorios persistidos o el archivo estaba vacio
+		for (j = 1; j < sizeof(indiceDirectorios); j++) {
+			indiceDirectorios[j] = 0;
+		}
+		indiceDirectorios[0] = 1; //raiz queda reservado como ocupado
+		directoriosDisponibles = (MAX_DIRECTORIOS - 1);
+	}
 
 	//Recupero de archivos
 	dir=fopen("archivos","r");
-	int i,j;
-	int cantidad_bloques,cantidad_copias;
-	char buffer_archivo[2048];
-	memset(buffer_archivo,'\0',2048);
-	while (fgets(buffer_archivo, sizeof(buffer_archivo),dir) != NULL){
-		if (strcmp(buffer_archivo,"\n")!=0){
-			t_archivo *archivo=malloc(sizeof(t_archivo));
-			nombre=string_new();
-			nombre = strtok_r(buffer_archivo,";",&saveptr);
-			memset(archivo->nombre,'\0',200);
-			strcpy(archivo->nombre,nombre);
-			archivo->padre=atoi(strtok_r(NULL,";",&saveptr));
-			cantidad_bloques=atoi(strtok_r(NULL,";",&saveptr));
-			archivo->bloques=list_create();
-			for (i=0;i<cantidad_bloques;i++){
-				t_bloque *bloque=malloc(sizeof(t_bloque));
-				bloque->copias=list_create();
-				cantidad_copias=atoi(strtok_r(NULL,";",&saveptr));
-				for (j=0;j<cantidad_copias;j++){
-					t_copias *copia=malloc(sizeof(t_copias));
-					char *andre;
-					andre=strtok_r(NULL,";",&saveptr);
-					copia->nodo=strdup(andre);
-					md5=strtok_r(NULL,";",&saveptr);
-					memset(copia->md5,'\0',32);
-					strcpy(copia->md5,md5);
-					copia->bloqueNodo=atoi(strtok_r(NULL,";",&saveptr));
-					list_add(bloque->copias,copia);
-				}
-				list_add(archivo->bloques,bloque);
-			}
-			list_add(archivos,archivo);
-		}
+	if (dir!=NULL){
+		int i,j;
+		int cantidad_bloques,cantidad_copias;
+		char buffer_archivo[2048];
 		memset(buffer_archivo,'\0',2048);
+		while (fgets(buffer_archivo, sizeof(buffer_archivo),dir) != NULL){
+			if (strcmp(buffer_archivo,"\n")!=0){
+				valor_persistencia=1;
+				recupero_archivos=1;
+				t_archivo *archivo=malloc(sizeof(t_archivo));
+				nombre=string_new();
+				nombre = strtok_r(buffer_archivo,";",&saveptr);
+				memset(archivo->nombre,'\0',200);
+				strcpy(archivo->nombre,nombre);
+				archivo->padre=atoi(strtok_r(NULL,";",&saveptr));
+				cantidad_bloques=atoi(strtok_r(NULL,";",&saveptr));
+				archivo->bloques=list_create();
+				for (i=0;i<cantidad_bloques;i++){
+					t_bloque *bloque=malloc(sizeof(t_bloque));
+					bloque->copias=list_create();
+					cantidad_copias=atoi(strtok_r(NULL,";",&saveptr));
+					for (j=0;j<cantidad_copias;j++){
+						t_copias *copia=malloc(sizeof(t_copias));
+						char *andre;
+						andre=strtok_r(NULL,";",&saveptr);
+						copia->nodo=strdup(andre);
+						md5=strtok_r(NULL,";",&saveptr);
+						memset(copia->md5,'\0',32);
+						strcpy(copia->md5,md5);
+						copia->bloqueNodo=atoi(strtok_r(NULL,";",&saveptr));
+						list_add(bloque->copias,copia);
+					}
+					list_add(archivo->bloques,bloque);
+				}
+				list_add(archivos,archivo);
+			}
+			memset(buffer_archivo,'\0',2048);
+		}
+		fclose(dir);
 	}
-	fclose(dir);
+	return recupero_archivos+recupero_directorios;
 }
 
 
@@ -398,11 +420,13 @@ void actualizar_persistencia_directorio_eliminado(int idPadre){
 	char *saveptr;
 	int id;
 	while (fgets(buffer, sizeof(buffer),dir) != NULL){
-		strcpy(copia_buffer,buffer);
-		id = atoi(strtok_r(buffer,";",&saveptr));
-		if (id!=idPadre) fprintf (aux,"%s",copia_buffer);
-		memset(buffer,'\0',200);
-		memset(copia_buffer,'\0',200);
+		if (strcmp(buffer,"\n")!=0){
+			strcpy(copia_buffer,buffer);
+			id = atoi(strtok_r(buffer,";",&saveptr));
+			if (id!=idPadre) fprintf (aux,"%s",copia_buffer);
+			memset(buffer,'\0',200);
+			memset(copia_buffer,'\0',200);
+		}
 	}
 	fclose(dir);
 	fclose(aux);
@@ -435,21 +459,23 @@ void actualizar_persistencia_directorio_renombrado(int idPadre, char*nuevoNombre
 	char* id=string_new();
 	char* padre=string_new();
 	while (fgets(buffer, sizeof(buffer),dir) != NULL){
-		strcpy(copia_buffer,buffer);
-		id = strtok_r(buffer,";",&saveptr);
-		padre = strtok_r(NULL,";",&saveptr);
-		padre = strtok_r(NULL,";",&saveptr);
-		if (atoi(id)==idPadre){
-			strcat(nueva_copia,id);
-			strcat(nueva_copia,";");
-			strcat(nueva_copia,nuevoNombre);
-			strcat(nueva_copia,";");
-			strcat(nueva_copia,padre);
-			strcat(nueva_copia,"\n");
-			fprintf (aux,"%s",nueva_copia);
-		}else fprintf (aux,"%s",copia_buffer);
-		memset(buffer,'\0',200);
-		memset(copia_buffer,'\0',200);
+		if (strcmp(buffer,"\n")!=0){
+			strcpy(copia_buffer,buffer);
+			id = strtok_r(buffer,";",&saveptr);
+			padre = strtok_r(NULL,";",&saveptr);
+			padre = strtok_r(NULL,";",&saveptr);
+			if (atoi(id)==idPadre){
+				strcat(nueva_copia,id);
+				strcat(nueva_copia,";");
+				strcat(nueva_copia,nuevoNombre);
+				strcat(nueva_copia,";");
+				strcat(nueva_copia,padre);
+				strcat(nueva_copia,"\n");
+				fprintf (aux,"%s",nueva_copia);
+			}else fprintf (aux,"%s",copia_buffer);
+			memset(buffer,'\0',200);
+			memset(copia_buffer,'\0',200);
+		}
 	}
 	fclose(dir);
 	fclose(aux);
@@ -483,21 +509,23 @@ void actualizar_persistencia_directorio_movido(int idPadre, int nuevoPadre){
 	char* nombre=string_new();
 	char* padre=string_new();  //este warning no se puede sacar pero esta bien, aunque dice que no hace nada hace algo
 	while (fgets(buffer, sizeof(buffer),dir) != NULL){
-		strcpy(copia_buffer,buffer);
-		id = strtok_r(buffer,";",&saveptr);
-		nombre = strtok_r(NULL,";",&saveptr);
-		padre = strtok_r(NULL,";",&saveptr);
-		if (atoi(id)==idPadre){
-			strcat(nueva_copia,id);
-			strcat(nueva_copia,";");
-			strcat(nueva_copia,nombre);
-			strcat(nueva_copia,";");
-			strcat(nueva_copia,string_itoa(nuevoPadre));
-			strcat(nueva_copia,"\n");
-			fprintf (aux,"%s",nueva_copia);
-		}else fprintf (aux,"%s",copia_buffer);
-		memset(buffer,'\0',200);
-		memset(copia_buffer,'\0',200);
+		if (strcmp(buffer,"\n")!=0){
+			strcpy(copia_buffer,buffer);
+			id = strtok_r(buffer,";",&saveptr);
+			nombre = strtok_r(NULL,";",&saveptr);
+			padre = strtok_r(NULL,";",&saveptr);
+			if (atoi(id)==idPadre){
+				strcat(nueva_copia,id);
+				strcat(nueva_copia,";");
+				strcat(nueva_copia,nombre);
+				strcat(nueva_copia,";");
+				strcat(nueva_copia,string_itoa(nuevoPadre));
+				strcat(nueva_copia,"\n");
+				fprintf (aux,"%s",nueva_copia);
+			}else fprintf (aux,"%s",copia_buffer);
+			memset(buffer,'\0',200);
+			memset(copia_buffer,'\0',200);
+		}
 	}
 	fclose(dir);
 	fclose(aux);
@@ -539,6 +567,50 @@ void persistir_archivo(t_archivo *archivo){
 	fprintf (dir,"%s","\n");
 	fclose(dir);
 }
+
+void actualizar_persistencia_archivo_eliminado(char* nombre,int idPadre){
+	//Seccion de Directorios
+	FILE* dir;
+	FILE* aux;
+	dir=fopen("archivos","r");
+	aux=fopen("auxiliar","w");
+	char buffer[2028];
+	char copia_buffer[2048];
+	memset(buffer,'\0',2048);
+	memset(copia_buffer,'\0',2048);
+	char *saveptr;
+	int padre;
+	char *nombre_archivo=string_new();
+	while (fgets(buffer, sizeof(buffer),dir) != NULL){
+		if (strcmp(buffer,"\n")!=0){
+			strcpy(copia_buffer,buffer);
+			nombre_archivo = strtok_r(buffer,";",&saveptr);
+			padre = atoi(strtok_r(NULL,";",&saveptr));
+			if (strcmp(nombre_archivo,nombre)==0 && padre==idPadre){
+
+			}else
+				fprintf (aux,"%s",copia_buffer);
+			memset(buffer,'\0',2048);
+			memset(copia_buffer,'\0',2048);
+		}
+	}
+	fclose(dir);
+	fclose(aux);
+
+	dir=fopen("archivos","w");
+	aux=fopen("auxiliar","r");
+	memset(buffer,'\0',2048);
+	while (fgets(buffer, sizeof(buffer),aux) != NULL){
+		fprintf (dir,"%s",buffer);
+		memset(buffer,'\0',2048);
+	}
+	fclose(dir);
+	fclose(aux);
+}
+
+
+
+
 void listar_directorios(){
 	t_dir *dir=malloc(sizeof(t_dir));
 	int i;
@@ -645,7 +717,7 @@ static t_nodo *agregar_nodo_a_lista(char nodo_id[6], int socket, int est, int es
 	nodo_temporal->bloques_bitarray = malloc(i / 8);
 	nodo_temporal->bloques_del_nodo = bitarray_create(nodo_temporal->bloques_bitarray, i / 8);
 	for (i = 0; i < nodo_temporal->bloques_totales; i++) bitarray_clean_bit(nodo_temporal->bloques_del_nodo, i);
-	if (atoi(valor_persistencia)==1) actualizar_nodo_persistencia(nodo_temporal);
+	if (valor_persistencia==1) actualizar_nodo_persistencia(nodo_temporal);
 	return nodo_temporal;
 }
 void actualizar_nodo_persistencia(t_nodo *nodo){
@@ -1308,6 +1380,8 @@ void EliminarArchivo() {
 	memset(path,'\0',200);
 	char* directorio=string_new();
 	int j,m,posicionDirectorio=0;
+	char nombreArchivo[200];
+	memset(nombreArchivo,'\0',200);
 	char ** directoriosPorSeparado;
 	if (list_size(archivos)!=0){
 		printf ("Se listan los archivos existentes en MDFS:\n");
@@ -1337,6 +1411,7 @@ void EliminarArchivo() {
 			Menu();
 		}
 		archivo = list_get(archivos, posArchivo);
+		strcpy(nombreArchivo,archivo->nombre);
 		for (i=0;i<list_size(archivo->bloques);i++){
 			bloque=list_get(archivo->bloques,i);
 			for (j=0;j<list_size(bloque->copias);j++){
@@ -1358,6 +1433,7 @@ void EliminarArchivo() {
 		}
 		list_remove_and_destroy_element(archivos,posArchivo,(void*)eliminar_lista_de_archivos);
 		printf ("Archivo eliminado exitosamente\n");
+		actualizar_persistencia_archivo_eliminado(nombreArchivo,idPadre);
 		//Actualizo a Marta
 		if(marta_presente == 1){
 			memset(identificacion,'\0',BUF_SIZE);
@@ -1378,10 +1454,6 @@ void EliminarArchivo() {
 				exit(-1);
 			}*/
 		}
-
-
-
-
 	}else printf ("No hay archivos cargados en MDFS\n");
 
 }
@@ -1676,6 +1748,7 @@ void eliminar_listas(t_list *archivos_l, t_list *directorios_l, t_list *nodos_l)
 		}
 		fprintf (archivo_persistencia,"%s","0");
 		fclose(archivo_persistencia);
+
 		//Abro los archivos directorios y archivos en modo w para borrarlos
 		dir=fopen("directorios","w");
 		fclose(dir);
