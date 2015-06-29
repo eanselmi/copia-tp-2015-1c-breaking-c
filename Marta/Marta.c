@@ -66,7 +66,7 @@ int main(int argc, char**argv){
 	listaArchivos = list_create(); //creo la lista para los archivos que me pasa el FS
 	jobs=list_create(); //creo la lista de jobs
 
-	//Variables para probar
+//	//Variables para probar
 //		t_archivo *archivo1;
 //		t_archivo *archivo2;
 //		t_archivo *archivo3;
@@ -596,9 +596,9 @@ void *connection_handler_jobs(){
 							printf ("Voy a agregar una nueva copia de un bloque de un archivo a las estructuras\n");
 						}
 					}
-					else{
-						//aca hablara el job
-					}
+//					else{
+//						//aca hablara el job
+//					}
 				}
 			}
 		}
@@ -606,36 +606,22 @@ void *connection_handler_jobs(){
 }
 
 void *atenderJob (int *socketJob) {
-	int cantBloques;
-	int posBloques;
-	int posArray;
-	t_nodo *nodo;
-	int cantCopias;
+	pthread_detach(pthread_self());
 	char accion[BUF_SIZE];
 	char mensaje_fs[BUF_SIZE];
-	t_copias *copia;
-	t_bloque *bloque;
-	t_list *copiasNodo;
-	t_nodo *nodoAux;
 	t_list* listaMappers;
 	memset(mensaje_fs,'\0',BUF_SIZE);
 	memset(accion,'\0',BUF_SIZE);
-	copiasNodo=list_create();
 	listaMappers = list_create();
 	char archivoResultado[TAM_NOMFINAL];
-	pthread_detach(pthread_self());
 	int posicionArchivo;
+	int nroRespuesta;
 	char mensajeCombiner[3];
-	int padre;
 	char archivosDelJob[MENSAJE_SIZE];
 	memset(mensajeCombiner, '\0', 3);
 	memset(archivosDelJob, '\0', MENSAJE_SIZE);
 	memset(archivoResultado,'\0', TAM_NOMFINAL);
-	char ** arrayTiempo;
-	char *nombreArchivoTemp=string_new();//Nombre del archivo que va a mandar a los nodos
-	char *pathArchivoTemp = string_new(); //Path donde va a guardar los archivos temporales
-	t_replanificarMap *mapper;
-	t_mapper datosMapper;
+
 	//Recibe mensaje de si es o no combiner
 	if(recv(*socketJob,mensajeCombiner,sizeof(mensajeCombiner),MSG_WAITALL)==-1){
 		perror("recv");
@@ -663,12 +649,18 @@ void *atenderJob (int *socketJob) {
 
 	// Separo el mensaje que recibo con los archivos a trabajar (Job envía todos juntos separados con ,)
 	char** archivos =string_split((char*)archivosDelJob,",");
-	t_list *bloques;
-	char** arrayArchivo;
+
 	//Lo siguiente es para probar que efectivamente se reciba la lista de archivos
 	char nombreArchivo[TAM_NOMFINAL];
 	memset(nombreArchivo,'\0',TAM_NOMFINAL);
 	for(posicionArchivo=0;archivos[posicionArchivo]!=NULL;posicionArchivo++){
+		int posArray;
+		int cantBloques;
+		int posBloques;
+		int padre;
+		char** arrayArchivo;
+		t_list *bloques;
+
 		printf("Se debe trabajar en el archivo:%s\n",archivos[posicionArchivo]);
 		//Separo el nombre del archivo por barras
 		arrayArchivo = string_split(archivos[posicionArchivo], "/");
@@ -678,6 +670,7 @@ void *atenderJob (int *socketJob) {
 				strcpy(nombreArchivo,arrayArchivo[posArray]);
 			}
 		}
+		memset(mensaje_fs,'\0',BUF_SIZE);
 		strcpy(mensaje_fs, "dame padre");
 		if(send(socket_fs,mensaje_fs, sizeof(mensaje_fs), MSG_WAITALL )==-1){
 			perror("send");
@@ -696,15 +689,24 @@ void *atenderJob (int *socketJob) {
 			log_error(logger,"Fallo el recv del padre del FS");
 			//exit(-1);
 		}
-	//	padre=1;
+//		padre=1;
 		//De cada archivo que nos manda el Job buscamos y nos traemos los bloques
 		bloques=buscarBloques(nombreArchivo,padre);
 		cantBloques = list_size(bloques);
 		for(posBloques=0; posBloques<cantBloques; posBloques++){ //recorremos los bloques del archivo que nos mando job
+			int cantCopias;
+			t_bloque *bloque;
+			t_nodo *nodoAux;
+			t_replanificarMap *mapper;
+			t_mapper datosMapper;
+			t_list *copiasNodo;
+			copiasNodo=list_create();
 			bloque = list_get(bloques,posBloques);
 			cantCopias = list_size(bloque->copias);
 			int posCopia;
 			for(posCopia=0;posCopia<cantCopias;posCopia++){ // Por cada bloque del archivo recorremos las copias de dicho archivo
+				t_nodo *nodo;
+				t_copias *copia;
 				copia = list_get(bloque->copias,posCopia);
 				// Nos traemos cada nodo en donde esta cada una de las copias del archivo
 				nodo= buscarCopiaEnNodos(copia);
@@ -727,25 +729,33 @@ void *atenderJob (int *socketJob) {
 			strcpy(datosMapper.ip_nodo,nodoAux->ip);
 			datosMapper.puerto_nodo= nodoAux->puerto_escucha_nodo;
 			for(posCopia=0;posCopia<cantCopias;posCopia++){
+				t_copias *copia;
 				copia = list_get(bloque->copias,posCopia);
 				if(strcmp(copia->nodo,nodoAux->nodo_id)==0){
 					datosMapper.bloque=copia->bloqueNodo;
 				}
 			}
-			strcpy(pathArchivoTemp,"/tmp/");
-			strcpy(nombreArchivoTemp,"MapTemporal");
-			arrayTiempo=string_split(temporal_get_string_time(),":"); //creo array con hora minutos segundos y milisegundos separados
+
+			char *nombreArchivoTemp=string_new();//Nombre del archivo que va a mandar a los nodos
+			char *pathArchivoTemp = string_new(); //Path donde va a guardar los archivos temporales
 			char *tiempo=string_new(); //string que tendrá la hora
+			char **arrayNomArchivo=string_split(nombreArchivo,".");
+			string_append(&pathArchivoTemp,"/tmp/");
+			string_append(&nombreArchivoTemp,arrayNomArchivo[0]);
+			char **arrayTiempo=string_split(temporal_get_string_time(),":"); //creo array con hora minutos segundos y milisegundos separados
 			string_append(&tiempo,arrayTiempo[0]);//Agrego horas
 			string_append(&tiempo,arrayTiempo[1]);//Agrego minutos
 			string_append(&tiempo,arrayTiempo[2]);//Agrego segundos
 			string_append(&tiempo,arrayTiempo[3]);//Agrego milisegundos
-			string_append(&nombreArchivoTemp,tiempo); //Concateno la fecha en formato hhmmssmmmm
-			string_append(&nombreArchivoTemp,".tmp");
+			string_append(&nombreArchivoTemp,"_Bloq");
+			string_append(&nombreArchivoTemp,string_itoa(posBloques));
+			string_append(&nombreArchivoTemp,"_");
+			string_append(&nombreArchivoTemp,tiempo);
+			string_append(&nombreArchivoTemp,".txt");
 			string_append(&pathArchivoTemp,nombreArchivoTemp);
 			strcpy(datosMapper.archivoResultadoMap,pathArchivoTemp);
 
-
+			memset(accion,'\0',BUF_SIZE);
 			strcpy(accion,"ejecuta map");
 			//Le avisamos al job que vamos a mandarle rutina map
 			if(send(*socketJob,accion,sizeof(accion),MSG_WAITALL)==-1){
@@ -778,10 +788,19 @@ void *atenderJob (int *socketJob) {
 
 			//Buscar nodoAux en la lista general comparando por nodo_id y sumarle cantMapper
 			sumarCantMapper(nodoAux->nodo_id);
-			free(tiempo);
-			list_clean(copiasNodo);
+
+			free(nombreArchivoTemp);
+			free(pathArchivoTemp);
+//			free(tiempo);
+
+			list_destroy(copiasNodo);
 		}
 	}
+
+	//SE ESPERAN EN UN CICLO FOR LA CANTIDAD DE RESPUESTAS IGUAL A CUANTOS MAPPER SE HALLAN ENVIADO (con tamaño de la listaMappers)
+
+	for(nroRespuesta=0;nroRespuesta<list_size(listaMappers);nroRespuesta++){
+
 		t_respuestaMap respuestaMap;
 		//Recibo respuesta del Job de cada map
 		if(recv(*socketJob,&respuestaMap, sizeof(t_respuestaMap),MSG_WAITALL)==-1){
@@ -878,18 +897,25 @@ void *atenderJob (int *socketJob) {
 			char** arrayTiempoReplanificado;
 			char* archivoReplanificadoTemp=string_new();
 			char* pathArchivoRTemp= string_new();
+			char **arrayNomArchivo=string_split(map->nombreArchivoDelJob,".");
+
 			strcpy(pathArchivoRTemp,"/tmp/");
-			strcpy(archivoReplanificadoTemp,"MapTemporal");
+			strcpy(archivoReplanificadoTemp,arrayNomArchivo[0]);
 			arrayTiempoReplanificado=string_split(temporal_get_string_time(),":"); //creo array con hora minutos segundos y milisegundos separados
 			string_append(&tiempoReplanificado,arrayTiempoReplanificado[0]);//Agrego horas
 			string_append(&tiempoReplanificado,arrayTiempoReplanificado[1]);//Agrego minutos
 			string_append(&tiempoReplanificado,arrayTiempoReplanificado[2]);//Agrego segundos
 			string_append(&tiempoReplanificado,arrayTiempoReplanificado[3]);//Agrego milisegundos
 			string_append(&archivoReplanificadoTemp,tiempoReplanificado); //Concateno la fecha en formato hhmmssmmmm
-			string_append(&archivoReplanificadoTemp,".tmp");
+			string_append(&archivoReplanificadoTemp,"_Bloq");
+			string_append(&archivoReplanificadoTemp,string_itoa(map->bloqueArchivo));
+			string_append(&archivoReplanificadoTemp,tiempoReplanificado);
+			string_append(&archivoReplanificadoTemp,"Rep");
+			string_append(&archivoReplanificadoTemp,".txt");
 			string_append(&pathArchivoRTemp,archivoReplanificadoTemp);
 			strcpy(datosReplanificacionMap.archivoResultadoMap,pathArchivoRTemp);
 
+			memset(accion,'\0',BUF_SIZE);
 			strcpy(accion,"ejecuta map");
 			//Le avisamos al job que vamos a mandarle rutina map
 			if(send(*socketJob,accion,sizeof(accion),MSG_WAITALL)==-1){
@@ -928,84 +954,86 @@ void *atenderJob (int *socketJob) {
 			// buscar en la lista del struct el nodo_id y luego buscarlo en la lista gral de nodos y restarle 1 a su catMappers
 			restarCantMapper(map->nodoId);
 		}
+	}
 
 /************************************************************************************************************************************************
 * SIN COMBINER
 * ************************************************************************************************************************************************/
+
 	//Si es sin combiner manda a hacer reduce al nodo que tenga mas archivos resultados MAP
-		if(strcmp(mensajeCombiner, "NO")==0){
-			int posicionMapper;
-			t_replanificarMap *mapperOk;
-			t_list* listaNodosMapperOk;
-			listaNodosMapperOk = list_create();
-			//Recorro lista de mappers y por cada mapperOk con resultado 0 que es map ok, me lo guardo  en una lista
-			for (posicionMapper =0; posicionMapper < list_size(listaMappers); posicionMapper++){
-				mapperOk = list_get(listaMappers, posicionMapper);
-				if(mapperOk->resultado == 0){
-					list_add(listaNodosMapperOk,mapperOk);
-				}
-
+	if(strcmp(mensajeCombiner, "NO")==0){
+		int posicionMapper;
+		t_replanificarMap *mapperOk;
+		t_list* listaNodosMapperOk;
+		listaNodosMapperOk = list_create();
+		//Recorro lista de mappers y por cada mapperOk con resultado 0 que es map ok, me lo guardo  en una lista
+		for (posicionMapper =0; posicionMapper < list_size(listaMappers); posicionMapper++){
+			mapperOk = list_get(listaMappers, posicionMapper);
+			if(mapperOk->resultado == 0){
+				list_add(listaNodosMapperOk,mapperOk);
 			}
-			int posicionNodo;
-			int cantNodosMapOk;
-			cantNodosMapOk = list_size(listaNodosMapperOk);
-			int mayorRepetido = 0;
-			int cantNodoRepetido;
-			t_replanificarMap *nodoMasRepetido;
-			t_replanificarMap *mapOk;
-			//recorro la lista de mappers ok y por cada uno saco la cantidad de veces que esta repetido, es decir donde se hicieron mas Maps locales
-			//y la asigno como mayor
-			for(posicionNodo = 0; posicionNodo < cantNodosMapOk; posicionNodo++){
-				mapOk = list_get(listaNodosMapperOk, posicionNodo);
-				cantNodoRepetido = list_count_satisfying(listaNodosMapperOk,(void*) nodoIdMasRepetido);
-				if(cantNodoRepetido > mayorRepetido){
-					mayorRepetido = cantNodoRepetido;
-					//Del que se hicieron mas MAPS locales me guardo el nodo_id
-					nodoMasRepetido = mapOk;
-
-				}
-			}
-			//Le mando al job el nodo principal a hacer reduce
-			char mensajeMandoNodoReduce[TAM_NOMFINAL];
-			memset(mensajeMandoNodoReduce,'\0',TAM_NOMFINAL);
-			strcpy(mensajeMandoNodoReduce,"mando nodo reduce");
-			if(send(*socketJob, mensajeMandoNodoReduce, sizeof(TAM_NOMFINAL),MSG_WAITALL)==-1){
-				perror("send");
-				log_error(logger,"Fallo el envio de aviso de mandar nodo reducer");
-				//exit(-1);
-			}
-			int posNG;
-			t_nodo * nodoG;
-			t_reduce *nodoReducer = malloc(sizeof(t_reduce));
-			for(posNG=0; posNG < list_size(listaNodos); posNG++){
-				nodoG = list_get(listaNodos, posNG);
-				if(strcmp(nodoMasRepetido->nodoId, nodoG->nodo_id)==0){
-					strcpy(nodoReducer->ip_nodoPpal, nodoG->ip);
-					nodoReducer->puerto_nodoPpal = nodoG->puerto_escucha_nodo;
-				}
-
-			}
-			strcpy(nodoReducer->nombreArchivoFinal,"/tmp/archivoReducerFinal");
-			int posicionNodoOk;
-			t_replanificarMap *nodoOk;
-			t_archivosReduce *archReduce = malloc(sizeof(t_archivosReduce));
-			memset(archReduce->archivoAAplicarReduce,'\0',TAM_NOMFINAL);
-			for(posicionNodoOk = 0; posicionNodoOk < cantNodosMapOk; posicionNodoOk ++){
-				nodoOk = list_get(listaNodosMapperOk,posicionNodoOk);
-				strcpy(archReduce->archivoAAplicarReduce, nodoOk->archivoResultadoMap);
-				int posNodoGlobal;
-				t_nodo *nodoGlobal;
-				for(posNodoGlobal = 0; posNodoGlobal < list_size(listaNodos);posNodoGlobal ++){
-					nodoGlobal = list_get(listaNodos,posNodoGlobal);
-					if(strcmp(nodoOk->nodoId, nodoGlobal->nodo_id)==0){
-						strcpy(archReduce->ip_nodo, nodoGlobal->ip);
-						archReduce->puerto_nodo = nodoGlobal->puerto_escucha_nodo;
-					}
-				}
-			}
-
 
 		}
+		int posicionNodo;
+		int cantNodosMapOk;
+		cantNodosMapOk = list_size(listaNodosMapperOk);
+		int mayorRepetido = 0;
+		int cantNodoRepetido;
+		t_replanificarMap *nodoMasRepetido;
+		t_replanificarMap *mapOk;
+		//recorro la lista de mappers ok y por cada uno saco la cantidad de veces que esta repetido, es decir donde se hicieron mas Maps locales
+		//y la asigno como mayor
+		for(posicionNodo = 0; posicionNodo < cantNodosMapOk; posicionNodo++){
+			mapOk = list_get(listaNodosMapperOk, posicionNodo);
+			cantNodoRepetido = list_count_satisfying(listaNodosMapperOk,(void*) nodoIdMasRepetido);
+			if(cantNodoRepetido > mayorRepetido){
+				mayorRepetido = cantNodoRepetido;
+				//Del que se hicieron mas MAPS locales me guardo el nodo_id
+				nodoMasRepetido = mapOk;
+
+			}
+		}
+		//Le mando al job el nodo principal a hacer reduce
+		char mensajeMandoNodoReduce[TAM_NOMFINAL];
+		memset(mensajeMandoNodoReduce,'\0',TAM_NOMFINAL);
+		strcpy(mensajeMandoNodoReduce,"mando nodo reduce");
+		if(send(*socketJob, mensajeMandoNodoReduce, sizeof(TAM_NOMFINAL),MSG_WAITALL)==-1){
+			perror("send");
+			log_error(logger,"Fallo el envio de aviso de mandar nodo reducer");
+			//exit(-1);
+		}
+		int posNG;
+		t_nodo * nodoG;
+		t_reduce *nodoReducer = malloc(sizeof(t_reduce));
+		for(posNG=0; posNG < list_size(listaNodos); posNG++){
+			nodoG = list_get(listaNodos, posNG);
+			if(strcmp(nodoMasRepetido->nodoId, nodoG->nodo_id)==0){
+				strcpy(nodoReducer->ip_nodoPpal, nodoG->ip);
+				nodoReducer->puerto_nodoPpal = nodoG->puerto_escucha_nodo;
+			}
+
+		}
+		strcpy(nodoReducer->nombreArchivoFinal,"/tmp/archivoReducerFinal");
+		int posicionNodoOk;
+		t_replanificarMap *nodoOk;
+		t_archivosReduce *archReduce = malloc(sizeof(t_archivosReduce));
+		memset(archReduce->archivoAAplicarReduce,'\0',TAM_NOMFINAL);
+		for(posicionNodoOk = 0; posicionNodoOk < cantNodosMapOk; posicionNodoOk ++){
+			nodoOk = list_get(listaNodosMapperOk,posicionNodoOk);
+			strcpy(archReduce->archivoAAplicarReduce, nodoOk->archivoResultadoMap);
+			int posNodoGlobal;
+			t_nodo *nodoGlobal;
+			for(posNodoGlobal = 0; posNodoGlobal < list_size(listaNodos);posNodoGlobal ++){
+				nodoGlobal = list_get(listaNodos,posNodoGlobal);
+				if(strcmp(nodoOk->nodoId, nodoGlobal->nodo_id)==0){
+					strcpy(archReduce->ip_nodo, nodoGlobal->ip);
+					archReduce->puerto_nodo = nodoGlobal->puerto_escucha_nodo;
+				}
+			}
+		}
+
+
+	}
 	if(strcmp(mensajeCombiner,"SI")==0){
 		t_replanificarMap *mapOk;
 		t_list *listaMapOk;
