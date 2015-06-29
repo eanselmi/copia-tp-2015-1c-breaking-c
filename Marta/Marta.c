@@ -451,7 +451,7 @@ int main(int argc, char**argv){
 		for (ii = 0; ii < cant_archivos; ii++) {
 			archi = list_get(listaArchivos, ii);
 			printf("\n\n");
-			printf("Archivo: %s\nPadre: %d\nEstado: %d\n",archi->nombre,archi->padre,archi->estado);
+			printf("Archivo: %s\nPadre: %d\n",archi->nombre,archi->padre);
 			printf("\n");
 			cant_bloques=list_size(archi->bloques);
 			for (jj = 0; jj < cant_bloques; jj++){
@@ -596,7 +596,6 @@ void *atenderJob (int *socketJob) {
 	t_list *copiasNodo;
 	t_nodo *nodoAux;
 	t_list* listaMappers;
-	int numeroResultado;
 	memset(mensaje_fs,'\0',BUF_SIZE);
 	memset(accion,'\0',BUF_SIZE);
 	copiasNodo=list_create();
@@ -764,34 +763,30 @@ void *atenderJob (int *socketJob) {
 			list_clean_and_destroy_elements(copiasNodo, (void*) eliminarCopiasNodo);
 		}
 	}
-	for(numeroResultado = 0; numeroResultado < list_size(listaMappers);numeroResultado ++) {
 		t_respuestaMap respuestaMap;
-		t_replanificarMap *map;
-		int posMapper;
 		//Recibo respuesta del Job de cada map
 		if(recv(*socketJob,&respuestaMap, sizeof(t_respuestaMap),MSG_WAITALL)==-1){
 		perror("recv");
 		log_error(logger,"Fallo al recibir el ok del job");
 		//exit(-1);
 		}
+		t_replanificarMap *map;
+		int posMapper;
+		//Recorro lista de mappers y comparo cada archivoResultadoMap con el que me dio la respuesta del job, cuando coincide corta
 		for(posMapper = 0; posMapper < list_size(listaMappers); posMapper++){
-			map = list_get(listaMappers, numeroResultado);
+			map = list_get(listaMappers, posMapper);
 			if(strcmp(map->archivoResultadoMap,respuestaMap.archivoResultadoMap)==0){
 				break;
 			}
 		}
+		// Al resultado del map que coincidio le asigno el resultado de la respuesta del job
 		map->resultado = respuestaMap.resultado;
 
 		if(map->resultado ==1){
 			printf("El map falló\n");
-			//PAM
-			//REPLANIFICAR BLOQUE (buscar t_respuestasMap.archivoResultadoMap con t_replanificarMap el archivo y bloque del archivo
-			// que no se pudo hacer el map recorrer sus copias y ordenar la sublista devuelta y mandar el map a el primer nodo de la sublista :)
-			//Agregar dicho nodo_id a la lista dentro de la estructura de ese map que se va a mandar
-			// y buscarlo en la lista gral de nodos restarle map al que me dio KO = 1 LE RESTO UN cantMap-- y le sumo al nuevo nodo que mando el maps
 			t_list *nodosQueFallaron;
 			nodosQueFallaron=list_create();
-			int posRepl;
+//			int posRepl;
 			int posCopia;
 			int cantidadCopias;
 			t_list *bloquesNoMap;
@@ -799,40 +794,45 @@ void *atenderJob (int *socketJob) {
 			t_copias* copiaBloque;
 			t_nodo *nodoCopia;
 			t_list* nodoSinMap;
-			t_replanificarMap *mapperEnviado;
+//			t_replanificarMap *mapperEnviado;
 			nodoSinMap=list_create();
-			//Recorro la lista de t_replanificarMap para buscar los que fallaron y los guardo en una lista para no volver a asignarlos
-			for(posRepl=0;posRepl<list_size(listaMappers);posRepl++){
-				mapperEnviado = list_get(listaMappers,posRepl);
-				if((strcmp(mapperEnviado->nombreArchivoDelJob,map->nombreArchivoDelJob)==0)
-						&&(mapperEnviado->padreArchivoJob==map->padreArchivoJob)&&(mapperEnviado->bloqueArchivo==map->bloqueArchivo)
-						&&(mapperEnviado->resultado==1)){
-					char* idNodoANoConsiderar=string_new();
-					string_append(&idNodoANoConsiderar,mapperEnviado->nodoId);
-					list_add(nodosQueFallaron,idNodoANoConsiderar);
-				}
-			}
+//			//Recorro la lista de t_replanificarMap para buscar los que fallaron y los guardo en una lista para no volver a asignarlos
+//			for(posRepl=0;posRepl<list_size(listaMappers);posRepl++){
+//				mapperEnviado = list_get(listaMappers,posRepl);
+//				if((strcmp(mapperEnviado->nombreArchivoDelJob,map->nombreArchivoDelJob)==0)
+//						&&(mapperEnviado->padreArchivoJob==map->padreArchivoJob)&&(mapperEnviado->bloqueArchivo==map->bloqueArchivo)
+//						&&(mapperEnviado->resultado==1)){
+//					char* idNodoANoConsiderar=string_new();
+//					string_append(&idNodoANoConsiderar,mapperEnviado->nodoId);
+//					list_add(nodosQueFallaron,idNodoANoConsiderar);
+//
+//				}
+//			}
+			list_add(nodosQueFallaron, map->nodoId);
 
-			//buscamos en la lista general de archivos los bloques
+			//buscamos en la lista general de archivos los bloques del map que fallo
 			bloquesNoMap = buscarBloques(map->nombreArchivoDelJob,map->padreArchivoJob);
 			//buscamos en los bloques el bloque en el que salio mal el MAP
 			bloqueQueFallo = list_get(bloquesNoMap,map->bloqueArchivo);
 			cantidadCopias = list_size(bloqueQueFallo->copias);
-			for(posCopia=0;posCopia<cantidadCopias;posCopia++){ // Por cada bloque del archivo recorremos las copias de dicho archivo
+			for(posCopia=0;posCopia<cantidadCopias;posCopia++){ // recorremos las copias del bloque que salio mal el MAP
 				int estaEnListaParaNoConsiderar,indice;
 				int tamanioListaANoConsiderar=list_size(nodosQueFallaron);
 
 				copiaBloque = list_get(bloqueQueFallo->copias,posCopia);
-				// Nos traemos cada nodo en donde esta cada una de las copias del archivo
+				// Nos traemos cada nodo en donde esta cada una de las copias del bloque que fallo
 				nodoCopia= buscarCopiaEnNodos(copiaBloque);
 				estaEnListaParaNoConsiderar=0;
+				// recorremos la lista de nodos que fallaron
 				for(indice=0;indice<tamanioListaANoConsiderar;indice++){
 					char* nodo_id_acomparar;
 					nodo_id_acomparar=list_get(nodosQueFallaron,indice);
+					// por cada nodo que fallo lo comparo con un nodo de una copia del bloque que fallo
 					if(strcmp(nodo_id_acomparar,nodoCopia->nodo_id)==0){
 						estaEnListaParaNoConsiderar=1;
 					}
 				}
+				//si esta el nodo de la copia activo y no era el fallado
 				if((nodoCopia->estado == 1)&&(!estaEnListaParaNoConsiderar)){
 					// Creamos una sublista de la lista global de nodos con los nodos en los que esta cada copia del archivo
 					list_add(nodoSinMap,nodoCopia);
@@ -884,7 +884,7 @@ void *atenderJob (int *socketJob) {
 				log_error(logger,"Fallo el envio de los datos para el mapper");
 				exit(-1);
 			}
-
+			//rellenamos un nuevo struct t_replanificar map conlos datos del map que acabamos de enviar y lo agregamos a lista mappers
 			t_replanificarMap *nuevoMap=malloc(sizeof(t_replanificarMap));
 
 			nuevoMap->bloqueArchivo = map->bloqueArchivo ;
@@ -899,15 +899,17 @@ void *atenderJob (int *socketJob) {
 			nuevoMap->resultado=2;
 			nuevoMap->padreArchivoJob=map->padreArchivoJob;
 			list_add(listaMappers,nuevoMap);
+			// le resto cantMappers al nodo que le salio mal el MAP
 			restarCantMapper(map->nodoId);
+			// le sumo cantMappers al nodo que acabo de mandar a hacer MAP
 			sumarCantMapper(nuevoMap->nodoId);
 
-		}else {
+		}else{
 			printf("El map salio ok\n");
 			// buscar en la lista del struct el nodo_id y luego buscarlo en la lista gral de nodos y restarle 1 a su catMappers
 			restarCantMapper(map->nodoId);
 		}
-	}
+
 
 
 	if(strcmp(mensajeCombiner, "NO")==0){
@@ -915,13 +917,13 @@ void *atenderJob (int *socketJob) {
 		t_replanificarMap *mapperOk;
 		t_list* listaNodosId;
 		listaNodosId = list_create();
-		int cantListaNodos;
-		char *ultimoNodoMapOk;
+		char nodoMapOk[6];
 		for (posicionMapper =0; posicionMapper < list_size(listaMappers); posicionMapper++){
 			mapperOk = list_get(listaMappers, posicionMapper);
-//			cantListaNodos = list_size(mapperOk->lista_nodos);
-//			ultimoNodoMapOk = list_get(mapperOk->lista_nodos,cantListaNodos -1);
-			list_add(listaNodosId,ultimoNodoMapOk);
+			if(mapperOk->resultado == 1){
+				list_add(listaNodosId,nodoMapOk);
+			}
+
 		}
 		int posicionNodo;
 		int cantNodosId;
