@@ -56,7 +56,7 @@ int main(int argc, char**argv){
 	//para recibir la informacion de los archivos
 	int j, k, l;
 	int cantArchivos;
-	char nombreArchivo[100];
+	char nombreArchivo[200];
 	uint32_t padreArchivo;
 	char nodoIdArchivo[6];
 	int bloqueNodoArchivo;
@@ -374,22 +374,25 @@ int main(int argc, char**argv){
 		log_error(logger,"FALLO el Recv de cantidad de archivos");
 		exit(-1);
 	}
+	printf ("Cantidad de archivos a recibir: %d\n",cantArchivos);
 	j=0;
 	while (j < cantArchivos){
 		//primero los datos de t_archivo, la lista de archivos
 		t_archivo* archivoTemporal = malloc(sizeof(t_archivo));
-		memset(nombreArchivo,'\0',100);
+		memset(nombreArchivo,'\0',200);
 		if ((nbytes = recv(socket_fs, nombreArchivo, sizeof(nombreArchivo), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
 			perror("recv");
 			log_error(logger,"FALLO el Recv del nombre del archivo");
 			exit(-1);
 		}
+		printf ("...Nombre Archivo: %s\n",nombreArchivo);
 		//pathArchivo=string_new(); //no enviamos path por ahora
 		if ((nbytes = recv(socket_fs, &padreArchivo, sizeof(uint32_t), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
 			perror("recv");
 			log_error(logger,"FALLO el Recv del padre del archivo");
 			exit(-1);
 		}
+		printf ("...Padre del archivo: %d\n",padreArchivo);
 		archivoTemporal->nombre=string_new();
 		strcpy(archivoTemporal->nombre, nombreArchivo);
 		//strcpy(archivoTemporal->path, pathArchivo);
@@ -400,6 +403,7 @@ int main(int argc, char**argv){
 			log_error(logger,"FALLO el Recv de cantidad de bloques del archivo");
 			exit(-1);
 		}
+		printf ("...Cantidad de bloques del archivo: %d\n",cantidadBloquesArchivo);
 		archivoTemporal->bloques = list_create();
 		k=0;
 		while (k < cantidadBloquesArchivo){
@@ -410,6 +414,7 @@ int main(int argc, char**argv){
 				log_error(logger,"FALLO el Recv de cantidad de copias del bloque del archivo");
 				exit(-1);
 			}
+			printf ("... ...Cantidad de copias del bloque:%d\n",cantidadCopiasArchivo);
 			l=0;
 			while (l < cantidadCopiasArchivo){
 				t_copias* copiaBloqueTemporal = malloc(sizeof(t_copias));
@@ -419,11 +424,13 @@ int main(int argc, char**argv){
 					log_error(logger,"FALLO el Recv del nodo de la copia del archivo");
 					exit(-1);
 				}
+				printf ("... ... ...Nodo ID: %s\n",nodoIdArchivo);
 				if ((nbytes = recv(socket_fs, &bloqueNodoArchivo, sizeof(int), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
 					perror("recv");
 					log_error(logger,"FALLO el Recv del bloque del nodo donde está el archivo");
 					exit(-1);
 				}
+				printf ("... ... ...Bloque Nodo: %d\n",bloqueNodoArchivo);
 				copiaBloqueTemporal->nodo=string_new();
 				strcpy(copiaBloqueTemporal->nodo, nodoIdArchivo);
 				copiaBloqueTemporal->bloqueNodo =bloqueNodoArchivo;
