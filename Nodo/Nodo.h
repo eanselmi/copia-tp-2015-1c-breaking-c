@@ -35,7 +35,7 @@ typedef struct estructura_archivosapareando{
 typedef struct estructura_archivoAbierto{
 	FILE* archivoAbierto;
 	char nombreArchivo[TAM_NOMFINAL];
-	int posicionBuffer;
+	long posicionBuffer;
 }t_archivoAbierto;
 
 //Declaración de funciones
