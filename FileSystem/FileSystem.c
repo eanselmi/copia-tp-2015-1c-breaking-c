@@ -328,7 +328,7 @@ int recuperar_persistencia(){
 		}
 		fclose(dir);
 	}
-	if (list_size(archivos)==0){ //No hay directorios persistidos o el archivo estaba vacio
+	if (list_size(directorios)==0){ //No hay directorios persistidos o el archivo estaba vacio
 		for (j = 1; j < sizeof(indiceDirectorios); j++) {
 			indiceDirectorios[j] = 0;
 		}
