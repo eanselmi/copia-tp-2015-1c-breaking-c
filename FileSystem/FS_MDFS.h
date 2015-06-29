@@ -50,7 +50,7 @@ typedef struct estructura_directorio{
 //------------------------------ FUNCIONES PRINCIPALES DE CONSOLA ------------------------
 //----------------------------------------------------------------------------------------
 void FormatearFilesystem ();							//DESARROLLADA                          mandar formatear  OK
-void EliminarArchivo();									//DESARROLLADA, falta persistencia      1. mandar elim_arch 2. nombre 3. padre
+void EliminarArchivo();									//DESARROLLADA					      1. mandar elim_arch 2. nombre 3. padre
 void RenombrarArchivo();								//DESARROLLADA, falta persistencia      1. mandar renom_arch 2. nombre 3. padre 4. nuevo nombre
 void MoverArchivo();									//DESARROLLADA, falta persistencia      1. mov_arch 2. nom 3. padre_viejo  4. padre_nuevo
 void CrearDirectorio();									//DESARROLLADA

@@ -608,6 +608,79 @@ void actualizar_persistencia_archivo_eliminado(char* nombre,int idPadre){
 	fclose(aux);
 }
 
+void actualizar_persistencia_archivo_renombrado(char* nombre,int idPadre,char *nuevoNombre){
+	//Seccion de Directorios
+		FILE* dir;
+		FILE* aux;
+		dir=fopen("archivos","r");
+		aux=fopen("auxiliar","w");
+		char buffer[2028];
+		char copia_buffer[2048];
+		memset(buffer,'\0',2048);
+		memset(copia_buffer,'\0',2048);
+		char nueva_copia[2048];
+		memset(nueva_copia,'\0',2048);
+		int i,j;
+		char *saveptr;
+		char *padre=string_new();
+		char *nombre_archivo=string_new();
+		char* n_bloques=string_new();
+		char *n_copias=string_new();
+		char *nodo_id=string_new();
+		char *md5=string_new();
+		char *n_bloque=string_new();
+		while (fgets(buffer, sizeof(buffer),dir) != NULL){
+			if (strcmp(buffer,"\n")!=0){
+				strcpy(copia_buffer,buffer);
+				nombre_archivo = strtok_r(buffer,";",&saveptr);
+				padre = strtok_r(NULL,";",&saveptr);
+				if (strcmp(nombre_archivo,nombre)==0 && atoi(padre)==idPadre){
+					n_bloques=strtok_r(NULL,";",&saveptr);
+					strcat(nueva_copia,nuevoNombre);
+					strcat(nueva_copia,";");
+					strcat(nueva_copia,padre);
+					strcat(nueva_copia,";");
+					strcat(nueva_copia,n_bloques);
+					for (i=0;i<atoi(n_bloques);i++){
+						n_copias=strtok_r(NULL,";",&saveptr);
+						strcat(nueva_copia,";");
+						strcat(nueva_copia,n_copias);
+						for (j=0;j<atoi(n_copias);j++){
+							nodo_id=strtok_r(NULL,";",&saveptr);
+							md5=strtok_r(NULL,";",&saveptr);
+							n_bloque=strtok_r(NULL,";",&saveptr);
+							strcat(nueva_copia,";");
+							strcat(nueva_copia,nodo_id);
+							strcat(nueva_copia,";");
+							strcat(nueva_copia,md5);
+							strcat(nueva_copia,";");
+							strcat(nueva_copia,n_bloque);
+						}
+					}
+					strcat(nueva_copia,"\n");
+					fprintf (aux,"%s",nueva_copia);
+				}
+				else
+					fprintf (aux,"%s",copia_buffer);
+				memset(buffer,'\0',2048);
+				memset(copia_buffer,'\0',2048);
+			}
+		}
+		fclose(dir);
+		fclose(aux);
+
+		dir=fopen("archivos","w");
+		aux=fopen("auxiliar","r");
+		memset(buffer,'\0',2048);
+		while (fgets(buffer, sizeof(buffer),aux) != NULL){
+			fprintf (dir,"%s",buffer);
+			memset(buffer,'\0',2048);
+		}
+		fclose(dir);
+		fclose(aux);
+}
+
+
 
 
 
@@ -1468,6 +1541,8 @@ void RenombrarArchivo() {
 		memset(path,'\0',200);
 		char nuevoNombre[200];
 		memset(nuevoNombre,'\0',200);
+		char viejoNombre[200];
+		memset(viejoNombre,'\0',200);
 		int i;
 		printf ("Se listan los archivos existentes en MDFS:\n");
 		for (i = 0; i < list_size(archivos); i++) {
@@ -1493,8 +1568,10 @@ void RenombrarArchivo() {
 		archivo = list_get(archivos, posArchivo);
 		printf("Ingrese el nuevo nombre \n");
 		scanf("%s", nuevoNombre);
+		strcpy(viejoNombre,archivo->nombre);
 		strcpy(archivo->nombre, nuevoNombre);
 		printf ("Archivo renombrado exitosamente\n");
+		actualizar_persistencia_archivo_renombrado(viejoNombre,idPadre,nuevoNombre);
 
 		//Aviso a marta que tiene que renombrar un archivo
 
