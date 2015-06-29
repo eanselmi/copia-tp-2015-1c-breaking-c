@@ -1011,7 +1011,18 @@ void *atenderJob (int *socketJob) {
 
 		}
 	if(strcmp(mensajeCombiner,"SI")==0){
-		//Recorrer la lista t_replanificarMap
+		t_replanificarMap *mapOk;
+		t_list listaMapOk;
+		listaMapOk = list_create();
+		int posMapper;
+		//Recorrer la lista t_replanificarMap y guardo en una lista los map que salieron OK
+		for(posMapper=0;posMapper<list_size(listaMappers);posMapper++){
+			mapOk = list_get(listaMappers,posMapper);
+			if(mapOk->resultado == 0){
+				list_add(listaMapOk,mapOk);
+			}
+		}
+
 		// Avisarle a JOB que tiene que ejecutar Reduce
 		//Le mando a JOB t_reduce que se va a ejecutar
 		// le mando al job la cantidad de archivos a los que que hay que aplicarle Reduce
