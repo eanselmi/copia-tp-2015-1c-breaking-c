@@ -1012,7 +1012,7 @@ void *atenderJob (int *socketJob) {
 		}
 	if(strcmp(mensajeCombiner,"SI")==0){
 		t_replanificarMap *mapOk;
-		t_list listaMapOk;
+		t_list *listaMapOk;
 		listaMapOk = list_create();
 		int posMapper;
 		//Recorrer la lista t_replanificarMap y guardo en una lista los map que salieron OK
@@ -1024,7 +1024,7 @@ void *atenderJob (int *socketJob) {
 		}
 
 		// Avisarle a JOB que tiene que ejecutar Reduce
-		//Le mando a JOB t_reduce que se va a ejecutar
+		//Le mando a JOB t_reduce que se va a ejecuta
 		// le mando al job la cantidad de archivos a los que que hay que aplicarle Reduce
 		//Le mando los datos de cada uno de los archivos: IP Nodo, Puerto Nodo, nombreArchivo resultado de map (t_archivosReduce)
 		//Recibir la respuesta del JOB confirmando que termino con los reduce
