@@ -1228,7 +1228,16 @@ void FormatearFilesystem() {
 	//=====================================================================
 
 	list_clean_and_destroy_elements(directorios,(void*)eliminar_lista_de_directorio);
-	//TODO: AVISAR A MARTA QUE VACIE SUS ESTRUCTURAS
+	if(marta_presente == 1){
+		memset(identificacion,'\0',BUF_SIZE);
+		strcpy(identificacion, "hola_andy");
+		if ((send(marta_sock, identificacion,sizeof(identificacion), MSG_WAITALL)) == -1) {
+			perror("send");
+			log_error(logger, "FALLO el envio del ok a Marta");
+			exit(-1);
+		}
+	}
+
 }
 
 char *obtenerPath(char *nombre, int dir_id){
