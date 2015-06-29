@@ -451,7 +451,7 @@ int main(int argc, char**argv){
 		for (ii = 0; ii < cant_archivos; ii++) {
 			archi = list_get(listaArchivos, ii);
 			printf("\n\n");
-			printf("Archivo: %s\nPadre: %d\nEstado: %d\n",archi->nombre,archi->padre,archi->estado);
+			printf("Archivo: %s\nPadre: %d\n",archi->nombre,archi->padre);
 			printf("\n");
 			cant_bloques=list_size(archi->bloques);
 			for (jj = 0; jj < cant_bloques; jj++){
