@@ -373,6 +373,7 @@ void *manejador_de_escuchas(){
 
 							if((archivoPedido=estaEnListaArchivosAbiertos(archivoAPasar))==NULL){ //Si el archivo no está ya abierto, lo abro y leo un renglon
 								t_archivoAbierto* archAbiertoNuevo=malloc(sizeof(t_archivoAbierto));
+								memset(archAbiertoNuevo->nombreArchivo,'\0',TAM_NOMFINAL);
 								FILE* archParaPasar;
 
 								//Abro el nuevo archivo
@@ -523,6 +524,7 @@ void removerDeListaDeArchivosAbiertos(FILE* archivoARemover){
 		unArchAbierto=list_get(archivosAbiertos,indice);
 		if(unArchAbierto->archivoAbierto==archivoARemover){
 			list_remove_and_destroy_element(archivosAbiertos,indice,(void*)eliminarArchivo);
+			break;
 		}
 	}
 }
@@ -990,6 +992,7 @@ void* rutinaReduce (int* sckReduce){
 			}
 			nuevoArchivoEnApareo->archivo=nuevoFileStream;
 			memset(nuevoArchivoEnApareo->buffer,'\0',512);
+			memset(nuevoArchivoEnApareo->nombreArchivo,'\0',TAM_NOMFINAL);
 			nuevoArchivoEnApareo->socket=-1;
 			strcpy(nuevoArchivoEnApareo->nombreArchivo,unArchivoReduce->archivoAAplicarReduce);
 			nuevoArchivoEnApareo->endOfFile=0;
@@ -1036,6 +1039,7 @@ void* rutinaReduce (int* sckReduce){
 //			printf("Agrego el archivo remoto %s\n",nombreArchivo);
 			nuevoArchivoEnApareo->archivo=NULL;
 			memset(nuevoArchivoEnApareo->buffer,'\0',512);
+			memset(nuevoArchivoEnApareo->nombreArchivo,'\0',TAM_NOMFINAL);
 			nuevoArchivoEnApareo->socket=otroNodoSock;
 			strcpy(nuevoArchivoEnApareo->nombreArchivo,unArchivoReduce->archivoAAplicarReduce);
 			nuevoArchivoEnApareo->endOfFile=0;
