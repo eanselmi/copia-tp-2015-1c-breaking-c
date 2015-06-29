@@ -763,11 +763,7 @@ void *atenderJob (int *socketJob) {
 			mapper->padreArchivoJob=padre;
 			list_add(listaMappers,mapper);
 
-
-
-			//******************************************************************************
 			//Buscar nodoAux en la lista general comparando por nodo_id y sumarle cantMapper
-			//*******************************************************************************
 			sumarCantMapper(nodoAux->nodo_id);
 			list_clean_and_destroy_elements(copiasNodo, (void*) eliminarCopiasNodo);
 		}
@@ -795,7 +791,7 @@ void *atenderJob (int *socketJob) {
 			printf("El map falló\n");
 			t_list *nodosQueFallaron;
 			nodosQueFallaron=list_create();
-//			int posRepl;
+			int posRepl;
 			int posCopia;
 			int cantidadCopias;
 			t_list *bloquesNoMap;
@@ -803,21 +799,21 @@ void *atenderJob (int *socketJob) {
 			t_copias* copiaBloque;
 			t_nodo *nodoCopia;
 			t_list* nodoSinMap;
-//			t_replanificarMap *mapperEnviado;
+			t_replanificarMap *mapperEnviado;
 			nodoSinMap=list_create();
-//			//Recorro la lista de t_replanificarMap para buscar los que fallaron y los guardo en una lista para no volver a asignarlos
-//			for(posRepl=0;posRepl<list_size(listaMappers);posRepl++){
-//				mapperEnviado = list_get(listaMappers,posRepl);
-//				if((strcmp(mapperEnviado->nombreArchivoDelJob,map->nombreArchivoDelJob)==0)
-//						&&(mapperEnviado->padreArchivoJob==map->padreArchivoJob)&&(mapperEnviado->bloqueArchivo==map->bloqueArchivo)
-//						&&(mapperEnviado->resultado==1)){
-//					char* idNodoANoConsiderar=string_new();
-//					string_append(&idNodoANoConsiderar,mapperEnviado->nodoId);
-//					list_add(nodosQueFallaron,idNodoANoConsiderar);
-//
-//				}
-//			}
-			list_add(nodosQueFallaron, map->nodoId);
+			//Recorro la lista de t_replanificarMap para buscar los que fallaron y los guardo en una lista para no volver a asignarlos
+			for(posRepl=0;posRepl<list_size(listaMappers);posRepl++){
+				mapperEnviado = list_get(listaMappers,posRepl);
+				if((strcmp(mapperEnviado->nombreArchivoDelJob,map->nombreArchivoDelJob)==0)
+						&&(mapperEnviado->padreArchivoJob==map->padreArchivoJob)&&(mapperEnviado->bloqueArchivo==map->bloqueArchivo)
+						&&(mapperEnviado->resultado==1)){
+					char* idNodoANoConsiderar=string_new();
+					string_append(&idNodoANoConsiderar,mapperEnviado->nodoId);
+					list_add(nodosQueFallaron,idNodoANoConsiderar);
+
+				}
+			}
+
 
 			//buscamos en la lista general de archivos los bloques del map que fallo
 			bloquesNoMap = buscarBloques(map->nombreArchivoDelJob,map->padreArchivoJob);
@@ -919,54 +915,83 @@ void *atenderJob (int *socketJob) {
 			restarCantMapper(map->nodoId);
 		}
 
-
-
-	if(strcmp(mensajeCombiner, "NO")==0){
-		int posicionMapper;
-		t_replanificarMap *mapperOk;
-		t_list* listaNodosId;
-		listaNodosId = list_create();
-		char nodoMapOk[6];
-		for (posicionMapper =0; posicionMapper < list_size(listaMappers); posicionMapper++){
-			mapperOk = list_get(listaMappers, posicionMapper);
-			if(mapperOk->resultado == 1){
-				list_add(listaNodosId,nodoMapOk);
-			}
-
-		}
-		int posicionNodo;
-		int cantNodosId;
-		cantNodosId = list_size(listaNodosId);
-		int mayorRepetido = 0;
-		int cantNodoIdRepetido;
-		char *nodoIdMasRepetido;
-		char *unNodoId;
-		for(posicionNodo = 0; posicionNodo < cantNodosId; posicionNodo++){
-			unNodoId = list_get(listaNodosId, posicionNodo);
-			cantNodoIdRepetido = list_count_satisfying(listaNodosId,(void*) nodoIdMasRepetido);
-			if(cantNodoIdRepetido > mayorRepetido){
-				mayorRepetido = cantNodoIdRepetido;
-				nodoIdMasRepetido = unNodoId;
+/************************************************************************************************************************************************
+* SIN COMBINER
+* ************************************************************************************************************************************************/
+	//Si es sin combiner manda a hacer reduce al nodo que tenga mas archivos resultados MAP
+		if(strcmp(mensajeCombiner, "NO")==0){
+			int posicionMapper;
+			t_replanificarMap *mapperOk;
+			t_list* listaNodosMapperOk;
+			listaNodosMapperOk = list_create();
+			//Recorro lista de mappers y por cada mapperOk con resultado 0 que es map ok, me lo guardo  en una lista
+			for (posicionMapper =0; posicionMapper < list_size(listaMappers); posicionMapper++){
+				mapperOk = list_get(listaMappers, posicionMapper);
+				if(mapperOk->resultado == 0){
+					list_add(listaNodosMapperOk,mapperOk);
+				}
 
 			}
-		}
-		int posicionNodoGlobal;
-		int cantNodosGlobal;
-		cantNodosGlobal = list_size(listaNodos);
-		t_nodo * nodoGlobal;
-		for(posicionNodoGlobal = 0; posicionNodoGlobal < cantNodosGlobal; posicionNodoGlobal++){
-			nodoGlobal = list_get(listaNodos,posicionNodoGlobal);
-			if(strcmp(nodoGlobal->nodo_id, unNodoId)== 0){
-				//Aca mandaria al job
+			int posicionNodo;
+			int cantNodosMapOk;
+			cantNodosMapOk = list_size(listaNodosMapperOk);
+			int mayorRepetido = 0;
+			int cantNodoRepetido;
+			t_replanificarMap *nodoMasRepetido;
+			t_replanificarMap *mapOk;
+			//recorro la lista de mappers ok y por cada uno saco la cantidad de veces que esta repetido, es decir donde se hicieron mas Maps locales
+			//y la asigno como mayor
+			for(posicionNodo = 0; posicionNodo < cantNodosMapOk; posicionNodo++){
+				mapOk = list_get(listaNodosMapperOk, posicionNodo);
+				cantNodoRepetido = list_count_satisfying(listaNodosMapperOk,(void*) nodoIdMasRepetido);
+				if(cantNodoRepetido > mayorRepetido){
+					mayorRepetido = cantNodoRepetido;
+					//Del que se hicieron mas MAPS locales me guardo el nodo_id
+					nodoMasRepetido = mapOk;
 
+				}
+			}
+			//Le mando al job el nodo principal a hacer reduce
+			char mensajeMandoNodoReduce[TAM_NOMFINAL];
+			memset(mensajeMandoNodoReduce,'\0',TAM_NOMFINAL);
+			strcpy(mensajeMandoNodoReduce,"mando nodo reduce");
+			if(send(*socketJob, mensajeMandoNodoReduce, sizeof(TAM_NOMFINAL),MSG_WAITALL)==-1){
+				perror("send");
+				log_error(logger,"Fallo el envio de aviso de mandar nodo reducer");
+				//exit(-1);
+			}
+			int posNG;
+			t_nodo * nodoG;
+			t_reduce *nodoReducer = malloc(sizeof(t_reduce));
+			for(posNG=0; posNG < list_size(listaNodos); posNG++){
+				nodoG = list_get(listaNodos, posNG);
+				if(strcmp(nodoMasRepetido->nodoId, nodoG->nodo_id)==0){
+					strcpy(nodoReducer->ip_nodoPpal, nodoG->ip);
+					nodoReducer->puerto_nodoPpal = nodoG->puerto_escucha_nodo;
+				}
+
+			}
+			strcpy(nodoReducer->nombreArchivoFinal,"/tmp/archivoReducerFinal");
+			int posicionNodoOk;
+			t_replanificarMap *nodoOk;
+			t_archivosReduce *archReduce = malloc(sizeof(t_archivosReduce));
+			memset(archReduce->archivoAAplicarReduce,'\0',TAM_NOMFINAL);
+			for(posicionNodoOk = 0; posicionNodoOk < cantNodosMapOk; posicionNodoOk ++){
+				nodoOk = list_get(listaNodosMapperOk,posicionNodoOk);
+				strcpy(archReduce->archivoAAplicarReduce, nodoOk->archivoResultadoMap);
+				int posNodoGlobal;
+				t_nodo *nodoGlobal;
+				for(posNodoGlobal = 0; posNodoGlobal < list_size(listaNodos);posNodoGlobal ++){
+					nodoGlobal = list_get(listaNodos,posNodoGlobal);
+					if(strcmp(nodoOk->nodoId, nodoGlobal->nodo_id)==0){
+						strcpy(archReduce->ip_nodo, nodoGlobal->ip);
+						archReduce->puerto_nodo = nodoGlobal->puerto_escucha_nodo;
+					}
+				}
 			}
 
 
 		}
-
-
-
-	}
 	if(strcmp(mensajeCombiner,"SI")==0){
 		//Recorrer la lista t_replanificarMap
 		// Avisarle a JOB que tiene que ejecutar Reduce
