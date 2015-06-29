@@ -279,8 +279,8 @@ int Menu(void) {
 			
 		//case 17: printf("Eligió Salir\n"); break;
 		//case 17: listar_nodos_conectados(nodos); break;
-		//case 17: listar_archivos_subidos(archivos); break;
-		case 17: listarDirectoriosCreados();break;
+		case 17: listar_archivos_subidos(archivos); break;
+		//case 17: listarDirectoriosCreados();break;
 		//case 17: listar_directorios(); break;
 		//case 17: eliminar_listas(archivos,directorios,nodos); break;
 		//TODO hacer la opcion SALIR
@@ -299,6 +299,7 @@ void recuperar_persistencia(){
 	char *saveptr;
 	char *nombre;
 	int idYaUsado=0;
+	char *md5;
 	indiceDirectorios[idYaUsado]= 1; //reservo raíz
 	while (fgets(buffer, sizeof(buffer),dir) != NULL){
 		if (strcmp(buffer,"\n")!=0){
@@ -317,14 +318,48 @@ void recuperar_persistencia(){
 			memset(buffer,'\0',200);
 		}
 	}
-	if (feof(dir)){
-		// hit end of file
-	}else{
-		perror ("fgets de recuperar_persistencia");
-	}
+	fclose(dir);
 
+	//Recupero de archivos
+	dir=fopen("archivos","r");
+	int i,j;
+	int cantidad_bloques,cantidad_copias;
+	char buffer_archivo[2048];
+	memset(buffer_archivo,'\0',2048);
+	while (fgets(buffer_archivo, sizeof(buffer_archivo),dir) != NULL){
+		if (strcmp(buffer_archivo,"\n")!=0){
+			t_archivo *archivo=malloc(sizeof(t_archivo));
+			nombre=string_new();
+			nombre = strtok_r(buffer_archivo,";",&saveptr);
+			memset(archivo->nombre,'\0',200);
+			strcpy(archivo->nombre,nombre);
+			archivo->padre=atoi(strtok_r(NULL,";",&saveptr));
+			cantidad_bloques=atoi(strtok_r(NULL,";",&saveptr));
+			archivo->bloques=list_create();
+			for (i=0;i<cantidad_bloques;i++){
+				t_bloque *bloque=malloc(sizeof(t_bloque));
+				bloque->copias=list_create();
+				cantidad_copias=atoi(strtok_r(NULL,";",&saveptr));
+				for (j=0;j<cantidad_copias;j++){
+					t_copias *copia=malloc(sizeof(t_copias));
+					char *andre;
+					andre=strtok_r(NULL,";",&saveptr);
+					copia->nodo=strdup(andre);
+					md5=strtok_r(NULL,";",&saveptr);
+					memset(copia->md5,'\0',32);
+					strcpy(copia->md5,md5);
+					copia->bloqueNodo=atoi(strtok_r(NULL,";",&saveptr));
+					list_add(bloque->copias,copia);
+				}
+				list_add(archivo->bloques,bloque);
+			}
+			list_add(archivos,archivo);
+		}
+		memset(buffer_archivo,'\0',2048);
+	}
 	fclose(dir);
 }
+
 
 void persistir_directorio(t_dir *directorio){
 	FILE* dir;
@@ -447,7 +482,7 @@ void actualizar_persistencia_directorio_movido(int idPadre, int nuevoPadre){
 	char *saveptr;
 	char* id=string_new();
 	char* nombre=string_new();
-	char* padre=string_new();
+	char* padre=string_new();  //este warning no se puede sacar pero esta bien, aunque dice que no hace nada hace algo
 	while (fgets(buffer, sizeof(buffer),dir) != NULL){
 		strcpy(copia_buffer,buffer);
 		id = strtok_r(buffer,";",&saveptr);
@@ -704,6 +739,7 @@ void listar_nodos_conectados(t_list *nodos) {
 	exit(0);
 }
 
+/*
 void listar_archivos_subidos(t_list *archivos) {
 	int i,j,k,cantidad_archivos,cantidad_bloques,cantidad_copias;
 	t_archivo *elemento;
@@ -729,11 +765,11 @@ void listar_archivos_subidos(t_list *archivos) {
 		}
 	}else printf ("No hay archivos cargados en MDFS\n");
 }
+*/
 
 
 
-/*
-void listar_archivos_subidos(t_list *archivos) {    VERSION COMPLETA NO APTA PARA USUARIOS
+void listar_archivos_subidos(t_list *archivos) {    //VERSION COMPLETA NO APTA PARA USUARIOS
 	int i,j,k,cantidad_archivos,cantidad_bloques,cantidad_copias;
 	t_archivo *elemento;
 	t_bloque *bloque;
@@ -746,7 +782,7 @@ void listar_archivos_subidos(t_list *archivos) {    VERSION COMPLETA NO APTA PAR
 	for (i = 0; i < cantidad_archivos; i++) {
 		elemento = list_get(archivos, i);
 		printf("\n\n");
-		printf("Archivo: %s\nPadre: %d\nTam: %d\nEstado: %d\n",elemento->nombre,elemento->padre,elemento->tamanio,elemento->estado);
+		printf("Archivo: %s\nPadre: %d\n",elemento->nombre,elemento->padre);
 		printf("\n");
 		cantidad_bloques=list_size(elemento->bloques);
 		for (j = 0; j < cantidad_bloques; j++){
@@ -762,7 +798,6 @@ void listar_archivos_subidos(t_list *archivos) {    VERSION COMPLETA NO APTA PAR
 		}
 	}
 }
-*/
 
 
 void *connection_handler_escucha(void) {
@@ -1193,7 +1228,16 @@ void FormatearFilesystem() {
 	//=====================================================================
 
 	list_clean_and_destroy_elements(directorios,(void*)eliminar_lista_de_directorio);
-	//TODO: AVISAR A MARTA QUE VACIE SUS ESTRUCTURAS
+	if(marta_presente == 1){
+		memset(identificacion,'\0',BUF_SIZE);
+		strcpy(identificacion, "hola_andy");
+		if ((send(marta_sock, identificacion,sizeof(identificacion), MSG_WAITALL)) == -1) {
+			perror("send");
+			log_error(logger, "FALLO el envio del ok a Marta");
+			exit(-1);
+		}
+	}
+
 }
 
 char *obtenerPath(char *nombre, int dir_id){

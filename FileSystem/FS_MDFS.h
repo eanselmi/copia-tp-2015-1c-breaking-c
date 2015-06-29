@@ -57,7 +57,7 @@ void CrearDirectorio();									//DESARROLLADA
 void EliminarDirectorio();								//DESARROLLADA
 void RenombrarDirectorio();								//DESARROLLADA
 void MoverDirectorio();									//DESARROLLADA
-int CopiarArchivoAMDFS();								//DESARROLLADA, falta persistencia      1. mandar nuevo_arch --- mandar casi igual que al principio
+int CopiarArchivoAMDFS();								//DESARROLLADA					        1. mandar nuevo_arch --- mandar casi igual que al principio
 int CopiarArchivoDelMDFS(int flag, char*unArchivo);		//DESARROLLADA
 void MD5DeArchivo();									//DESARROLLADA
 int VerBloque();										//DESARROLLADA

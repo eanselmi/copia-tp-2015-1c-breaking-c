@@ -32,13 +32,12 @@ int read_size;
 t_list* jobs;
 t_list* listaNodos; //lista de nodos conectados al FS
 t_list* listaArchivos; //lista de archivos del FS
-
+char identificacion[BUF_SIZE]; //para el mensaje que envie al conectarse para identificarse, puede cambiar
 int main(int argc, char**argv){
 
 	pthread_t escucha_jobs;
 	configurador= config_create("resources/martaConfig.conf");
 	logger = log_create("./martaLog.log", "Marta", true, LOG_LEVEL_INFO);
-	char identificacion[BUF_SIZE]; //para el mensaje que envie al conectarse para identificarse, puede cambiar
 	FD_ZERO(&master); // borra los conjuntos maestro y temporal
 	FD_ZERO(&read_fds);
 	printf("%s\n", config_get_string_value(configurador,"IP_FS"));
@@ -470,7 +469,6 @@ int main(int argc, char**argv){
 
 //================================= FIN DEL ENVIO DE LA LISTA DE ARCHIVOS DEL FS ================================================
 
-
 	if( pthread_create( &escucha_jobs , NULL , connection_handler_jobs , NULL) < 0){
 	    perror("could not create thread");
 	    return -1;
@@ -555,29 +553,33 @@ void *connection_handler_jobs(){
 					}
 					//.................................................
 				//hasta aca, es el tratamiento de conexiones nuevas
-				//.................................................
+					//.................................................
 				} else {
 					// gestionar datos  del fs
-					if ((nbytes = recv(i, mensaje, sizeof(mensaje), MSG_WAITALL)) <= 0) { //si entra aca es porque se desconecto o hubo un error
-						if (nbytes == 0) {
-							//  fs se desconecto, lo identifico
-							if (i==socket_fs){ //se desconecto el FS
+					if (i==socket_fs){
+						memset(identificacion,'\0',BUF_SIZE);
+						if ((nbytes = recv(i, identificacion, sizeof(identificacion), MSG_WAITALL)) <= 0) { //si entra aca es porque se desconecto o hubo un error
+							if (nbytes == 0) {
+								//  fs se desconecto, lo identifico
 								close(i); // ¡Hasta luego!
 								FD_CLR(i, &master); // eliminar del conjunto maestro
 								log_info(logger,"Se desconectó el FileSystem.");
 								exit(1);
+							} else {
+								perror("recv");
+								log_info(logger,"FALLO el Recv");
+								exit(-1);
 							}
-						} else {
-							perror("recv");
-							log_info(logger,"FALLO el Recv");
-							exit(-1);
-							}
-					}else {
-						// tenemos datos del fs
-						// ...... Tratamiento del mensaje nuevo
+						}
+						printf ("%s\n",identificacion);
+						if (strcmp(identificacion,"hola_andy")==0){
+							printf ("Hola Mundo!\n");
+						}
+					}
+					else{
+						//aca hablara el job
 					}
 				}
-
 			}
 		}
 	}
