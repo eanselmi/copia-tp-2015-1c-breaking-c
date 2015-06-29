@@ -283,7 +283,6 @@ int Menu(void) {
 		//case 17: listarDirectoriosCreados();break;
 		//case 17: listar_directorios(); break;
 		//case 17: eliminar_listas(archivos,directorios,nodos); break;
-		//TODO hacer la opcion SALIR
 		default: printf("Opción incorrecta. Por favor ingrese una opción del 1 al 17\n"); break;
 		}
 	}
@@ -1230,14 +1229,13 @@ void FormatearFilesystem() {
 	list_clean_and_destroy_elements(directorios,(void*)eliminar_lista_de_directorio);
 	if(marta_presente == 1){
 		memset(identificacion,'\0',BUF_SIZE);
-		strcpy(identificacion, "hola_andy");
+		strcpy(identificacion, "marta_formatea");
 		if ((send(marta_sock, identificacion,sizeof(identificacion), MSG_WAITALL)) == -1) {
 			perror("send");
 			log_error(logger, "FALLO el envio del ok a Marta");
 			exit(-1);
 		}
 	}
-
 }
 
 char *obtenerPath(char *nombre, int dir_id){
@@ -1340,8 +1338,32 @@ void EliminarArchivo() {
 		}
 		list_remove_and_destroy_element(archivos,posArchivo,(void*)eliminar_lista_de_archivos);
 		printf ("Archivo eliminado exitosamente\n");
+		//Actualizo a Marta
+		if(marta_presente == 1){
+			memset(identificacion,'\0',BUF_SIZE);
+			strcpy(identificacion, "elim_arch");
+			if ((send(marta_sock, identificacion,sizeof(identificacion), MSG_WAITALL)) == -1) {
+				perror("send");
+				log_error(logger, "FALLO el envio del ok a Marta");
+				exit(-1);
+			}
+			/*if ((send(marta_sock, identificacion,sizeof(identificacion), MSG_WAITALL)) == -1) {
+				perror("send");
+				log_error(logger, "FALLO el envio del ok a Marta");
+				exit(-1);
+			}
+			if ((send(marta_sock, identificacion,sizeof(identificacion), MSG_WAITALL)) == -1) {
+				perror("send");
+				log_error(logger, "FALLO el envio del ok a Marta");
+				exit(-1);
+			}*/
+		}
+
+
+
+
 	}else printf ("No hay archivos cargados en MDFS\n");
-	//TODO: ACTUALIZAR EL ARCHIVO ELIMINADO A MARTA
+
 }
 void RenombrarArchivo() {
 	printf("Eligió Renombrar archivos\n");
@@ -1382,9 +1404,35 @@ void RenombrarArchivo() {
 		strcpy(archivo->nombre, nuevoNombre);
 		printf ("Archivo renombrado exitosamente\n");
 
+		//Aviso a marta que tiene que renombrar un archivo
+
+		if(marta_presente == 1){
+			memset(identificacion,'\0',BUF_SIZE);
+			strcpy(identificacion, "renom_arch");
+			if ((send(marta_sock, identificacion,sizeof(identificacion), MSG_WAITALL)) == -1) {
+				perror("send");
+				log_error(logger, "FALLO el envio del ok a Marta");
+				exit(-1);
+			}
+			/*if ((send(marta_sock, identificacion,sizeof(identificacion), MSG_WAITALL)) == -1) {
+				perror("send");
+				log_error(logger, "FALLO el envio del ok a Marta");
+				exit(-1);
+			}
+			if ((send(marta_sock, identificacion,sizeof(identificacion), MSG_WAITALL)) == -1) {
+				perror("send");
+				log_error(logger, "FALLO el envio del ok a Marta");
+				exit(-1);
+			}
+			if ((send(marta_sock, identificacion,sizeof(identificacion), MSG_WAITALL)) == -1) {
+				perror("send");
+				log_error(logger, "FALLO el envio del ok a Marta");
+				exit(-1);
+			}*/
+		}
 	}else printf ("No hay archivos cargados en MDFS\n");
 
-	//TODO: ACTUALIZAR EL NUEVO NOMBRE A MARTA
+
 }
 void MoverArchivo() {
 	printf("Eligió Mover archivos\n");
@@ -1436,6 +1484,31 @@ void MoverArchivo() {
 		}
 		printf("andre was here\n");
 		archivo->padre = idPadreNuevo;
+
+		if(marta_presente == 1){
+			memset(identificacion,'\0',BUF_SIZE);
+			strcpy(identificacion, "mov_arch");
+			if ((send(marta_sock, identificacion,sizeof(identificacion), MSG_WAITALL)) == -1) {
+				perror("send");
+				log_error(logger, "FALLO el envio del ok a Marta");
+				exit(-1);
+			}
+		/*	if ((send(marta_sock, identificacion,sizeof(identificacion), MSG_WAITALL)) == -1) {
+				perror("send");
+				log_error(logger, "FALLO el envio del ok a Marta");
+				exit(-1);
+			}
+			if ((send(marta_sock, identificacion,sizeof(identificacion), MSG_WAITALL)) == -1) {
+				perror("send");
+				log_error(logger, "FALLO el envio del ok a Marta");
+				exit(-1);
+			}
+			if ((send(marta_sock, identificacion,sizeof(identificacion), MSG_WAITALL)) == -1) {
+				perror("send");
+				log_error(logger, "FALLO el envio del ok a Marta");
+				exit(-1);
+			}*/
+		}
 	}
 }
 
@@ -2167,7 +2240,20 @@ int CopiarArchivoAMDFS(){
     	archivo_temporal->padre=idPadre; //modifico al path del archivo en el MDFS
     	fclose(archivoLocal);
 
+
+
+    	if(marta_presente == 1){
+    		memset(identificacion,'\0',BUF_SIZE);
+    		strcpy(identificacion, "nuevo_arch");
+    		if ((send(marta_sock, identificacion,sizeof(identificacion), MSG_WAITALL)) == -1) {
+    			perror("send");
+    			log_error(logger, "FALLO el envio del ok a Marta");
+    			exit(-1);
+    		}
+    	}
+
     	persistir_archivo(archivo_temporal);
+
     	//Si llego hasta aca salio tod0 bien, actualizo la lista real de nodos
     	eliminar_listas(NULL,NULL,nodos);
     	nodos=list_create();
@@ -2383,6 +2469,18 @@ void BorrarBloque() {
 		nodoBuscado->bloques_libres++;
 		bitarray_clean_bit(nodoBuscado->bloques_del_nodo, bloque);
 		printf("Se ha borrado el bloque correctamente\n");
+
+		//Actualizar en marta
+		if(marta_presente == 1){
+    		memset(identificacion,'\0',BUF_SIZE);
+    		strcpy(identificacion, "elim_bloque");
+    		if ((send(marta_sock, identificacion,sizeof(identificacion), MSG_WAITALL)) == -1) {
+    			perror("send");
+    			log_error(logger, "FALLO el envio del ok a Marta");
+    			exit(-1);
+    		}
+    	}
+
 	}
 	else{
 		printf("No se puede eliminar el bloque\n");
@@ -2510,6 +2608,17 @@ void CopiarBloque() {
 			}
 			if (bloque_encontrado==1){
 				list_add(unBloque->copias,copia_temporal);
+
+				//actualizo a marta
+				if(marta_presente == 1){
+					memset(identificacion,'\0',BUF_SIZE);
+					strcpy(identificacion, "nuevo_bloque");
+					if ((send(marta_sock, identificacion,sizeof(identificacion), MSG_WAITALL)) == -1) {
+						perror("send");
+						log_error(logger, "FALLO el envio del ok a Marta");
+						exit(-1);
+					}
+				}
 				break;
 			}
 		}
