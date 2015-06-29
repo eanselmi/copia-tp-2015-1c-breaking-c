@@ -40,6 +40,8 @@ int main(void){
 	int fdmax;//Numero maximo de descriptores de fichero
 	int nbytes;
 	int finalizoJob=0;
+	int cantArchivos=0; //cantidad de archivos para un reduce
+	int indice;
 	char** archivosDelJob;
 	char handshake[BUF_SIZE];
 	char accion[BUF_SIZE];
@@ -48,6 +50,8 @@ int main(void){
 	char mensajeArchivos[MENSAJE_SIZE]; //cadena de caracteres que enviara a MaRTA los archivos a donde se aplica el Job. Formato: ",archivo1,archivo2,archivo3,...,archivo_n"
 	t_mapper datosMapper; // Datos para lanzar un hilo Map
 	t_mapper* punteroMapper;
+	t_reduce datosReduce;
+	t_hiloReduce* hiloReduce;
 
 	sem_init(&obtenerRutinaMap,0,1);
 	memset(handshake,'\0', BUF_SIZE);
@@ -145,12 +149,20 @@ int main(void){
 					}
 					else{
 						/* -- marta envío un mensaje a tratar -- */
+
+						//EJECUTAR MAP//
+
 						if(strncmp(accion,"ejecuta map",11)==0){
-							//datosMapper.
+
+							printf("Marta me dijo %s\n",accion);
+
+							//inicializo el puntero con los datos que envío al hilo
 							punteroMapper=malloc(sizeof(t_mapper));
 							memset(punteroMapper->archivoResultadoMap,'\0',TAM_NOMFINAL);
 							memset(punteroMapper->ip_nodo,'\0',20);
-							printf("Marta me dijo %s\n",accion);
+							//inicializo los datosMapper que recibo de Marta
+							memset(datosMapper.archivoResultadoMap,'\0',TAM_NOMFINAL);
+							memset(datosMapper.ip_nodo,'\0',20);
 
 							// VA a recibir los datos sobre donde lanzar hilos Map de Marta
 
@@ -160,17 +172,91 @@ int main(void){
 								exit(-1);
 							}
 
+							//Copio los datos que me interesan de lo que envía marta al puntero que enviaré al hilo
 							strcpy(punteroMapper->ip_nodo,datosMapper.ip_nodo);
 							punteroMapper->bloque=datosMapper.bloque;
 							punteroMapper->puerto_nodo=datosMapper.puerto_nodo;
 							strcpy(punteroMapper->archivoResultadoMap,datosMapper.archivoResultadoMap);
 
+							//Creo el hilo (que es detach) pasando el puntero como parametro
 							if(pthread_create(&mapperThread,NULL,(void*)hilo_mapper,punteroMapper)!=0){
 								perror("pthread_create");
 								log_error(logger,"Fallo la creación del hilo rutina mapper");
 								return 1;
 							}
 
+						}
+
+						// EJECUTAR REDUCE //
+
+						if(strncmp(accion,"ejecuta reduce",14)==0){
+							//recibe un ejecuta reduce
+							printf("Marta me dijo %s\n",accion);
+
+							//Inicializo el puntero que enviare con los datos al Hilo Reduce
+							hiloReduce=malloc(sizeof(t_hiloReduce));
+							memset(hiloReduce->ip_nodoPpal,'\0',20);
+							memset(hiloReduce->nombreArchivoFinal,'\0',TAM_NOMFINAL);
+							hiloReduce->listaNodos=list_create();
+
+							//Inicializo la estructura que recibo de Marta con los datos principales del reduce
+							memset(datosReduce.ip_nodoPpal,'\0',20);
+							memset(datosReduce.nombreArchivoFinal,'\0',TAM_NOMFINAL);
+
+							// VA a recibir los datos sobre donde lanzar hilos Reduce de Marta (IP y Puerto a conectarse y resultado
+							// final
+
+							if(recv(marta_sock,&datosReduce,sizeof(t_reduce),MSG_WAITALL)==-1){
+								perror("recv");
+								log_error(logger,"Fallo al recibir los datos para el reduce");
+								exit(-1);
+							}
+
+							//Copio los datos que me interesan de lo que envía marta al puntero que enviaré al hilo
+							strcpy(hiloReduce->ip_nodoPpal,datosReduce.ip_nodoPpal);
+							strcpy(hiloReduce->nombreArchivoFinal,datosReduce.nombreArchivoFinal);
+							hiloReduce->puerto_nodoPpal=datosReduce.puerto_nodoPpal;
+
+							//Recibo de marta la cantidad de archivos a donde voy a tener que hacer reduce
+							if(recv(marta_sock,&cantArchivos,sizeof(int),MSG_WAITALL)==-1){
+								perror("recv");
+								log_error(logger,"Fallo al recibir la cantidad de archivos a donde aplicara reduce");
+							}
+
+							//En un ciclo for, recibo uno por uno los archivos a donde voy a aplicar reduce
+							//Los agrego a la lista del puntero que enviare al hilo Reduce (en listanodos)
+							for(indice=0;indice<cantArchivos;indice++){
+								t_archivosReduce* nuevoArch=malloc(sizeof(t_archivosReduce));
+								t_archivosReduce archivoDesdeMarta;
+								memset(nuevoArch->archivoAAplicarReduce,'\0',TAM_NOMFINAL);
+								memset(nuevoArch->ip_nodo,'\0',20);
+								memset(archivoDesdeMarta.archivoAAplicarReduce,'\0',TAM_NOMFINAL);
+								memset(archivoDesdeMarta.ip_nodo,'\0',20);
+
+								if(recv(marta_sock,&archivoDesdeMarta,sizeof(t_archivosReduce),MSG_WAITALL)==-1){
+									perror("recv");
+									log_error(logger,"Fallo al recibir uno de los archivos a aplicar reduce");
+								}
+
+								strcpy(nuevoArch->ip_nodo,archivoDesdeMarta.ip_nodo);
+								nuevoArch->puerto_nodo=archivoDesdeMarta.puerto_nodo;
+								strcpy(nuevoArch->archivoAAplicarReduce,archivoDesdeMarta.archivoAAplicarReduce);
+								list_add(hiloReduce->listaNodos,nuevoArch);
+							}
+
+							//Creo el hilo (que es detach) pasando el puntero como parametro
+
+							if(pthread_create(&reduceThread,NULL,(void*)hilo_reduce,hiloReduce)!=0){
+								perror("pthread_create");
+								log_error(logger,"Fallo la creación del hilo rutina mapper");
+								return 1;
+							}
+						}
+
+						//FINALIZAR//
+
+						if(strncmp(accion,"finaliza",8)==0){
+							finalizoJob=1;
 						}
 					}
 				}
@@ -184,7 +270,8 @@ int main(void){
 }
 
 
-void* hilo_reduce(t_reduce* reduceStruct){
+void* hilo_reduce(t_hiloReduce* reduceStruct){
+	pthread_detach(pthread_self());
 	printf("El reduce se va a conectar al nodo con ip:%s\n",reduceStruct->ip_nodoPpal);
 	printf("En el puerto %d\n", reduceStruct->puerto_nodoPpal);	struct sockaddr_in nodo_addr;
 	int nodo_sock;
@@ -194,39 +281,17 @@ void* hilo_reduce(t_reduce* reduceStruct){
 	char * contReduce;
 	memset(identificacion,'\0',BUF_SIZE);
 	memset(rutinaReduce,'\0',REDUCE_SIZE);
-	int indice;
-//	t_list * archivosAAplicarReduce; //lista de t_archivosReduce
-//	archivosAAplicarReduce=list_create();
-
-// ACA MARTA ENVÍA LA CANTIDAD DE ARCHIVOS QUE DEBE ESPERAR
-// ACA RECIBIRIA UNO POR UNO "N" t_archivosReduce DE MARTA
-		int cantArchivos = 3; //lo envia marta en realidad
-		t_archivosReduce archivos[cantArchivos];
-		for(indice=0;indice<cantArchivos;indice++){
-			memset(archivos[indice].ip_nodo,'\0',20);
-			memset(archivos[indice].archivoAAplicarReduce,'\0',TAM_NOMFINAL);
-		}
-		strcpy(archivos[0].ip_nodo,"127.0.0.1");
-		archivos[0].puerto_nodo=6500;
-		strcpy(archivos[0].archivoAAplicarReduce,"/tmp/mapBloque0.txt");
-		//list_add(archivosAAplicarReduce,archivos[0]); // En un for agrego los archivos que recibe
-
-		strcpy(archivos[1].ip_nodo,"127.0.0.1");
-		archivos[1].puerto_nodo=6500;
-		strcpy(archivos[1].archivoAAplicarReduce,"/tmp/mapBloque1.txt");
-		//list_add(archivosAAplicarReduce,archivos[1]); // En un for agrego los archivos que recibe
-
-		strcpy(archivos[2].ip_nodo,"127.0.0.1");
-		archivos[2].puerto_nodo=6500;
-		strcpy(archivos[2].archivoAAplicarReduce,"/tmp/mapBloque2.txt");
-		//list_add(archivosAAplicarReduce,archivos[2]); // En un for agrego los archivos que recibe
-
+	int ind;
+	int cantidadArchivos=list_size(reduceStruct->listaNodos);
 
 	printf("Se aplicará reduce en los archivos:\n");
-	for(indice=0;indice<cantArchivos;indice++){
-		printf("\tIP Nodo: %s\n",archivos[indice].ip_nodo);
-		printf("\tEn el puerto: %d\n", archivos[indice].puerto_nodo);
-		printf("\tArchivo: %s\n", archivos[indice].archivoAAplicarReduce);
+
+	for(ind=0;ind<cantidadArchivos;ind++){
+		t_archivosReduce* archReduce;
+		archReduce=list_get(reduceStruct->listaNodos,ind);
+		printf("\tIP Nodo: %s\n",archReduce->ip_nodo);
+		printf("\tEn el puerto: %d\n", archReduce->puerto_nodo);
+		printf("\tArchivo: %s\n", archReduce->archivoAAplicarReduce);
 	}
 
 	if((nodo_sock=socket(AF_INET,SOCK_STREAM,0))==-1){ //si función socket devuelve -1 es error
@@ -287,7 +352,7 @@ void* hilo_reduce(t_reduce* reduceStruct){
 	}
 
 	//Envio la cantidad de archivos a aplicar reduce para que el nodo sepa cuantos esperar
-	if(send(nodo_sock,&cantArchivos,sizeof(int),MSG_WAITALL)==-1){
+	if(send(nodo_sock,&cantidadArchivos,sizeof(int),MSG_WAITALL)==-1){
 		perror("send");
 		log_error(logger,"Fallo el envío de la cantidad de archivos a aplicar reduce al nodo");
 		resultado=1;
@@ -296,8 +361,10 @@ void* hilo_reduce(t_reduce* reduceStruct){
 		pthread_exit((void*)0);
 	}
 
-	for(indice=0;indice<cantArchivos;indice++){ //Envio los archivos al nodo
-		if(send(nodo_sock,&archivos[indice],sizeof(t_archivosReduce),MSG_WAITALL)==-1){
+	for(ind=0;ind<cantidadArchivos;ind++){ //Envio los archivos al nodo
+		t_archivosReduce* archReduce;
+		archReduce=list_get(reduceStruct->listaNodos,ind);
+		if(send(nodo_sock,archReduce,sizeof(t_archivosReduce),MSG_WAITALL)==-1){
 			perror("send");
 			log_error(logger,"Fallo el envío de los archivos a aplicar reduce al nodo");
 			resultado=1;
@@ -309,6 +376,7 @@ void* hilo_reduce(t_reduce* reduceStruct){
 
 	pthread_exit((void*)0);
 }
+
 
 void* hilo_mapper(t_mapper* mapperStruct){
 	//comienzo de conexion con nodo
