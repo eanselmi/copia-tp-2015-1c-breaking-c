@@ -66,7 +66,7 @@ int main(int argc, char**argv){
 	listaArchivos = list_create(); //creo la lista para los archivos que me pasa el FS
 	jobs=list_create(); //creo la lista de jobs
 
-//	//Variables para probar
+	//Variables para probar
 //		t_archivo *archivo1;
 //		t_archivo *archivo2;
 //		t_archivo *archivo3;
@@ -76,21 +76,16 @@ int main(int argc, char**argv){
 //		archivo1->bloques =list_create();
 //		archivo2->bloques =list_create();
 //		archivo3->bloques =list_create();
-//		archivo1->estado =1;
-//		archivo2->estado =1;
-//		archivo3->estado =1;
 //		archivo1->nombre= string_new();
 //		archivo2->nombre= string_new();
 //		archivo3->nombre= string_new();
-//		archivo1->path= string_new();
-//		archivo2->path= string_new();
-//		archivo3->path= string_new();
+//
 //		string_append(&archivo1->nombre, "pam");
 //		string_append(&archivo2->nombre, "bruno");
 //		string_append(&archivo3->nombre, "archivoTemperatura1.txt");
-//		string_append(&archivo1->path, "/home/utnso/pam");
-//		string_append(&archivo2->path, "/home/utnso/bruno");
-//		string_append(&archivo3->path, "/user/Bruno/datos/archivoTemperatura1.txt");
+//		archivo1->padre=1;
+//		archivo2->padre=1;
+//		archivo3->padre=1;
 //
 //		t_bloque * bloque0Archivo1;
 //		t_bloque * bloque1Archivo1;
@@ -637,7 +632,6 @@ void *atenderJob (int *socketJob) {
 	memset(archivosDelJob, '\0', MENSAJE_SIZE);
 	memset(archivoResultado,'\0', TAM_NOMFINAL);
 	char ** arrayTiempo;
-	char *tiempo=string_new(); //string que tendrá la hora
 	char *nombreArchivoTemp=string_new();//Nombre del archivo que va a mandar a los nodos
 	char *pathArchivoTemp = string_new(); //Path donde va a guardar los archivos temporales
 	t_replanificarMap *mapper;
@@ -702,7 +696,7 @@ void *atenderJob (int *socketJob) {
 			log_error(logger,"Fallo el recv del padre del FS");
 			//exit(-1);
 		}
-
+	//	padre=1;
 		//De cada archivo que nos manda el Job buscamos y nos traemos los bloques
 		bloques=buscarBloques(nombreArchivo,padre);
 		cantBloques = list_size(bloques);
@@ -741,6 +735,7 @@ void *atenderJob (int *socketJob) {
 			strcpy(pathArchivoTemp,"/tmp/");
 			strcpy(nombreArchivoTemp,"MapTemporal");
 			arrayTiempo=string_split(temporal_get_string_time(),":"); //creo array con hora minutos segundos y milisegundos separados
+			char *tiempo=string_new(); //string que tendrá la hora
 			string_append(&tiempo,arrayTiempo[0]);//Agrego horas
 			string_append(&tiempo,arrayTiempo[1]);//Agrego minutos
 			string_append(&tiempo,arrayTiempo[2]);//Agrego segundos
@@ -783,7 +778,8 @@ void *atenderJob (int *socketJob) {
 
 			//Buscar nodoAux en la lista general comparando por nodo_id y sumarle cantMapper
 			sumarCantMapper(nodoAux->nodo_id);
-			list_clean_and_destroy_elements(copiasNodo, (void*) eliminarCopiasNodo);
+			free(tiempo);
+			list_clean(copiasNodo);
 		}
 	}
 		t_respuestaMap respuestaMap;
@@ -1065,9 +1061,9 @@ t_list* buscarBloques (char *nombreArchivo, uint32_t padre){
 }
 
 
-static void eliminarCopiasNodo(t_list *self){
-	free(self);
-}
+//static void eliminarCopiasNodo(t_list *self){
+//	free(self);
+//}
 
 //Buscamos los nodos de la lista global en los que esta cada copia
 t_nodo* buscarCopiaEnNodos(t_copias *copia){
