@@ -77,6 +77,7 @@ void listar_archivos_subidos(t_list *archivos);
 int obtenerEstadoDelBloque(char *nodo,int bloqueNodo);
 void listar_directorios(void);
 void persistir_archivo(t_archivo *archivo);
+void actualizar_nodo_persistencia(t_nodo *nodo);
 int obtenerEstadoDelNodo(char* nodo);
 void recuperar_persistencia(void);
 void actualizar_persistencia_directorio_eliminado(int idPadre);

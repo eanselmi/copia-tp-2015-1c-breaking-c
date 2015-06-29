@@ -51,7 +51,7 @@ int directoriosDisponibles; //reservo raiz
 int j; //variable para recorrer el vector de indices
 int *puerto_escucha_nodo;
 char nodo_id[6];
-
+char *valor_persistencia;
 int main(int argc, char *argv[]) {
 
 	pthread_t escucha; //Hilo que va a manejar los mensajes recibidos
@@ -65,15 +65,15 @@ int main(int argc, char *argv[]) {
 		log_error(logger,"El archivo de persistencia no existe en el filesystem local");
 		perror("fopen");
 	}
-	char *valor=string_new();
-	if((fgets(valor,sizeof(valor),archivo_persistencia))==NULL){
+	valor_persistencia=string_new();
+	if((fgets(valor_persistencia,sizeof(valor_persistencia),archivo_persistencia))==NULL){
 		perror ("fgets del archivo de persistencia");
 		exit(-1);
 	}
 	rewind(archivo_persistencia);
 	fprintf (archivo_persistencia,"%s","1");
 	fclose(archivo_persistencia);
-	if (atoi(valor)==1){
+	if (atoi(valor_persistencia)==1){
 		recuperar_persistencia(); //Hay que restaurar la persistencia
 	}else {
 		//como no hay persistencia inicializo los indices para los directorios, 0 si está libre, 1 ocupado.
@@ -645,7 +645,27 @@ static t_nodo *agregar_nodo_a_lista(char nodo_id[6], int socket, int est, int es
 	nodo_temporal->bloques_bitarray = malloc(i / 8);
 	nodo_temporal->bloques_del_nodo = bitarray_create(nodo_temporal->bloques_bitarray, i / 8);
 	for (i = 0; i < nodo_temporal->bloques_totales; i++) bitarray_clean_bit(nodo_temporal->bloques_del_nodo, i);
+	if (atoi(valor_persistencia)==1) actualizar_nodo_persistencia(nodo_temporal);
 	return nodo_temporal;
+}
+void actualizar_nodo_persistencia(t_nodo *nodo){
+	t_archivo *archivo;
+	t_bloque *bloque;
+	t_copias *copia;
+	int i,j,k;
+	for (i=0;i<list_size(archivos);i++){
+		archivo=list_get(archivos,i);
+		for (j=0;j<list_size(archivo->bloques);j++){
+			bloque=list_get(archivo->bloques,j);
+			for (k=0;k<list_size(bloque->copias);k++){
+				copia=list_get(bloque->copias,k);
+				if (strcmp(copia->nodo,nodo->nodo_id)==0){
+					nodo->bloques_libres--;
+					bitarray_set_bit(nodo->bloques_del_nodo,copia->bloqueNodo);
+				}
+			}
+		}
+	}
 }
 
 int validar_nodo_nuevo(char nodo_id[6]) {
