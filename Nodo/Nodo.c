@@ -36,9 +36,7 @@ t_list* listaNodosConectados; //Lista con los nodos conectados
 t_list* listaMappersConectados; //Lista con los mappers conectados
 t_list* listaReducersConectados; //lista con los reducers conectados
 t_list* archivosAbiertos; //Archivos ya abiertos que otro nodo me pide que pase renglon
-char nodo_id[6];
 sem_t semBloques[205]; //Soporta nodos de hasta 4GB 205 *20MB = 4100 MB --> ~4GB  (serían 205 bloques)
-sem_t semSort; // Un sort a la vez porque llama a bash
 //char bufFalso[BLOCK_SIZE]; //Buffer si voy a crear un bloque falso (para pruebas) 20MB
 //char bufAMediasFalso[BLOCK_SIZE/2]; //Buffer si voy a crear medio bloque falso (para pruebas) 10MB
 pthread_mutex_t mutexMap=PTHREAD_MUTEX_INITIALIZER;
@@ -66,8 +64,10 @@ int main(int argc , char *argv[]){
 	int *puerto_escucha;
 	struct sockaddr_in filesystem; //direccion del fs a donde se conectará
 	struct sockaddr_in nodoAddr; //direccion del nodo que será servidor
+	char nodo_id[6];
 	memset(&filesystem, 0, sizeof(filesystem));
 	memset(identificacion,'\0',BUF_SIZE);
+	memset(nodo_id,'\0',6);
 	listaNodosConectados=list_create();
 	listaMappersConectados=list_create();
 	listaReducersConectados=list_create();
@@ -81,7 +81,6 @@ int main(int argc , char *argv[]){
 	for(semBloque=0;semBloque<*bloquesTotales;semBloque++){
 		sem_init(&semBloques[semBloque],0,1);
 	}
-	sem_init(&semSort,0,1);
 
 	//Estructura para conexion con FS
 	filesystem.sin_family = AF_INET;
@@ -541,7 +540,6 @@ void ordenarMapper(char* pathMapperTemporal, char* nombreMapperOrdenado){
 	char* nombreMapperTemporal;
 	char* contenidoDelMapper;
 	sem_t terminoSort;
-	sem_wait(&semSort);
 	sem_init(&terminoSort,0,1);
 	nombreMapperTemporal=string_new();
 	pathMapperSeparado=string_split(pathMapperTemporal,"/");
@@ -576,7 +574,6 @@ void ordenarMapper(char* pathMapperTemporal, char* nombreMapperOrdenado){
 		free(contenidoDelMapper);
 		sem_wait(&terminoSort);
 		dup2(bak,STDOUT_FILENO);
-		sem_post(&semSort);
 	}
 }
 
@@ -825,8 +822,8 @@ void* rutinaMap(int* sckMap){
 	string_append(&pathNuevoMap,"/");
 	string_append(&pathNuevoMap,nombreNuevoMap);
 	//Genero nombre para el resultado temporal (luego a este se debera aplicar sort)
-	string_append(&resultadoTemporal,"/tmp/map.result.");
-	string_append(&resultadoTemporal,tiempo);
+	string_append(&resultadoTemporal,datosParaElMap.nomArchTemp);
+	//string_append(&resultadoTemporal,tiempo);
 	string_append(&resultadoTemporal,".tmp");
 
 	//Meto al nombre map final el ddirectorio temporal
@@ -854,11 +851,11 @@ void* rutinaMap(int* sckMap){
 	pthread_mutex_lock(&mutexMap);
 
 	ejecutarMapper(nombreNuevoMap,datosParaElMap.bloque,resultadoTemporal);
-	pthread_mutex_unlock(&mutexMap);
-	pthread_mutex_lock(&mutexSort);
+//	pthread_mutex_unlock(&mutexMap);
+//	pthread_mutex_lock(&mutexSort);
 
 	ordenarMapper(resultadoTemporal,datosParaElMap.nomArchTemp);
-	pthread_mutex_unlock(&mutexSort);
+	pthread_mutex_unlock(&mutexMap);
 
 	if(send(*sckMap,&resultado,sizeof(int),MSG_WAITALL)==-1){
 		perror("send");
