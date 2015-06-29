@@ -1117,6 +1117,7 @@ void ejecutarReduce(t_list* archivosApareando,char* script,char* resultado){
 					int i=0;
 					posicionActual=unArchivo->posicionRenglon;
 					memset(unArchivo->buffer,'\0',512);
+					memset(renglonTemporal,'\0',512);
 					for(byteActual=posicionActual;byteActual!=2500;byteActual++){ //1000 sera condicion de corte
 						renglonTemporal[i]=unArchivo->renglones[byteActual];
 						if(unArchivo->renglones[byteActual]=='\n'){
