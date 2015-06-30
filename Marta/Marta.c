@@ -1081,19 +1081,43 @@ void *atenderJob (int *socketJob) {
 
 
 	}
+
+/************************************************************************************************************************************************
+ * CON COMBINER
+ * ************************************************************************************************************************************************/
+
 	if(strcmp(mensajeCombiner,"SI")==0){
 		t_replanificarMap *mapOk;
 		t_list *listaMapOk;
 		listaMapOk = list_create();
 		int posMapper;
-		//Recorrer la lista t_replanificarMap y guardo en una lista los map que salieron OK
+		//Recorrer la lista t_replanificarMap y guardo en una lista todos los nodos en los que map salió OK
 		for(posMapper=0;posMapper<list_size(listaMappers);posMapper++){
 			mapOk = list_get(listaMappers,posMapper);
-			if(mapOk->resultado == 0){
+			if((mapOk->resultado == 0)){
 				list_add(listaMapOk,mapOk);
 			}
 		}
 
+		int posMapOk;
+		t_replanificarMap *mapPorNodoAnt;
+		t_replanificarMap *mapPorNodo;
+		t_list *listaMapPorNodo;
+		listaMapPorNodo=list_create();
+		//Agarro el primer elemento de la listaMapOk
+		mapPorNodoAnt = list_get(listaMapOk, 0);
+		//Agrego el primer que saqué de listaMapOk en la neuva lista
+		list_add(listaMapPorNodo,mapPorNodoAnt);
+		//Recorro la listaMapOk y me guardo en una lista los nodos que tienen el mismo ID_NODO
+		for(posMapOk=1; posMapOk<listaMapOk;posMapOk++){
+			//Agarro el elemento de la posición posMapOk de la listaMapOk
+			mapPorNodo = list_get(listaMapOk, 0);
+			//Si el nodoID del elemento que saqué de la posición posMapOk es igual al nodoID del
+			//primer elemento que saque de listaMapOk lo agrego en la nueva lista
+			while(strcmp(mapPorNodoAnt->nodoId,mapPorNodo->nodoId)==0){
+				list_add(listaMapPorNodo,mapPorNodo);
+			}
+		}
 		// Avisarle a JOB que tiene que ejecutar Reduce
 		//Le mando a JOB t_reduce que se va a ejecuta
 		// le mando al job la cantidad de archivos a los que que hay que aplicarle Reduce
