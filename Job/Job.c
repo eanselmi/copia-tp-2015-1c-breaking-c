@@ -282,8 +282,8 @@ int main(void){
 
 void* hilo_reduce(t_hiloReduce* reduceStruct){
 	pthread_detach(pthread_self());
-	printf("El reduce se va a conectar al nodo con ip:%s\n",reduceStruct->ip_nodoPpal);
-	printf("En el puerto %d\n", reduceStruct->puerto_nodoPpal);
+//	printf("El reduce se va a conectar al nodo con ip:%s\n",reduceStruct->ip_nodoPpal);
+//	printf("En el puerto %d\n", reduceStruct->puerto_nodoPpal);
 	struct sockaddr_in nodo_addr;
 	int nodo_sock;
 	int resultado;
@@ -295,14 +295,15 @@ void* hilo_reduce(t_hiloReduce* reduceStruct){
 	int ind;
 	int cantidadArchivos=list_size(reduceStruct->listaNodos);
 
-	printf("Se aplicará reduce en los archivos:\n");
+	log_info(logger,"Se creó un hilo con motivo ejecución de un REDUCE.\n\tParametros recibidos:\t\tIP del Nodo a conectarse: %s\n\t\tPuerto del Nodo: %d\n\t\tNombre del archivo resultado del reduce: %s",reduceStruct->ip_nodoPpal,reduceStruct->puerto_nodoPpal,reduceStruct->nombreArchivoFinal);
+	log_info(logger,"Se aplicará reduce en los archivos:");
 
 	for(ind=0;ind<cantidadArchivos;ind++){
 		t_archivosReduce* archReduce;
 		archReduce=list_get(reduceStruct->listaNodos,ind);
-		printf("\tIP Nodo: %s\n",archReduce->ip_nodo);
-		printf("\tEn el puerto: %d\n", archReduce->puerto_nodo);
-		printf("\tArchivo: %s\n", archReduce->archivoAAplicarReduce);
+		log_info(logger,"\tIP Nodo: %s",archReduce->ip_nodo);
+		log_info(logger,"\tPuerto Nodo: %d", archReduce->puerto_nodo);
+		log_info(logger,"\tArchivo: %s", archReduce->archivoAAplicarReduce);
 	}
 
 	if((nodo_sock=socket(AF_INET,SOCK_STREAM,0))==-1){ //si función socket devuelve -1 es error
@@ -489,7 +490,7 @@ void* hilo_mapper(t_mapper* mapperStruct){
 	}
 
 	respuestaParaMarta.resultado=resultadoMap;
-	printf("Resultado:%d\n",respuestaParaMarta.resultado);
+	//printf("Resultado:%d\n",respuestaParaMarta.resultado);
 
 	if(send(marta_sock,&respuestaParaMarta,sizeof(t_respuestaMap),MSG_WAITALL)==-1){
 		perror("send");
