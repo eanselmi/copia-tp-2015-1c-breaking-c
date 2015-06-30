@@ -33,6 +33,9 @@ t_list* jobs;
 t_list* listaNodos; //lista de nodos conectados al FS
 t_list* listaArchivos; //lista de archivos del FS
 char identificacion[BUF_SIZE]; //para el mensaje que envie al conectarse para identificarse, puede cambiar
+int nroJob; //Variable global utilizada por cada hilo Job para diferenciar el nombre de un resultado Map/Reduce
+pthread_mutex_t mutexNroJob=PTHREAD_MUTEX_INITIALIZER; //Para que cada Job tenga su numero diferente utilizaran este mutex
+
 int main(int argc, char**argv){
 
 	pthread_t escucha_jobs;
@@ -269,6 +272,8 @@ int main(int argc, char**argv){
 
 
 //====================== CONEXION CON FS =================================
+
+	nroJob=0; //inicializo la variable global de numero de Job actual a 0
 
 	if ((socket_fs = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
 		perror ("socket");
@@ -625,6 +630,14 @@ void *atenderJob (int *socketJob) {
 	memset(mensajeCombiner, '\0', 3);
 	memset(archivosDelJob, '\0', MENSAJE_SIZE);
 	memset(archivoResultado,'\0', TAM_NOMFINAL);
+	char* stringNroJob=string_new();
+
+	//Mediante un mutex asigno al string "stringNroJob" el numero actual de nroJob y le sumo 1
+	pthread_mutex_lock(&mutexNroJob);
+	string_append(&stringNroJob,string_itoa(nroJob));
+	nroJob++;
+	pthread_mutex_unlock(&mutexNroJob);
+
 
 	//Recibe mensaje de si es o no combiner
 	if(recv(*socketJob,mensajeCombiner,sizeof(mensajeCombiner),MSG_WAITALL)==-1){
@@ -745,6 +758,7 @@ void *atenderJob (int *socketJob) {
 			char *tiempo=string_new(); //string que tendrá la hora
 			char **arrayNomArchivo=string_split(nombreArchivo,".");
 			string_append(&pathArchivoTemp,"/tmp/");
+			string_append(&nombreArchivoTemp,stringNroJob);
 			string_append(&nombreArchivoTemp,arrayNomArchivo[0]);
 			char **arrayTiempo=string_split(temporal_get_string_time(),":"); //creo array con hora minutos segundos y milisegundos separados
 			string_append(&tiempo,arrayTiempo[0]);//Agrego horas
@@ -907,6 +921,7 @@ void *atenderJob (int *socketJob) {
 			char **arrayNomArchivo=string_split(map->nombreArchivoDelJob,".");
 
 			strcpy(pathArchivoRTemp,"/tmp/");
+			string_append(&archivoReplanificadoTemp,stringNroJob);
 			string_append(&archivoReplanificadoTemp,arrayNomArchivo[0]);
 			arrayTiempoReplanificado=string_split(temporal_get_string_time(),":"); //creo array con hora minutos segundos y milisegundos separados
 			string_append(&tiempoReplanificado,arrayTiempoReplanificado[0]);//Agrego horas
