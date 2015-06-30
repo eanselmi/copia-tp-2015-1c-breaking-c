@@ -286,8 +286,8 @@ int Menu(void) {
 		//case 17: listar_nodos_conectados(nodos); break;
 		//case 17: listar_archivos_subidos(archivos); break;
 		//case 17: listarDirectoriosCreados();break;
-		case 17: listar_directorios(); break;
-		//case 17: eliminar_listas(archivos,directorios,nodos); break;
+		//case 17: listar_directorios(); break;
+		case 17: eliminar_listas(archivos,directorios,nodos); break;
 		default: printf("Opción incorrecta. Por favor ingrese una opción del 1 al 17\n"); break;
 		}
 	}
@@ -753,8 +753,89 @@ void actualizar_persistencia_archivo_movido(char* nombre,int idPadre,int nuevo_i
 }
 
 
+void actualizar_persistencia_eliminar_bloque(char* nodoId,int bloque){
+	//Seccion de Directorios
+	FILE* dir;
+	FILE* aux;
+	dir=fopen("archivos","r");
+	aux=fopen("auxiliar","w");
+	char buffer[2028];
+	char copia_buffer[2048];
+	memset(buffer,'\0',2048);
+	char buffer_2[1024];
+	memset(buffer_2,'\0',1024);
+	memset(copia_buffer,'\0',2048);
+	char nueva_copia[2048];
+	memset(nueva_copia,'\0',2048);
+	int i,j;
+	char *saveptr;
+	int nuevo_n_copias;
+	char *padre=string_new();
+	char *nombre_archivo=string_new();
+	char* n_bloques=string_new();
+	char *n_copias=string_new();
+	char *nodo_id=string_new();
+	char *md5=string_new();
+	char *n_bloque=string_new();
+	while (fgets(buffer, sizeof(buffer),dir) != NULL){
+		if (strcmp(buffer,"\n")!=0){
+			strcpy(copia_buffer,buffer);
+			nombre_archivo = strtok_r(buffer,";",&saveptr);
+			padre = strtok_r(NULL,";",&saveptr);
+			n_bloques=strtok_r(NULL,";",&saveptr);
+			strcat(nueva_copia,nombre_archivo);
+			strcat(nueva_copia,";");
+			strcat(nueva_copia,padre);
+			strcat(nueva_copia,";");
+			strcat(nueva_copia,n_bloques);
+			for (i=0;i<atoi(n_bloques);i++){
+				n_copias=strtok_r(NULL,";",&saveptr);
+				nuevo_n_copias=atoi(n_copias);
+				strcat(buffer_2,";");
+				strcat(buffer_2,n_copias);
+				for (j=0;j<atoi(n_copias);j++){
+					nodo_id=strtok_r(NULL,";",&saveptr);
+					md5=strtok_r(NULL,";",&saveptr);
+					n_bloque=strtok_r(NULL,";",&saveptr);
+					if (strcmp(nodoId,nodo_id)==0 && atoi(n_bloque)==bloque){
+						nuevo_n_copias--;
+						buffer_2[1]=string_itoa(nuevo_n_copias)[0];
+					}
+					else{
+						strcat(buffer_2,";");
+						strcat(buffer_2,nodo_id);
+						strcat(buffer_2,";");
+						strcat(buffer_2,md5);
+						strcat(buffer_2,";");
+						strcat(buffer_2,n_bloque);
+					}
+				}
+				strcat(nueva_copia,buffer_2);
+				memset(buffer_2,'\0',1024);
+			}
+			strcat(nueva_copia,"\n");
+			fprintf (aux,"%s",nueva_copia);
+			memset(nueva_copia,'\0',2048);
+			memset(buffer,'\0',2048);
+			memset(copia_buffer,'\0',2048);
+		}
+	}
 
 
+	fclose(dir);
+	fclose(aux);
+
+	dir=fopen("archivos","w");
+	aux=fopen("auxiliar","r");
+	memset(buffer,'\0',2048);
+	while (fgets(buffer, sizeof(buffer),aux) != NULL){
+		fprintf (dir,"%s",buffer);
+		memset(buffer,'\0',2048);
+	}
+	fclose(dir);
+	fclose(aux);
+
+}
 
 void listar_directorios(){
 	t_dir *dir=malloc(sizeof(t_dir));
@@ -2693,6 +2774,11 @@ void BorrarBloque() {
 	int i, cantNodos, bloque, nodoEncontrado;
 	nodoEncontrado = 0;
 	t_nodo* nodoBuscado;
+	int k;
+	t_archivo *unArchivo;
+	t_bloque *unBloque;
+	t_copias *unaCopia;
+	int bloque_encontrado=0;
 	cantNodos = list_size(nodos);
 	//char* nodoId = malloc(1);
 	char nodoId[6];
@@ -2711,7 +2797,30 @@ void BorrarBloque() {
 	if (nodoEncontrado == 1){
 		nodoBuscado->bloques_libres++;
 		bitarray_clean_bit(nodoBuscado->bloques_del_nodo, bloque);
+
+		//Elimino la copia del bloque correspondiente del archivo al que pertenece
+		for (i=0;i<list_size(archivos);i++){
+			unArchivo=list_get(archivos,i);
+			for(j=0;j<list_size(unArchivo->bloques);j++){
+				unBloque=list_get(unArchivo->bloques,j);
+				for(k=0;k<list_size(unBloque->copias);k++){
+					unaCopia=list_get(unBloque->copias,k);
+					if (unaCopia->bloqueNodo==bloque && strcmp(unaCopia->nodo,nodoId)==0){
+						bloque_encontrado=1;
+						break;
+					}
+				}
+				if (bloque_encontrado==1){
+					list_remove_and_destroy_element(unBloque->copias,k,(void*)eliminar_lista_de_copias);
+					break;
+				}
+			}
+			if (bloque_encontrado==1) break;
+		}
 		printf("Se ha borrado el bloque correctamente\n");
+
+		//actualizar persistencia
+		actualizar_persistencia_eliminar_bloque(nodoId,bloque);
 
 		//Actualizar en marta
 		if(marta_presente == 1){
