@@ -284,10 +284,10 @@ int Menu(void) {
 			
 		//case 17: printf("Eligió Salir\n"); break;
 		//case 17: listar_nodos_conectados(nodos); break;
-		case 17: listar_archivos_subidos(archivos); break;
+		//case 17: listar_archivos_subidos(archivos); break;
 		//case 17: listarDirectoriosCreados();break;
 		//case 17: listar_directorios(); break;
-		//case 17: eliminar_listas(archivos,directorios,nodos); break;  //SALIDA NORMAL, LIBERA Y NO PERSISTE
+		case 17: eliminar_listas(archivos,directorios,nodos); break;  //SALIDA NORMAL, LIBERA Y NO PERSISTE
 		default: printf("Opción incorrecta. Por favor ingrese una opción del 1 al 17\n"); break;
 		}
 	}
