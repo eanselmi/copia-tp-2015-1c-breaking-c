@@ -287,7 +287,7 @@ int Menu(void) {
 		//case 17: listar_archivos_subidos(archivos); break;
 		//case 17: listarDirectoriosCreados();break;
 		//case 17: listar_directorios(); break;
-		case 17: eliminar_listas(archivos,directorios,nodos); break;
+		case 17: eliminar_listas(archivos,directorios,nodos); break;  //SALIDA NORMAL, LIBERA Y NO PERSISTE
 		default: printf("Opción incorrecta. Por favor ingrese una opción del 1 al 17\n"); break;
 		}
 	}
@@ -836,6 +836,112 @@ void actualizar_persistencia_eliminar_bloque(char* nodoId,int bloque){
 	fclose(aux);
 
 }
+
+
+void actualizar_persistencia_copiar_bloque(char* nodoId,int bloque,char* nodoId_nuevo,int bloque_nuevo){
+	//Seccion de Directorios
+	FILE* dir;
+	FILE* aux;
+	dir=fopen("archivos","r");
+	aux=fopen("auxiliar","w");
+	char buffer[2028];
+	char copia_buffer[2048];
+	memset(buffer,'\0',2048);
+	char buffer_2[1024];
+	memset(buffer_2,'\0',1024);
+	memset(copia_buffer,'\0',2048);
+	char nueva_copia[2048];
+	memset(nueva_copia,'\0',2048);
+	int i,j;
+	char *saveptr;
+	int nuevo_n_copias;
+	char *padre=string_new();
+	char *nombre_archivo=string_new();
+	char* n_bloques=string_new();
+	char *n_copias=string_new();
+	char *nodo_id=string_new();
+	char *md5=string_new();
+	char *n_bloque=string_new();
+	while (fgets(buffer, sizeof(buffer),dir) != NULL){
+		if (strcmp(buffer,"\n")!=0){
+			strcpy(copia_buffer,buffer);
+			nombre_archivo = strtok_r(buffer,";",&saveptr);
+			padre = strtok_r(NULL,";",&saveptr);
+			n_bloques=strtok_r(NULL,";",&saveptr);
+			strcat(nueva_copia,nombre_archivo);
+			strcat(nueva_copia,";");
+			strcat(nueva_copia,padre);
+			strcat(nueva_copia,";");
+			strcat(nueva_copia,n_bloques);
+			for (i=0;i<atoi(n_bloques);i++){
+				n_copias=strtok_r(NULL,";",&saveptr);
+				nuevo_n_copias=atoi(n_copias);
+				strcat(buffer_2,";");
+				strcat(buffer_2,n_copias);
+				for (j=0;j<atoi(n_copias);j++){
+					nodo_id=strtok_r(NULL,";",&saveptr);
+					md5=strtok_r(NULL,";",&saveptr);
+					n_bloque=strtok_r(NULL,";",&saveptr);
+					if (strcmp(nodoId,nodo_id)==0 && atoi(n_bloque)==bloque){
+						nuevo_n_copias++;
+						buffer_2[1]=string_itoa(nuevo_n_copias)[0];
+						strcat(buffer_2,";");
+						strcat(buffer_2,nodo_id);
+						strcat(buffer_2,";");
+						strcat(buffer_2,md5);
+						strcat(buffer_2,";");
+						strcat(buffer_2,n_bloque);
+
+						//Aca agrego el nuevo
+						strcat(buffer_2,";");
+						strcat(buffer_2,nodoId_nuevo);
+						strcat(buffer_2,";");
+						strcat(buffer_2,md5);
+						strcat(buffer_2,";");
+						strcat(buffer_2,string_itoa(bloque_nuevo));
+
+					}
+					else{
+						strcat(buffer_2,";");
+						strcat(buffer_2,nodo_id);
+						strcat(buffer_2,";");
+						strcat(buffer_2,md5);
+						strcat(buffer_2,";");
+						strcat(buffer_2,n_bloque);
+					}
+				}
+				strcat(nueva_copia,buffer_2);
+				memset(buffer_2,'\0',1024);
+			}
+			strcat(nueva_copia,"\n");
+			fprintf (aux,"%s",nueva_copia);
+			memset(nueva_copia,'\0',2048);
+			memset(buffer,'\0',2048);
+			memset(copia_buffer,'\0',2048);
+		}
+	}
+
+
+	fclose(dir);
+	fclose(aux);
+
+	dir=fopen("archivos","w");
+	aux=fopen("auxiliar","r");
+	memset(buffer,'\0',2048);
+	while (fgets(buffer, sizeof(buffer),aux) != NULL){
+		fprintf (dir,"%s",buffer);
+		memset(buffer,'\0',2048);
+	}
+	fclose(dir);
+	fclose(aux);
+
+}
+
+
+
+
+
+
 
 void listar_directorios(){
 	t_dir *dir=malloc(sizeof(t_dir));
@@ -2960,6 +3066,7 @@ void CopiarBloque() {
 			}
 			if (bloque_encontrado==1){
 				list_add(unBloque->copias,copia_temporal);
+				actualizar_persistencia_copiar_bloque(nodo_origen,bloque_origen,nodo_destino,bloque_destino);
 
 				//actualizo a marta
 				if(marta_presente == 1){

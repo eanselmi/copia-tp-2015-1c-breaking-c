@@ -857,10 +857,11 @@ void *atenderJob (int *socketJob) {
 			//buscamos en los bloques el bloque en el que salio mal el MAP
 			bloqueQueFallo = list_get(bloquesNoMap,map->bloqueArchivo);
 			cantidadCopias = list_size(bloqueQueFallo->copias);
+
+			int tamanioListaANoConsiderar=list_size(nodosQueFallaron);
+
 			for(posCopia=0;posCopia<cantidadCopias;posCopia++){ // recorremos las copias del bloque que salio mal el MAP
 				int estaEnListaParaNoConsiderar,indice;
-				int tamanioListaANoConsiderar=list_size(nodosQueFallaron);
-
 				copiaBloque = list_get(bloqueQueFallo->copias,posCopia);
 				// Nos traemos cada nodo en donde esta cada una de las copias del bloque que fallo
 				nodoCopia= buscarCopiaEnNodos(copiaBloque);
@@ -889,6 +890,8 @@ void *atenderJob (int *socketJob) {
 
 			t_mapper datosReplanificacionMap;
 
+			memset(datosReplanificacionMap.archivoResultadoMap,'\0',TAM_NOMFINAL);
+			memset(datosReplanificacionMap.ip_nodo,'\0',20);
 			strcpy(datosReplanificacionMap.ip_nodo, otroNodoAux->ip);
 			datosReplanificacionMap.puerto_nodo = otroNodoAux->puerto_escucha_nodo;
 			for(posCopia=0;posCopia<cantidadCopias;posCopia++){
@@ -904,18 +907,17 @@ void *atenderJob (int *socketJob) {
 			char **arrayNomArchivo=string_split(map->nombreArchivoDelJob,".");
 
 			strcpy(pathArchivoRTemp,"/tmp/");
-			strcpy(archivoReplanificadoTemp,arrayNomArchivo[0]);
+			string_append(&archivoReplanificadoTemp,arrayNomArchivo[0]);
 			arrayTiempoReplanificado=string_split(temporal_get_string_time(),":"); //creo array con hora minutos segundos y milisegundos separados
 			string_append(&tiempoReplanificado,arrayTiempoReplanificado[0]);//Agrego horas
 			string_append(&tiempoReplanificado,arrayTiempoReplanificado[1]);//Agrego minutos
 			string_append(&tiempoReplanificado,arrayTiempoReplanificado[2]);//Agrego segundos
 			string_append(&tiempoReplanificado,arrayTiempoReplanificado[3]);//Agrego milisegundos
-			string_append(&archivoReplanificadoTemp,tiempoReplanificado); //Concateno la fecha en formato hhmmssmmmm
 			string_append(&archivoReplanificadoTemp,"_Bloq");
 			string_append(&archivoReplanificadoTemp,string_itoa(map->bloqueArchivo));
+			string_append(&archivoReplanificadoTemp,"_");
 			string_append(&archivoReplanificadoTemp,tiempoReplanificado);
-			string_append(&archivoReplanificadoTemp,"Rep");
-			string_append(&archivoReplanificadoTemp,".txt");
+			string_append(&archivoReplanificadoTemp,"Rep.txt");
 			string_append(&pathArchivoRTemp,archivoReplanificadoTemp);
 			strcpy(datosReplanificacionMap.archivoResultadoMap,pathArchivoRTemp);
 
@@ -995,6 +997,7 @@ void *atenderJob (int *socketJob) {
 				mayorRepetido = cantNodoRepetido;
 				//Del que se hicieron mas MAPS locales me lo guardo
 				nodoMasRepetido = mapOk;
+
 
 			}
 		}
