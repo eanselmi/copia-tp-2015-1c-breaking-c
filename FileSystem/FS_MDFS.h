@@ -61,8 +61,8 @@ int CopiarArchivoAMDFS();								//DESARROLLADA					        1. mandar nuevo_arch
 int CopiarArchivoDelMDFS(int flag, char*unArchivo);		//DESARROLLADA
 void MD5DeArchivo();									//DESARROLLADA
 int VerBloque();										//DESARROLLADA
-void BorrarBloque();									//DESARROLLADA, falta persistencia      1. mandar elim_bloque 2. archivo 3. padre 4. n_bloque 5.nodo_id  6.bloque
-void CopiarBloque();									//DESARROLLADA, falta persistencia      1. mandar nuevo_bloque 2. archivo 3. padre 4. n_bloque 5.nodo_id_nuevo 6. bloque_nuevo
+void BorrarBloque();									//DESARROLLADA					        1. mandar elim_bloque 2. archivo 3. padre 4. n_bloque 5.nodo_id  6.bloque
+void CopiarBloque();									//DESARROLLADA					        1. mandar nuevo_bloque 2. archivo 3. padre 4. n_bloque 5.nodo_id_nuevo 6. bloque_nuevo
 void AgregarNodo();										//DESARROLLADA
 void EliminarNodo();  									//DESARROLLADA
 void eliminar_listas(t_list *archivos_l, t_list *directorios_d, t_list *nodos_n);	//DESARROLLADA
