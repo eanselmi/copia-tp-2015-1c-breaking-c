@@ -785,10 +785,10 @@ char* mapearFileDeDatos(){
 }
 
 void* rutinaMap(int* sckMap){
-	char** arrayTiempo;
-	int resultado=0;
-	t_datosMap datosParaElMap;
 	pthread_detach(pthread_self());
+	char** arrayTiempo;
+	int resultado=1;
+	t_datosMap datosParaElMap;
 
 	char *resultadoTemporal=string_new();
 	char *nombreNuevoMap=string_new(); //será el nombre del nuevo map
@@ -837,7 +837,11 @@ void* rutinaMap(int* sckMap){
 		log_error(logger,"Fallo al crear el script del mapper");
 		pthread_exit((void*)0);
 	}
-	fputs(datosParaElMap.rutinaMap,scriptMap);
+	if(fputs(datosParaElMap.rutinaMap,scriptMap)==EOF){
+		perror("fputs");
+		log_error(logger,"Fallo el fputs en una rutina map");
+		pthread_exit((void*)0);
+	}
 
 	// agrego permisos de ejecucion
 	if(chmod(pathNuevoMap,S_IRWXU|S_IRWXG|S_IROTH|S_IXOTH)==-1){
@@ -851,11 +855,11 @@ void* rutinaMap(int* sckMap){
 	pthread_mutex_lock(&mutexMap);
 
 	ejecutarMapper(nombreNuevoMap,datosParaElMap.bloque,resultadoTemporal);
-//	pthread_mutex_unlock(&mutexMap);
-//	pthread_mutex_lock(&mutexSort);
-
 	ordenarMapper(resultadoTemporal,datosParaElMap.nomArchTemp);
+
 	pthread_mutex_unlock(&mutexMap);
+
+	resultado=0;
 
 	if(send(*sckMap,&resultado,sizeof(int),MSG_WAITALL)==-1){
 		perror("send");

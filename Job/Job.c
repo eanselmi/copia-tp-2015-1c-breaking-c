@@ -24,6 +24,7 @@ t_config* configurador;
 t_log* logger;
 char bufGetArchivo[MAPPER_SIZE];
 sem_t obtenerRutinaMap;
+int marta_sock; //socket de conexión a MaRTA
 
 
 int main(void){
@@ -33,7 +34,6 @@ int main(void){
 	//Variables locales a main
 	pthread_t reduceThread;
 	pthread_t mapperThread;
-	int marta_sock; //socket de conexión a MaRTA
 	int socketModificado;
 	struct sockaddr_in marta_addr;
 	fd_set read_fds; // conjunto temporal de descriptores de fichero para select()
@@ -383,10 +383,15 @@ void* hilo_mapper(t_mapper* mapperStruct){
 	pthread_detach(pthread_self());
 	struct sockaddr_in nodo_addr;
 	int nodo_sock;
-	int resultado;
+	int resultadoMap;
 	char identificacion[BUF_SIZE];
 	t_datosMap datosParaNodo;
+	t_respuestaMap respuestaParaMarta;
 	memset(identificacion,'\0',BUF_SIZE);
+
+	memset(respuestaParaMarta.archivoResultadoMap,'\0',TAM_NOMFINAL);
+	respuestaParaMarta.resultado=2;
+	strcpy(respuestaParaMarta.archivoResultadoMap,mapperStruct->archivoResultadoMap);
 
 
 	printf("Se conectara al nodo con ip: %s\n",(char*)mapperStruct->ip_nodo);
@@ -402,9 +407,12 @@ void* hilo_mapper(t_mapper* mapperStruct){
 	if((nodo_sock=socket(AF_INET,SOCK_STREAM,0))==-1){ //si función socket devuelve -1 es error
 		perror("socket");
 		log_error(logger,"Fallo la creación del socket (conexión mapper-nodo)");
-		resultado=1;
-		printf("Resultado:%d\n",resultado);
-		//envío a marta el resultado
+		respuestaParaMarta.resultado=1;
+		printf("Resultado:%d\n",respuestaParaMarta.resultado);
+		if(send(marta_sock,&respuestaParaMarta,sizeof(t_respuestaMap),MSG_WAITALL)==-1){
+			perror("send");
+			log_error(logger,"Fallo el envio de la respuesta de un map a marta");
+		}
 		pthread_exit((void*)0);
 	}
 
@@ -416,9 +424,12 @@ void* hilo_mapper(t_mapper* mapperStruct){
 	if((connect(nodo_sock,(struct sockaddr *)&nodo_addr,sizeof(struct sockaddr)))==-1){
 		perror("connect");
 		log_error(logger,"Fallo la conexión con el nodo");
-		resultado=1;
-		printf("Resultado:%d\n",resultado);
-		//envío a marta el resultado
+		respuestaParaMarta.resultado=1;
+		printf("Resultado:%d\n",respuestaParaMarta.resultado);
+		if(send(marta_sock,&respuestaParaMarta,sizeof(t_respuestaMap),MSG_WAITALL)==-1){
+			perror("send");
+			log_error(logger,"Fallo el envio de la respuesta de un map a marta");
+		}
 		pthread_exit((void*)0);
 	}
 
@@ -426,9 +437,12 @@ void* hilo_mapper(t_mapper* mapperStruct){
 	if(send(nodo_sock,identificacion,sizeof(identificacion),MSG_WAITALL)==-1){
 		perror("send");
 		log_error(logger,"Fallo el envío de identificación mapper-nodo");
-		resultado=1;
-		printf("Resultado:%d\n",resultado);
-		//envío a marta el resultado
+		respuestaParaMarta.resultado=1;
+		printf("Resultado:%d\n",respuestaParaMarta.resultado);
+		if(send(marta_sock,&respuestaParaMarta,sizeof(t_respuestaMap),MSG_WAITALL)==-1){
+			perror("send");
+			log_error(logger,"Fallo el envio de la respuesta de un map a marta");
+		}
 		pthread_exit((void*)0);
 	}
 	/*Conexión mapper-nodo establecida*/
@@ -438,24 +452,34 @@ void* hilo_mapper(t_mapper* mapperStruct){
 	if(send(nodo_sock,&datosParaNodo,sizeof(t_datosMap),MSG_WAITALL)==-1){
 		perror("send");
 		log_error(logger,"Fallo el envio de los datos del map hacia el Nodo");
-		resultado=1;
-		printf("Resultado:%d\n",resultado);
-		//envío a marta el resultado
+		respuestaParaMarta.resultado=1;
+		printf("Resultado:%d\n",respuestaParaMarta.resultado);
+		if(send(marta_sock,&respuestaParaMarta,sizeof(t_respuestaMap),MSG_WAITALL)==-1){
+			perror("send");
+			log_error(logger,"Fallo el envio de la respuesta de un map a marta");
+		}
 		pthread_exit((void*)0);
 	}
 
-	if(recv(nodo_sock,&resultado,sizeof(int),MSG_WAITALL)==-1){
+	if(recv(nodo_sock,&resultadoMap,sizeof(int),MSG_WAITALL)<=0){
 		perror("recv");
 		log_error(logger,"Fallo el recibo del resultado de parte del Nodo");
-		resultado=1;
-		printf("Resultado:%d\n",resultado);
-		//envío a marta el resultado
+		respuestaParaMarta.resultado=1;
+		printf("Resultado:%d\n",respuestaParaMarta.resultado);
+		if(send(marta_sock,&respuestaParaMarta,sizeof(t_respuestaMap),MSG_WAITALL)==-1){
+			perror("send");
+			log_error(logger,"Fallo el envio de la respuesta de un map a marta");
+		}
 		pthread_exit((void*)0);
 	}
 
-	printf("Resultado:%d\n",resultado);
+	respuestaParaMarta.resultado=resultadoMap;
+	printf("Resultado:%d\n",respuestaParaMarta.resultado);
 
-	//Se envía el resultado de la operacion Map a Marta//
+	if(send(marta_sock,&respuestaParaMarta,sizeof(t_respuestaMap),MSG_WAITALL)==-1){
+		perror("send");
+		log_error(logger,"Fallo el envio de la respuesta de un map a marta");
+	}
 
 	//close(nodo_sock);
 	pthread_exit((void*)0);

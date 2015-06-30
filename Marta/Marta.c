@@ -231,7 +231,7 @@ int main(int argc, char**argv){
 //		list_add(listaArchivos, archivo1);
 //		list_add(listaArchivos, archivo2);
 //		list_add(listaArchivos, archivo3);
-//
+
 //		t_nodo *nodo1;
 //		t_nodo *nodo2;
 //		t_nodo *nodo3;
@@ -339,6 +339,8 @@ int main(int argc, char**argv){
 		nodoTemporal->estado =estadoNodo;
 		nodoTemporal->ip = strdup(ipNodo);
 		nodoTemporal->puerto_escucha_nodo = puertoEscuchaNodo;
+		nodoTemporal->cantMappers=0;
+		nodoTemporal->cantReducers=0;
 		list_add(listaNodos, nodoTemporal);
 		i++;
 	}
@@ -355,6 +357,8 @@ int main(int argc, char**argv){
 		elemento = list_get(listaNodos, iii);
 		printf("\n\n");
 		printf("Nodo_ID: %s\nEstado: %d\nIP: %s\nPuerto de Escucha: %d\n",elemento->nodo_id, elemento->estado, elemento->ip,elemento->puerto_escucha_nodo);
+		printf("Cantidad de mappers:%d\n",elemento->cantMappers);
+		printf("Cantidad de reducers:%d\n",elemento->cantReducers);
 		printf("\n");
 	}
 
@@ -821,7 +825,7 @@ void *atenderJob (int *socketJob) {
 		map->resultado = respuestaMap.resultado;
 
 		if(map->resultado ==1){
-			printf("El map falló\n");
+			printf("El map %s falló\n",map->archivoResultadoMap);
 			t_list *nodosQueFallaron;
 			nodosQueFallaron=list_create();
 			int posRepl;
@@ -949,8 +953,9 @@ void *atenderJob (int *socketJob) {
 			// le sumo cantMappers al nodo que acabo de mandar a hacer MAP
 			sumarCantMapper(nuevoMap->nodoId);
 
-		}else{
-			printf("El map salio ok\n");
+		}
+		if(map->resultado==0){
+			printf("El map %s salio ok\n",map->archivoResultadoMap);
 			// buscar en la lista del struct el nodo_id y luego buscarlo en la lista gral de nodos y restarle 1 a su catMappers
 			restarCantMapper(map->nodoId);
 		}
