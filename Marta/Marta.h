@@ -81,7 +81,7 @@ t_list *buscarBloques (char*, uint32_t);
 void asignarMap(t_list *bloques,int socketJob);
 t_nodo* buscarCopiaEnNodos(t_copias *copia);
 bool ordenarSegunMapYReduce (t_nodo* menorCarga,t_nodo* mayorCarga);
-static void eliminarCopiasNodo(t_list *self);
+//static void eliminarCopiasNodo(t_list *self);
 void sumarCantMapper(char* nodoASumar);
 bool nodoIdMasRepetido(char*,char*);
 void restarCantMapper(char* nodoParaRestar);

@@ -993,49 +993,88 @@ void *atenderJob (int *socketJob) {
 			cantNodoRepetido = list_count_satisfying(listaNodosMapperOk,(void*) nodoIdMasRepetido);
 			if(cantNodoRepetido > mayorRepetido){
 				mayorRepetido = cantNodoRepetido;
-				//Del que se hicieron mas MAPS locales me guardo el nodo_id
+				//Del que se hicieron mas MAPS locales me lo guardo
 				nodoMasRepetido = mapOk;
 
 			}
 		}
-		//Le mando al job el nodo principal a hacer reduce
-		char mensajeMandoNodoReduce[TAM_NOMFINAL];
-		memset(mensajeMandoNodoReduce,'\0',TAM_NOMFINAL);
-		strcpy(mensajeMandoNodoReduce,"mando nodo reduce");
-		if(send(*socketJob, mensajeMandoNodoReduce, sizeof(TAM_NOMFINAL),MSG_WAITALL)==-1){
-			perror("send");
-			log_error(logger,"Fallo el envio de aviso de mandar nodo reducer");
-			//exit(-1);
-		}
 		int posNG;
 		t_nodo * nodoG;
-		t_reduce *nodoReducer = malloc(sizeof(t_reduce));
+		t_reduce nodoReducer;
 		for(posNG=0; posNG < list_size(listaNodos); posNG++){
 			nodoG = list_get(listaNodos, posNG);
 			if(strcmp(nodoMasRepetido->nodoId, nodoG->nodo_id)==0){
-				strcpy(nodoReducer->ip_nodoPpal, nodoG->ip);
-				nodoReducer->puerto_nodoPpal = nodoG->puerto_escucha_nodo;
+				strcpy(nodoReducer.ip_nodoPpal, nodoG->ip);
+				nodoReducer.puerto_nodoPpal = nodoG->puerto_escucha_nodo;
 			}
 
 		}
-		strcpy(nodoReducer->nombreArchivoFinal,"/tmp/archivoReducerFinal");
+//		char* tiempoReplanificado=string_new();
+//		char** arrayTiempoReplanificado;
+//		char* archivoReplanificadoTemp=string_new();
+//		char* pathArchivoRTemp= string_new();
+//		char **arrayNomArchivo=string_split(map->nombreArchivoDelJob,".");
+//
+//		strcpy(pathArchivoRTemp,"/tmp/");
+//		strcpy(archivoReplanificadoTemp,arrayNomArchivo[0]);
+//		arrayTiempoReplanificado=string_split(temporal_get_string_time(),":"); //creo array con hora minutos segundos y milisegundos separados
+//		string_append(&tiempoReplanificado,arrayTiempoReplanificado[0]);//Agrego horas
+//		string_append(&tiempoReplanificado,arrayTiempoReplanificado[1]);//Agrego minutos
+//		string_append(&tiempoReplanificado,arrayTiempoReplanificado[2]);//Agrego segundos
+//		string_append(&tiempoReplanificado,arrayTiempoReplanificado[3]);//Agrego milisegundos
+//		string_append(&archivoReplanificadoTemp,tiempoReplanificado); //Concateno la fecha en formato hhmmssmmmm
+//		string_append(&archivoReplanificadoTemp,"_Bloq");
+//		string_append(&archivoReplanificadoTemp,string_itoa(map->bloqueArchivo));
+//		string_append(&archivoReplanificadoTemp,tiempoReplanificado);
+//		string_append(&archivoReplanificadoTemp,"Rep");
+//		string_append(&archivoReplanificadoTemp,".txt");
+//		string_append(&pathArchivoRTemp,archivoReplanificadoTemp);
+//		strcpy(datosReplanificacionMap.archivoResultadoMap,pathArchivoRTemp);
+// Mando a ejecutar reduce
+		char mensajeReducer[TAM_NOMFINAL];
+		memset(mensajeReducer, '\0', TAM_NOMFINAL);
+		strcpy(mensajeReducer,"ejecuta reduce");
+		if(send(*socketJob, mensajeReducer,sizeof(TAM_NOMFINAL),MSG_WAITALL)==-1){
+		perror("send");
+		log_error(logger, "Fallo mandar hacer reducer");
+		//exit(-1);
+		}
+		if(send(*socketJob, &nodoReducer,sizeof(t_reduce),MSG_WAITALL)==-1){
+			perror("send");
+			log_error(logger, "Fallo mandar datos para hacer reducer");
+			//exit(-1);
+		}
+		// Mando cantidad de archivos a hacer reduce
+		if(send(*socketJob, &cantNodosMapOk,sizeof(int),MSG_WAITALL)==-1){
+			perror("send");
+			log_error(logger, "Fallo mandar la cantidad de archivos a hacer reduce");
+			//exit(-1);
+		}
 		int posicionNodoOk;
 		t_replanificarMap *nodoOk;
-		t_archivosReduce *archReduce = malloc(sizeof(t_archivosReduce));
-		memset(archReduce->archivoAAplicarReduce,'\0',TAM_NOMFINAL);
+		t_archivosReduce archReduce;
+		memset(archReduce.archivoAAplicarReduce,'\0',TAM_NOMFINAL);
 		for(posicionNodoOk = 0; posicionNodoOk < cantNodosMapOk; posicionNodoOk ++){
 			nodoOk = list_get(listaNodosMapperOk,posicionNodoOk);
-			strcpy(archReduce->archivoAAplicarReduce, nodoOk->archivoResultadoMap);
+			strcpy(archReduce.archivoAAplicarReduce, nodoOk->archivoResultadoMap);
 			int posNodoGlobal;
 			t_nodo *nodoGlobal;
 			for(posNodoGlobal = 0; posNodoGlobal < list_size(listaNodos);posNodoGlobal ++){
 				nodoGlobal = list_get(listaNodos,posNodoGlobal);
 				if(strcmp(nodoOk->nodoId, nodoGlobal->nodo_id)==0){
-					strcpy(archReduce->ip_nodo, nodoGlobal->ip);
-					archReduce->puerto_nodo = nodoGlobal->puerto_escucha_nodo;
+					strcpy(archReduce.ip_nodo, nodoGlobal->ip);
+					archReduce.puerto_nodo = nodoGlobal->puerto_escucha_nodo;
 				}
 			}
+			// Mando por cada t_replanificarMap ok, los datos de cada archivo
+			if(send(*socketJob, &archReduce,sizeof(t_archivosReduce),MSG_WAITALL)==-1){
+				perror("send");
+				log_error(logger, "Fallo mandar la archivo a hacer reduce");
+				//exit(-1);
+			}
 		}
+
+		//Replanificar reduce sin combiner
 
 
 	}
