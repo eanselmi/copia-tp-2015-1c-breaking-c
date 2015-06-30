@@ -22,6 +22,7 @@
 //Declaración de variables
 t_config* configurador;
 t_log* logger;
+t_log* logger_archivo;
 char bufGetArchivo[MAPPER_SIZE];
 sem_t obtenerRutinaMap;
 int marta_sock; //socket de conexión a MaRTA
@@ -30,7 +31,7 @@ int marta_sock; //socket de conexión a MaRTA
 int main(void){
 	configurador= config_create("resources/jobConfig.conf"); //se asigna el archivo de configuración especificado en la ruta
 	logger = log_create("./jobLog.log", "Job", true, LOG_LEVEL_INFO); //se crea la instancia de log, que tambien imprimira en pantalla
-
+	logger_archivo=log_create("./jobLog.log","Job",false,LOG_LEVEL_INFO); //Logeará solo en el archivo
 	//Variables locales a main
 	pthread_t reduceThread;
 	pthread_t mapperThread;
@@ -86,7 +87,7 @@ int main(void){
 	if(send(marta_sock,handshake, sizeof(handshake),MSG_WAITALL)==-1){
 		perror("send");
 		log_error(logger, "Fallo el envío de handshake a marta");
-		exit(-1);
+		exit(1);
 	}
 
 	/*
@@ -96,7 +97,7 @@ int main(void){
 	if (send(marta_sock,config_get_string_value(configurador,"COMBINER"),3,MSG_WAITALL)==-1){
 		perror("send");
 		log_error(logger,"Falló el envío del atributo COMBINER");
-		exit(-1);
+		exit(1);
 	}
 
 	//Envio el nombre del archivo resultado
@@ -104,7 +105,7 @@ int main(void){
 	if(send(marta_sock,config_get_string_value(configurador,"RESULTADO"),TAM_NOMFINAL,MSG_WAITALL)==-1){
 		perror("send");
 		log_error(logger,"Falló el envío del atributo COMBINER");
-		exit(-1);
+		exit(1);
 	}
 
 	/*Creo un char[] que tenga los nombres de los archivos a trabajar separados con "," (una "," tambien al principio)
@@ -120,7 +121,7 @@ int main(void){
 	if (send(marta_sock,mensajeArchivos,sizeof(mensajeArchivos),MSG_WAITALL)==-1){
 		perror("send");
 		log_error(logger,"Falló el envío a MaRTA de la lista de archivos");
-		exit(-1);
+		exit(1);
 	}
 
 	//Queda a la espera de instrucciones de marta
@@ -144,7 +145,7 @@ int main(void){
 					if(nbytes==0){ //se desconectó
 						close(marta_sock);
 						FD_CLR(marta_sock,&read_fds);
-						log_info(logger,"Se desconectó Marta");
+						log_info(logger,"Se desconectó Marta. IP Marta: %s, Puerto Marta: %d",config_get_string_value(configurador,"IP_MARTA"),config_get_int_value(configurador,"PUERTO_MARTA"));
 						exit(1);
 					}
 					else{
@@ -155,6 +156,8 @@ int main(void){
 						if(strncmp(accion,"ejecuta map",11)==0){
 
 							printf("Marta me dijo %s\n",accion);
+							log_info(logger_archivo,"Marta me dijo %s",accion);
+
 
 							//inicializo el puntero con los datos que envío al hilo
 							punteroMapper=malloc(sizeof(t_mapper));
@@ -192,6 +195,8 @@ int main(void){
 						if(strncmp(accion,"ejecuta reduce",14)==0){
 							//recibe un ejecuta reduce
 							printf("Marta me dijo %s\n",accion);
+							log_info(logger_archivo,"Marta me dijo %s",accion);
+
 
 							//Inicializo el puntero que enviare con los datos al Hilo Reduce
 							hiloReduce=malloc(sizeof(t_hiloReduce));
@@ -256,6 +261,7 @@ int main(void){
 						//FINALIZAR//
 
 						if(strncmp(accion,"finaliza",8)==0){
+							log_info(logger_archivo,"Marta me dijo %s",accion);
 							finalizoJob=1;
 						}
 					}
@@ -264,7 +270,11 @@ int main(void){
 		}
 	}
 
+	printf("El job finalizó\n");
+	close(marta_sock);
+	log_info(logger,"El job se desconectó de Marta. IP Marta: %s, Puerto Marta: %d",config_get_string_value(configurador,"IP_MARTA"),config_get_int_value(configurador,"PUERTO_MARTA"));
 	log_destroy(logger); //se elimina la instancia de log
+	log_destroy(logger_archivo);
 	config_destroy(configurador);
 	return 0;
 }
@@ -272,8 +282,9 @@ int main(void){
 
 void* hilo_reduce(t_hiloReduce* reduceStruct){
 	pthread_detach(pthread_self());
-	printf("El reduce se va a conectar al nodo con ip:%s\n",reduceStruct->ip_nodoPpal);
-	printf("En el puerto %d\n", reduceStruct->puerto_nodoPpal);	struct sockaddr_in nodo_addr;
+//	printf("El reduce se va a conectar al nodo con ip:%s\n",reduceStruct->ip_nodoPpal);
+//	printf("En el puerto %d\n", reduceStruct->puerto_nodoPpal);
+	struct sockaddr_in nodo_addr;
 	int nodo_sock;
 	int resultado;
 	char identificacion[BUF_SIZE];
@@ -284,14 +295,15 @@ void* hilo_reduce(t_hiloReduce* reduceStruct){
 	int ind;
 	int cantidadArchivos=list_size(reduceStruct->listaNodos);
 
-	printf("Se aplicará reduce en los archivos:\n");
+	log_info(logger,"Se creó un hilo con motivo ejecución de un REDUCE.\n\tParametros recibidos:\t\tIP del Nodo a conectarse: %s\n\t\tPuerto del Nodo: %d\n\t\tNombre del archivo resultado del reduce: %s",reduceStruct->ip_nodoPpal,reduceStruct->puerto_nodoPpal,reduceStruct->nombreArchivoFinal);
+	log_info(logger,"Se aplicará reduce en los archivos:");
 
 	for(ind=0;ind<cantidadArchivos;ind++){
 		t_archivosReduce* archReduce;
 		archReduce=list_get(reduceStruct->listaNodos,ind);
-		printf("\tIP Nodo: %s\n",archReduce->ip_nodo);
-		printf("\tEn el puerto: %d\n", archReduce->puerto_nodo);
-		printf("\tArchivo: %s\n", archReduce->archivoAAplicarReduce);
+		log_info(logger,"\tIP Nodo: %s",archReduce->ip_nodo);
+		log_info(logger,"\tPuerto Nodo: %d", archReduce->puerto_nodo);
+		log_info(logger,"\tArchivo: %s", archReduce->archivoAAplicarReduce);
 	}
 
 	if((nodo_sock=socket(AF_INET,SOCK_STREAM,0))==-1){ //si función socket devuelve -1 es error
@@ -318,6 +330,7 @@ void* hilo_reduce(t_hiloReduce* reduceStruct){
 	}
 
 	strcpy(identificacion,"soy reducer");
+
 	if(send(nodo_sock,identificacion,sizeof(identificacion),MSG_WAITALL)==-1){
 		perror("send");
 		log_error(logger,"Fallo el envío de identificación mapper-nodo");
@@ -327,6 +340,7 @@ void* hilo_reduce(t_hiloReduce* reduceStruct){
 		pthread_exit((void*)0);
 	}
 	/*Conexión reduce-nodo establecida*/
+	log_info(logger_archivo,"Le dije al nodo %s puerto %d %s\n",reduceStruct->ip_nodoPpal,reduceStruct->puerto_nodoPpal,identificacion);
 	log_info(logger,"Hilo reduce conectado al Nodo con IP: %s,en el Puerto: %d",reduceStruct->ip_nodoPpal,reduceStruct->puerto_nodoPpal);
 
 	//Envio el nombre donde el nodo deberá guardar el resultado
@@ -393,11 +407,7 @@ void* hilo_mapper(t_mapper* mapperStruct){
 	respuestaParaMarta.resultado=2;
 	strcpy(respuestaParaMarta.archivoResultadoMap,mapperStruct->archivoResultadoMap);
 
-
-	printf("Se conectara al nodo con ip: %s\n",(char*)mapperStruct->ip_nodo);
-	printf("En el puerto %d\n", mapperStruct->puerto_nodo);
-	printf("Ejecutará la rutina mapper en el bloque %d\n",mapperStruct->bloque);
-	printf("Guardará el resultado en el archivo %s\n",mapperStruct->archivoResultadoMap);
+	log_info(logger,"Se creó un hilo con motivo ejecución de un MAP.\n\tParametros recibidos:\n\t\tIP del Nodo a conectarse: %s.\n\t\tPuerto del Nodo: %d\n\t\tBloque a ejecutar el map: %d\n\t\tNombre del archivo resultado del map: %s",mapperStruct->ip_nodo,mapperStruct->puerto_nodo,mapperStruct->bloque,mapperStruct->archivoResultadoMap);
 
 
 	datosParaNodo.bloque=mapperStruct->bloque;
@@ -408,11 +418,12 @@ void* hilo_mapper(t_mapper* mapperStruct){
 		perror("socket");
 		log_error(logger,"Fallo la creación del socket (conexión mapper-nodo)");
 		respuestaParaMarta.resultado=1;
-		printf("Resultado:%d\n",respuestaParaMarta.resultado);
+		//printf("Resultado:%d\n",respuestaParaMarta.resultado);
 		if(send(marta_sock,&respuestaParaMarta,sizeof(t_respuestaMap),MSG_WAITALL)==-1){
 			perror("send");
 			log_error(logger,"Fallo el envio de la respuesta de un map a marta");
 		}
+		log_info(logger,"Finalizó un hilo MAP.\n\tResultado: fallido\n\tNombre archivo resultado que tendría: %s",mapperStruct->archivoResultadoMap);
 		pthread_exit((void*)0);
 	}
 
@@ -425,11 +436,12 @@ void* hilo_mapper(t_mapper* mapperStruct){
 		perror("connect");
 		log_error(logger,"Fallo la conexión con el nodo");
 		respuestaParaMarta.resultado=1;
-		printf("Resultado:%d\n",respuestaParaMarta.resultado);
+		//printf("Resultado:%d\n",respuestaParaMarta.resultado);
 		if(send(marta_sock,&respuestaParaMarta,sizeof(t_respuestaMap),MSG_WAITALL)==-1){
 			perror("send");
 			log_error(logger,"Fallo el envio de la respuesta de un map a marta");
 		}
+		log_info(logger,"Finalizó un hilo MAP.\n\tResultado: fallido\n\tNombre archivo resultado que tendría: %s",mapperStruct->archivoResultadoMap);
 		pthread_exit((void*)0);
 	}
 
@@ -438,14 +450,16 @@ void* hilo_mapper(t_mapper* mapperStruct){
 		perror("send");
 		log_error(logger,"Fallo el envío de identificación mapper-nodo");
 		respuestaParaMarta.resultado=1;
-		printf("Resultado:%d\n",respuestaParaMarta.resultado);
+		//printf("Resultado:%d\n",respuestaParaMarta.resultado);
 		if(send(marta_sock,&respuestaParaMarta,sizeof(t_respuestaMap),MSG_WAITALL)==-1){
 			perror("send");
 			log_error(logger,"Fallo el envio de la respuesta de un map a marta");
 		}
+		log_info(logger,"Finalizó un hilo MAP.\n\tResultado: fallido\n\tNombre archivo resultado que tendría: %s",mapperStruct->archivoResultadoMap);
 		pthread_exit((void*)0);
 	}
 	/*Conexión mapper-nodo establecida*/
+	log_info(logger_archivo,"Le dije al nodo con IP %s puerto %d %s",mapperStruct->ip_nodo,mapperStruct->puerto_nodo,identificacion);
 	log_info(logger,"Hilo mapper conectado al Nodo con IP: %s,en el Puerto: %d",mapperStruct->ip_nodo,mapperStruct->puerto_nodo);
 
 	//Envio al nodo de los datos del Map
@@ -453,11 +467,12 @@ void* hilo_mapper(t_mapper* mapperStruct){
 		perror("send");
 		log_error(logger,"Fallo el envio de los datos del map hacia el Nodo");
 		respuestaParaMarta.resultado=1;
-		printf("Resultado:%d\n",respuestaParaMarta.resultado);
+		//printf("Resultado:%d\n",respuestaParaMarta.resultado);
 		if(send(marta_sock,&respuestaParaMarta,sizeof(t_respuestaMap),MSG_WAITALL)==-1){
 			perror("send");
 			log_error(logger,"Fallo el envio de la respuesta de un map a marta");
 		}
+		log_info(logger,"Finalizó un hilo MAP.\n\tResultado: fallido\n\tNombre archivo resultado que tendría: %s",mapperStruct->archivoResultadoMap);
 		pthread_exit((void*)0);
 	}
 
@@ -465,23 +480,29 @@ void* hilo_mapper(t_mapper* mapperStruct){
 		perror("recv");
 		log_error(logger,"Fallo el recibo del resultado de parte del Nodo");
 		respuestaParaMarta.resultado=1;
-		printf("Resultado:%d\n",respuestaParaMarta.resultado);
+		//printf("Resultado:%d\n",respuestaParaMarta.resultado);
 		if(send(marta_sock,&respuestaParaMarta,sizeof(t_respuestaMap),MSG_WAITALL)==-1){
 			perror("send");
 			log_error(logger,"Fallo el envio de la respuesta de un map a marta");
 		}
+		log_info(logger,"Finalizó un hilo MAP.\n\tResultado: fallido\n\tNombre archivo resultado que tendría: %s",mapperStruct->archivoResultadoMap);
 		pthread_exit((void*)0);
 	}
 
 	respuestaParaMarta.resultado=resultadoMap;
-	printf("Resultado:%d\n",respuestaParaMarta.resultado);
+	//printf("Resultado:%d\n",respuestaParaMarta.resultado);
 
 	if(send(marta_sock,&respuestaParaMarta,sizeof(t_respuestaMap),MSG_WAITALL)==-1){
 		perror("send");
 		log_error(logger,"Fallo el envio de la respuesta de un map a marta");
+		log_info(logger,"Finalizó un hilo MAP.\n\tResultado: fallido\n\tNombre archivo resultado que tendría: %s",mapperStruct->archivoResultadoMap);
+		pthread_exit((void*)0);
 	}
 
 	//close(nodo_sock);
+
+	log_info(logger,"Finalizó un hilo MAP.\n\tResultado: exitoso\n\tNombre archivo resultado: %s",mapperStruct->archivoResultadoMap);
+
 	pthread_exit((void*)0);
 
 }
