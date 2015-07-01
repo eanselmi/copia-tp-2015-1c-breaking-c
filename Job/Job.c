@@ -277,8 +277,9 @@ int main(void){
 }
 
 
+
 void* hilo_reduce(t_hiloReduce* reduceStruct){
-	//pthread_detach(pthread_self());
+	pthread_detach(pthread_self());
 	struct sockaddr_in nodo_addr;
 	int nodo_sock;
 	char identificacion[BUF_SIZE];
@@ -433,8 +434,9 @@ void* hilo_reduce(t_hiloReduce* reduceStruct){
 	}
 
 	//Espero respuesta del nodo
-	if(recv(nodo_sock,&respuestaNodo,sizeof(t_respuestaNodoReduce),MSG_WAITALL)==-1){
+	if(recv(nodo_sock,&respuestaNodo,sizeof(t_respuestaNodoReduce),MSG_WAITALL)<=0){
 		perror("recv");
+		log_info(logger,"El nodo con ip %s y puerto %d se desconectó",reduceStruct->ip_nodoPpal,reduceStruct->puerto_nodoPpal);
 		log_error(logger,"Fallo al recibir la respuesta del nodo para un reduce");
 		respuestaParaMarta.resultado=1;
 		//envío a marta el resultado
@@ -491,7 +493,7 @@ void* hilo_reduce(t_hiloReduce* reduceStruct){
 
 void* hilo_mapper(t_mapper* mapperStruct){
 	//comienzo de conexion con nodo
-	//pthread_detach(pthread_self());
+	pthread_detach(pthread_self());
 	struct sockaddr_in nodo_addr;
 	int nodo_sock;
 	int resultadoMap;
