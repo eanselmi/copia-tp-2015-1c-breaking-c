@@ -887,6 +887,7 @@ void* rutinaReduce (int* sckReduce){
 	int posicionEnListaArchivos=0;
 	int indice=0;
 	FILE* scriptReduce;
+	t_respuestaNodoReduce respuestaParaJob;
 	t_list* listaArchivosReduce;
 	t_list* archivosEnApareo;
 	memset(nombreFinalReduce,'\0',TAM_NOMFINAL);
@@ -897,7 +898,7 @@ void* rutinaReduce (int* sckReduce){
 	char *nombreNuevoReduce=string_new(); //será el nombre del nuevo map
 	char *tiempo=string_new(); //string que tendrá la hora
 	char *pathNuevoReduce=string_new();//El path completo del nuevo Map
-//	t_datosReduce datosParaElReduce;
+	memset(respuestaParaJob.ip_nodoFallido,'\0',20);
 
 	if(recv(*sckReduce,&nombreFinalReduce,TAM_NOMFINAL,MSG_WAITALL)==-1){
 		perror("recv");
@@ -929,6 +930,13 @@ void* rutinaReduce (int* sckReduce){
 	if((scriptReduce=fopen(pathNuevoReduce,"w+"))==NULL){ //path donde guardara el script
 		perror("fopen");
 		log_error(logger,"Fallo al crear el script del mapper");
+		respuestaParaJob.resultado=1;
+		respuestaParaJob.puerto_nodoFallido=config_get_int_value(configurador,"PUERTO_NODO");
+		strcpy(respuestaParaJob.ip_nodoFallido,config_get_string_value(configurador,"IP_NODO"));
+		if(send(*sckReduce,&respuestaParaJob,sizeof(t_respuestaNodoReduce),MSG_WAITALL)==-1){
+			perror("send");
+			log_error(logger,"Fallo el envio de la respues KO al Reduce");
+		}
 		pthread_exit((void*)0);
 	}
 	fputs(rutinaReduce,scriptReduce);
@@ -938,6 +946,13 @@ void* rutinaReduce (int* sckReduce){
 	if(chmod(pathNuevoReduce,S_IRWXU|S_IRWXG|S_IROTH|S_IXOTH)==-1){
 		perror("chmod");
 		log_error(logger,"Fallo el cambio de permisos para el script de map");
+		respuestaParaJob.resultado=1;
+		respuestaParaJob.puerto_nodoFallido=config_get_int_value(configurador,"PUERTO_NODO");
+		strcpy(respuestaParaJob.ip_nodoFallido,config_get_string_value(configurador,"IP_NODO"));
+		if(send(*sckReduce,&respuestaParaJob,sizeof(t_respuestaNodoReduce),MSG_WAITALL)==-1){
+			perror("send");
+			log_error(logger,"Fallo el envio de la respues KO al Reduce");
+		}
 		pthread_exit((void*)0);
 	}
 	fclose(scriptReduce); //cierro el file
@@ -990,6 +1005,14 @@ void* rutinaReduce (int* sckReduce){
 			t_archivoEnApareo *nuevoArchivoEnApareo=malloc(sizeof(t_archivoEnApareo));
 			if((nuevoFileStream=fopen(unArchivoReduce->archivoAAplicarReduce,"r"))==NULL){
 				perror("fopen:");
+				respuestaParaJob.resultado=1;
+				respuestaParaJob.puerto_nodoFallido=config_get_int_value(configurador,"PUERTO_NODO");
+				strcpy(respuestaParaJob.ip_nodoFallido,config_get_string_value(configurador,"IP_NODO"));
+				if(send(*sckReduce,&respuestaParaJob,sizeof(t_respuestaNodoReduce),MSG_WAITALL)==-1){
+					perror("send");
+					log_error(logger,"Fallo el envio de la respues KO al Reduce");
+				}
+				pthread_exit((void*)0);
 			}
 			nuevoArchivoEnApareo->archivo=nuevoFileStream;
 			memset(nuevoArchivoEnApareo->buffer,'\0',512);
@@ -999,6 +1022,9 @@ void* rutinaReduce (int* sckReduce){
 			nuevoArchivoEnApareo->endOfFile=0;
 			nuevoArchivoEnApareo->posicionRenglon=0;
 			memset(nuevoArchivoEnApareo->renglones,'\0',2048);
+			memset(nuevoArchivoEnApareo->ip_nodo,'\0',20);
+			strcpy(nuevoArchivoEnApareo->ip_nodo,config_get_string_value(configurador,"IP_NODO"));
+			nuevoArchivoEnApareo->puerto_nodo=config_get_int_value(configurador,"PUERTO_NODO");
 			printf("Agrego el archivo local %s\n",unArchivoReduce->archivoAAplicarReduce);
 			list_add(archivosEnApareo,nuevoArchivoEnApareo);
 		}
@@ -1016,6 +1042,15 @@ void* rutinaReduce (int* sckReduce){
 			if((otroNodoSock=socket(AF_INET,SOCK_STREAM,0))==-1){ //si función socket devuelve -1 es error
 				perror("socket");
 				log_error(logger,"Fallo la creación del socket (conexión nodo-nodo)");
+				respuestaParaJob.resultado=1;
+				respuestaParaJob.puerto_nodoFallido=config_get_int_value(configurador,"PUERTO_NODO");
+				strcpy(respuestaParaJob.ip_nodoFallido,config_get_string_value(configurador,"IP_NODO"));
+				if(send(*sckReduce,&respuestaParaJob,sizeof(t_respuestaNodoReduce),MSG_WAITALL)==-1){
+					perror("send");
+					log_error(logger,"Fallo el envio de la respues KO al Reduce");
+				}
+				pthread_exit((void*)0);
+
 			}
 			nodo_addr.sin_family=AF_INET;
 			nodo_addr.sin_port=htons(unArchivoReduce->puerto_nodo);
@@ -1024,11 +1059,28 @@ void* rutinaReduce (int* sckReduce){
 			if((connect(otroNodoSock,(struct sockaddr *)&nodo_addr,sizeof(struct sockaddr)))==-1){
 				perror("connect");
 				log_error(logger,"Fallo la conexión con el nodo");
+				respuestaParaJob.resultado=1;
+				respuestaParaJob.puerto_nodoFallido=unArchivoReduce->puerto_nodo;
+				strcpy(respuestaParaJob.ip_nodoFallido,unArchivoReduce->ip_nodo);
+				if(send(*sckReduce,&respuestaParaJob,sizeof(t_respuestaNodoReduce),MSG_WAITALL)==-1){
+					perror("send");
+					log_error(logger,"Fallo el envio de la respues KO al Reduce");
+				}
+				pthread_exit((void*)0);
+
 			}
 			strcpy(identificacion,"soy nodo");
 			if(send(otroNodoSock,identificacion,sizeof(identificacion),MSG_WAITALL)==-1){
 				perror("send");
 				log_error(logger,"Fallo el envío de identificación nodo-nodo");
+				respuestaParaJob.resultado=1;
+				respuestaParaJob.puerto_nodoFallido=unArchivoReduce->puerto_nodo;
+				strcpy(respuestaParaJob.ip_nodoFallido,unArchivoReduce->ip_nodo);
+				if(send(*sckReduce,&respuestaParaJob,sizeof(t_respuestaNodoReduce),MSG_WAITALL)==-1){
+					perror("send");
+					log_error(logger,"Fallo el envio de la respues KO al Reduce");
+				}
+				pthread_exit((void*)0);
 			}
 			/*Conexión mapper-nodo establecida*/
 			log_info(logger,"Nodo conectado al Nodo con IP: %s,en el Puerto: %d",unArchivoReduce->ip_nodo,unArchivoReduce->puerto_nodo);
@@ -1046,6 +1098,9 @@ void* rutinaReduce (int* sckReduce){
 			nuevoArchivoEnApareo->endOfFile=0;
 			nuevoArchivoEnApareo->posicionRenglon=0;
 			memset(nuevoArchivoEnApareo->renglones,'\0',2048);
+			memset(nuevoArchivoEnApareo->ip_nodo,'\0',20);
+			strcpy(nuevoArchivoEnApareo->ip_nodo,unArchivoReduce->ip_nodo);
+			nuevoArchivoEnApareo->puerto_nodo=unArchivoReduce->puerto_nodo;
 			list_add(archivosEnApareo,nuevoArchivoEnApareo);
 		}
 	}
@@ -1053,15 +1108,24 @@ void* rutinaReduce (int* sckReduce){
 
 
 	pthread_mutex_lock(&mutexReduce);
-	ejecutarReduce(archivosEnApareo,nombreNuevoReduce,nombreFinalReduce);
+	ejecutarReduce(archivosEnApareo,nombreNuevoReduce,nombreFinalReduce,sckReduce);
 	pthread_mutex_unlock(&mutexReduce);
 
+	//Si llego hasta acá --> El reduce termino OK, enviar respuesta al Job
 
+	respuestaParaJob.resultado=0;
+	strcpy(respuestaParaJob.ip_nodoFallido,config_get_string_value(configurador,"IP_NODO")); //NO ES FALLIDO EN REALIDAD
+	respuestaParaJob.puerto_nodoFallido=config_get_int_value(configurador,"PUERTO_NODO"); //NO ES FALLIDO EN REALIDAD
+	if(send(*sckReduce,&respuestaParaJob,sizeof(t_respuestaNodoReduce),MSG_WAITALL)==-1){
+		perror("send");
+		log_error(logger,"Fallo el envio de la respuesta OK al hilo reduce");
+		pthread_exit((void*)0);
+	}
 
 	pthread_exit((void*)0);
 }
 
-void ejecutarReduce(t_list* archivosApareando,char* script,char* resultado){
+void ejecutarReduce(t_list* archivosApareando,char* script,char* resultado, int* sckReduce){
 	int posicionLista;
 	int posicionDelMenor=0;
 	int byteActual=0;
@@ -1078,6 +1142,8 @@ void ejecutarReduce(t_list* archivosApareando,char* script,char* resultado){
 	bak=0;
 	char *path;
 	sem_t terminoElReduce;
+	t_respuestaNodoReduce respuestaNR;
+	memset(respuestaNR.ip_nodoFallido,'\0',20);
 	sem_init(&terminoElReduce,0,1);
 	pipe(outfd); /* Donde escribe el padre */
 	if((pid=fork())==-1){
@@ -1111,9 +1177,42 @@ void ejecutarReduce(t_list* archivosApareando,char* script,char* resultado){
 			t_archivoEnApareo* unArchivo;//=malloc(sizeof(t_archivoEnApareo));
 			unArchivo=list_get(archivosApareando,posicionLista);
 			if(unArchivo->archivo==NULL){ //Si es un archivo Remoto
-				send(unArchivo->socket,dameRenglones,sizeof(dameRenglones),MSG_WAITALL);
-				send(unArchivo->socket,unArchivo->nombreArchivo,sizeof(unArchivo->nombreArchivo),MSG_WAITALL);
-				recv(unArchivo->socket,unArchivo->renglones,sizeof(unArchivo->renglones),MSG_WAITALL);
+				if(send(unArchivo->socket,dameRenglones,sizeof(dameRenglones),MSG_WAITALL)==-1){
+					perror("send");
+					log_error(logger,"Fallo al enviar \"dame renglones\" a otro nodo");
+					respuestaNR.resultado=1;
+					respuestaNR.puerto_nodoFallido=unArchivo->puerto_nodo;
+					strcpy(respuestaNR.ip_nodoFallido,unArchivo->ip_nodo);
+					if(send(*sckReduce,&respuestaNR,sizeof(t_respuestaNodoReduce),MSG_WAITALL)==-1){
+						perror("send");
+						log_error(logger,"Fallo el envio de la respues KO al Reduce");
+					}
+					pthread_exit((void*)0);
+				}
+				if(send(unArchivo->socket,unArchivo->nombreArchivo,sizeof(unArchivo->nombreArchivo),MSG_WAITALL)==-1){
+					perror("send");
+					log_error(logger,"Fallo el envio del nombre del archivo a conseguir renglones hacia otro nodo");
+					respuestaNR.resultado=1;
+					respuestaNR.puerto_nodoFallido=unArchivo->puerto_nodo;
+					strcpy(respuestaNR.ip_nodoFallido,unArchivo->ip_nodo);
+					if(send(*sckReduce,&respuestaNR,sizeof(t_respuestaNodoReduce),MSG_WAITALL)==-1){
+						perror("send");
+						log_error(logger,"Fallo el envio de la respues KO al Reduce");
+					}
+					pthread_exit((void*)0);
+				}
+				if(recv(unArchivo->socket,unArchivo->renglones,sizeof(unArchivo->renglones),MSG_WAITALL)==-1){
+					perror("recv");
+					log_error(logger,"Fallo al recibir los renglones de un archivo desde otro nodo");
+					respuestaNR.resultado=1;
+					respuestaNR.puerto_nodoFallido=unArchivo->puerto_nodo;
+					strcpy(respuestaNR.ip_nodoFallido,unArchivo->ip_nodo);
+					if(send(*sckReduce,&respuestaNR,sizeof(t_respuestaNodoReduce),MSG_WAITALL)==-1){
+						perror("send");
+						log_error(logger,"Fallo el envio de la respues KO al Reduce");
+					}
+					pthread_exit((void*)0);
+				}
 				if(strcmp(unArchivo->renglones,"Llego al EOF\n")==0){
 					unArchivo->endOfFile=1;
 				}else{
@@ -1183,9 +1282,42 @@ void ejecutarReduce(t_list* archivosApareando,char* script,char* resultado){
 				if(unArchivo->renglones[unArchivo->posicionRenglon]=='\0'){ //Leyo todos los renglones, hay que pedir mas
 					memset(unArchivo->renglones,'\0',2048);
 					unArchivo->posicionRenglon=0;
-					send(unArchivo->socket,dameRenglones,sizeof(dameRenglones),MSG_WAITALL);
-					send(unArchivo->socket,unArchivo->nombreArchivo,sizeof(unArchivo->nombreArchivo),MSG_WAITALL);
-					recv(unArchivo->socket,unArchivo->renglones,sizeof(unArchivo->renglones),MSG_WAITALL);
+					if(send(unArchivo->socket,dameRenglones,sizeof(dameRenglones),MSG_WAITALL)==-1){
+						perror("send");
+						log_error(logger,"Fallo al enviar \"dame renglones\" a otro nodo");
+						respuestaNR.resultado=1;
+						respuestaNR.puerto_nodoFallido=unArchivo->puerto_nodo;
+						strcpy(respuestaNR.ip_nodoFallido,unArchivo->ip_nodo);
+						if(send(*sckReduce,&respuestaNR,sizeof(t_respuestaNodoReduce),MSG_WAITALL)==-1){
+							perror("send");
+							log_error(logger,"Fallo el envio de la respues KO al Reduce");
+						}
+						pthread_exit((void*)0);
+					}
+					if(send(unArchivo->socket,unArchivo->nombreArchivo,sizeof(unArchivo->nombreArchivo),MSG_WAITALL)==-1){
+						perror("send");
+						log_error(logger,"Fallo el envio del nombre del archivo a conseguir renglones hacia otro nodo");
+						respuestaNR.resultado=1;
+						respuestaNR.puerto_nodoFallido=unArchivo->puerto_nodo;
+						strcpy(respuestaNR.ip_nodoFallido,unArchivo->ip_nodo);
+						if(send(*sckReduce,&respuestaNR,sizeof(t_respuestaNodoReduce),MSG_WAITALL)==-1){
+							perror("send");
+							log_error(logger,"Fallo el envio de la respues KO al Reduce");
+						}
+						pthread_exit((void*)0);
+					}
+					if(recv(unArchivo->socket,unArchivo->renglones,sizeof(unArchivo->renglones),MSG_WAITALL)==-1){
+						perror("recv");
+						log_error(logger,"Fallo al recibir los renglones de un archivo desde otro nodo");
+						respuestaNR.resultado=1;
+						respuestaNR.puerto_nodoFallido=unArchivo->puerto_nodo;
+						strcpy(respuestaNR.ip_nodoFallido,unArchivo->ip_nodo);
+						if(send(*sckReduce,&respuestaNR,sizeof(t_respuestaNodoReduce),MSG_WAITALL)==-1){
+							perror("send");
+							log_error(logger,"Fallo el envio de la respues KO al Reduce");
+						}
+						pthread_exit((void*)0);
+					}
 					if(strcmp(unArchivo->renglones,"Llego al EOF\n")==0){
 						unArchivo->endOfFile=1;
 					}

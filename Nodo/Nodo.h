@@ -30,6 +30,8 @@ typedef struct estructura_archivosapareando{
 	int endOfFile; //0 si no llego, 1 si llego
 	char renglones[2048]; //El proximo renglon del buffer
 	int posicionRenglon; //Posicion en el buffer de donde termina el renglon
+	char ip_nodo[20];
+	int puerto_nodo;
 }t_archivoEnApareo;
 
 typedef struct estructura_archivoAbierto{
@@ -37,6 +39,12 @@ typedef struct estructura_archivoAbierto{
 	char nombreArchivo[TAM_NOMFINAL];
 	long posicionBuffer;
 }t_archivoAbierto;
+
+typedef struct estructura_respuesta_reduce_delnodo{
+	int resultado;
+	char ip_nodoFallido[20];
+	int puerto_nodoFallido;
+}__attribute__((packed)) t_respuestaNodoReduce;
 
 //Declaración de funciones
 char* mapearFileDeDatos();
@@ -54,7 +62,7 @@ void* rutinaReduce(int *socketReduce); //Hilo encargado de ejecutar una rutina R
 char* crearBloqueFalso(); //Solo para uso interno, crea un bloque de 20MB
 char* crearBloqueAMediasFalso(); // Solo para uso interno, crea un bloque de 10MB
 void crearArchivoFalso();//Solo para uso interno, crea un archivo de 50MB en /tmp/archivoPrueba.txt (se puede regular el tamaño en multiplos de 10MB)
-void ejecutarReduce(t_list * listaArchivos, char* script,char* resultado);
+void ejecutarReduce(t_list * listaArchivos, char* script,char* resultado,int* socketReduce);
 t_archivoAbierto* estaEnListaArchivosAbiertos(char* nombreArchivo);
 int no_llego_a_eof(t_archivoEnApareo* archivo); //condicion de que un archivo no llego a end of file
 void removerDeListaDeArchivosAbiertos(FILE* archivoARemover);

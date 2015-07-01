@@ -50,6 +50,13 @@ typedef struct estructura_respuesta {
 	int resultado; // 0 si salio bien , y 1 si salio mal el map
 }__attribute__((packed)) t_respuestaMap;
 
+typedef struct estructura_respuesta_reduce{
+	int resultado;
+	char archivoResultadoReduce[TAM_NOMFINAL];
+	char ip_nodo[20]; //Puede ser el principal, o uno que fallo
+	int puerto_nodo; //Puede ser el principal, o uno que fallo
+}__attribute__((packed)) t_respuestaReduce;
+
 //Estructura que va a tener marta para poder replanificar
 typedef struct estructura_replanificar_map {
 	char archivoResultadoMap[TAM_NOMFINAL];

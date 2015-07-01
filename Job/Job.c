@@ -185,7 +185,6 @@ int main(void){
 							if(pthread_create(&mapperThread,NULL,(void*)hilo_mapper,punteroMapper)!=0){
 								perror("pthread_create");
 								log_error(logger,"Fallo la creación del hilo rutina mapper");
-								return 1;
 							}
 
 						}
@@ -214,7 +213,6 @@ int main(void){
 							if(recv(marta_sock,&datosReduce,sizeof(t_reduce),MSG_WAITALL)==-1){
 								perror("recv");
 								log_error(logger,"Fallo al recibir los datos para el reduce");
-								exit(-1);
 							}
 
 							//Copio los datos que me interesan de lo que envía marta al puntero que enviaré al hilo
@@ -254,7 +252,6 @@ int main(void){
 							if(pthread_create(&reduceThread,NULL,(void*)hilo_reduce,hiloReduce)!=0){
 								perror("pthread_create");
 								log_error(logger,"Fallo la creación del hilo rutina mapper");
-								return 1;
 							}
 						}
 
@@ -281,22 +278,28 @@ int main(void){
 
 
 void* hilo_reduce(t_hiloReduce* reduceStruct){
-	pthread_detach(pthread_self());
-//	printf("El reduce se va a conectar al nodo con ip:%s\n",reduceStruct->ip_nodoPpal);
-//	printf("En el puerto %d\n", reduceStruct->puerto_nodoPpal);
+	//pthread_detach(pthread_self());
 	struct sockaddr_in nodo_addr;
 	int nodo_sock;
-	int resultado;
 	char identificacion[BUF_SIZE];
 	char rutinaReduce[REDUCE_SIZE];
+	t_respuestaReduce respuestaParaMarta;
+	t_respuestaNodoReduce respuestaNodo;
 	char * contReduce;
 	memset(identificacion,'\0',BUF_SIZE);
 	memset(rutinaReduce,'\0',REDUCE_SIZE);
 	int ind;
 	int cantidadArchivos=list_size(reduceStruct->listaNodos);
 
-	log_info(logger,"Se creó un hilo con motivo ejecución de un REDUCE.\n\tParametros recibidos:\t\tIP del Nodo a conectarse: %s\n\t\tPuerto del Nodo: %d\n\t\tNombre del archivo resultado del reduce: %s",reduceStruct->ip_nodoPpal,reduceStruct->puerto_nodoPpal,reduceStruct->nombreArchivoFinal);
+	log_info(logger,"Se creó un hilo con motivo ejecución de un REDUCE.\n\tParametros recibidos:\n\t\tIP del Nodo a conectarse: %s\n\t\tPuerto del Nodo: %d\n\t\tNombre del archivo resultado del reduce: %s",reduceStruct->ip_nodoPpal,reduceStruct->puerto_nodoPpal,reduceStruct->nombreArchivoFinal);
 	log_info(logger,"Se aplicará reduce en los archivos:");
+
+	memset(respuestaNodo.ip_nodoFallido,'\0',20);
+	memset(respuestaParaMarta.archivoResultadoReduce,'\0',TAM_NOMFINAL);
+	memset(respuestaParaMarta.ip_nodo,'\0',20);
+	strcpy(respuestaParaMarta.archivoResultadoReduce,reduceStruct->nombreArchivoFinal);
+	strcpy(respuestaParaMarta.ip_nodo,reduceStruct->ip_nodoPpal);
+	respuestaParaMarta.puerto_nodo=reduceStruct->puerto_nodoPpal;
 
 	for(ind=0;ind<cantidadArchivos;ind++){
 		t_archivosReduce* archReduce;
@@ -309,9 +312,14 @@ void* hilo_reduce(t_hiloReduce* reduceStruct){
 	if((nodo_sock=socket(AF_INET,SOCK_STREAM,0))==-1){ //si función socket devuelve -1 es error
 		perror("socket");
 		log_error(logger,"Fallo la creación del socket (conexión mapper-nodo)");
-		resultado=1;
-		printf("Resultado:%d\n",resultado);
+		respuestaParaMarta.resultado=1;
 		//envío a marta el resultado
+//		if(send(marta_sock,&respuestaParaMarta,sizeof(t_respuestaReduce),MSG_WAITALL)==-1){
+//			perror("send");
+//			log_error(logger,"Fallo el envío de la respuesta fallida a Marta");
+//		}
+
+		log_error(logger,"Finalizó un hilo REDUCE.\n\tResultado: fallido\n\tNombre archivo resultado que tendría: %s",reduceStruct->nombreArchivoFinal);
 		pthread_exit((void*)0);
 	}
 
@@ -323,9 +331,15 @@ void* hilo_reduce(t_hiloReduce* reduceStruct){
 	if((connect(nodo_sock,(struct sockaddr *)&nodo_addr,sizeof(struct sockaddr)))==-1){
 		perror("connect");
 		log_error(logger,"Fallo la conexión con el nodo");
-		resultado=1;
-		printf("Resultado:%d\n",resultado);
+		respuestaParaMarta.resultado=1;
 		//envío a marta el resultado
+//		if(send(marta_sock,&respuestaParaMarta,sizeof(t_respuestaReduce),MSG_WAITALL)==-1){
+//			perror("send");
+//			log_error(logger,"Fallo el envío de la respuesta fallida a Marta");
+//		}
+
+		printf("NO PUDE CONECTARME AL NODO PRINCIPAL %s %d\n",reduceStruct->ip_nodoPpal,reduceStruct->puerto_nodoPpal);
+		log_error(logger,"Finalizó un hilo REDUCE.\n\tResultado: fallido\n\tNombre archivo resultado que tendría: %s",reduceStruct->nombreArchivoFinal);
 		pthread_exit((void*)0);
 	}
 
@@ -334,9 +348,15 @@ void* hilo_reduce(t_hiloReduce* reduceStruct){
 	if(send(nodo_sock,identificacion,sizeof(identificacion),MSG_WAITALL)==-1){
 		perror("send");
 		log_error(logger,"Fallo el envío de identificación mapper-nodo");
-		resultado=1;
-		printf("Resultado:%d\n",resultado);
+		respuestaParaMarta.resultado=1;
 		//envío a marta el resultado
+//		if(send(marta_sock,&respuestaParaMarta,sizeof(t_respuestaReduce),MSG_WAITALL)==-1){
+//			perror("send");
+//			log_error(logger,"Fallo el envío de la respuesta fallida a Marta");
+//		}
+		printf("SE DESCONECTO EL NODO PRINCIPAL %s %d\n",reduceStruct->ip_nodoPpal,reduceStruct->puerto_nodoPpal);
+
+		log_error(logger,"Finalizó un hilo REDUCE.\n\tResultado: fallido\n\tNombre archivo resultado que tendría: %s",reduceStruct->nombreArchivoFinal);
 		pthread_exit((void*)0);
 	}
 	/*Conexión reduce-nodo establecida*/
@@ -347,9 +367,15 @@ void* hilo_reduce(t_hiloReduce* reduceStruct){
 	if(send(nodo_sock,&reduceStruct->nombreArchivoFinal,TAM_NOMFINAL,MSG_WAITALL)==-1){
 		perror("send");
 		log_error(logger,"Fallo el envio del nombre del archivo del resultado del reduce al nodo");
-		resultado=1;
-		printf("Resultado:%d\n",resultado);
+		respuestaParaMarta.resultado=1;
 		//envío a marta el resultado
+//		if(send(marta_sock,&respuestaParaMarta,sizeof(t_respuestaReduce),MSG_WAITALL)==-1){
+//			perror("send");
+//			log_error(logger,"Fallo el envío de la respuesta fallida a Marta");
+//		}
+		printf("SE DESCONECTO EL NODO PRINCIPAL %s %d\n",reduceStruct->ip_nodoPpal,reduceStruct->puerto_nodoPpal);
+
+		log_error(logger,"Finalizó un hilo REDUCE.\n\tResultado: fallido\n\tNombre archivo resultado que tendría: %s",reduceStruct->nombreArchivoFinal);
 		pthread_exit((void*)0);
 	}
 
@@ -359,9 +385,15 @@ void* hilo_reduce(t_hiloReduce* reduceStruct){
 	if(send(nodo_sock,rutinaReduce,sizeof(rutinaReduce),MSG_WAITALL)==-1){
 		perror("send");
 		log_error(logger,"Fallo el envío de la rutina reduce al nodo");
-		resultado=1;
-		printf("Resultado:%d\n",resultado);
-		//envio a marta el resultado
+		respuestaParaMarta.resultado=1;
+		//envío a marta el resultado
+//		if(send(marta_sock,&respuestaParaMarta,sizeof(t_respuestaReduce),MSG_WAITALL)==-1){
+//			perror("send");
+//			log_error(logger,"Fallo el envío de la respuesta fallida a Marta");
+//		}
+		printf("SE DESCONECTO EL NODO PRINCIPAL %s %d\n",reduceStruct->ip_nodoPpal,reduceStruct->puerto_nodoPpal);
+
+		log_error(logger,"Finalizó un hilo REDUCE.\n\tResultado: fallido\n\tNombre archivo resultado que tendría: %s",reduceStruct->nombreArchivoFinal);
 		pthread_exit((void*)0);
 	}
 
@@ -369,9 +401,15 @@ void* hilo_reduce(t_hiloReduce* reduceStruct){
 	if(send(nodo_sock,&cantidadArchivos,sizeof(int),MSG_WAITALL)==-1){
 		perror("send");
 		log_error(logger,"Fallo el envío de la cantidad de archivos a aplicar reduce al nodo");
-		resultado=1;
-		printf("Resultado:%d\n",resultado);
-		//envio a marta el resultado
+		respuestaParaMarta.resultado=1;
+		//envío a marta el resultado
+//		if(send(marta_sock,&respuestaParaMarta,sizeof(t_respuestaReduce),MSG_WAITALL)==-1){
+//			perror("send");
+//			log_error(logger,"Fallo el envío de la respuesta fallida a Marta");
+//		}
+		printf("SE DESCONECTO EL NODO PRINCIPAL %s %d\n",reduceStruct->ip_nodoPpal,reduceStruct->puerto_nodoPpal);
+
+		log_error(logger,"Finalizó un hilo REDUCE.\n\tResultado: fallido\n\tNombre archivo resultado que tendría: %s",reduceStruct->nombreArchivoFinal);
 		pthread_exit((void*)0);
 	}
 
@@ -381,12 +419,71 @@ void* hilo_reduce(t_hiloReduce* reduceStruct){
 		if(send(nodo_sock,archReduce,sizeof(t_archivosReduce),MSG_WAITALL)==-1){
 			perror("send");
 			log_error(logger,"Fallo el envío de los archivos a aplicar reduce al nodo");
-			resultado=1;
-			printf("Resultado:%d\n",resultado);
-			//envio a marta el resultado
+			respuestaParaMarta.resultado=1;
+			//envío a marta el resultado
+//			if(send(marta_sock,&respuestaParaMarta,sizeof(t_respuestaReduce),MSG_WAITALL)==-1){
+//				perror("send");
+//				log_error(logger,"Fallo el envío de la respuesta fallida a Marta");
+//			}
+			printf("SE DESCONECTO EL NODO PRINCIPAL %s %d\n",reduceStruct->ip_nodoPpal,reduceStruct->puerto_nodoPpal);
+
+			log_error(logger,"Finalizó un hilo REDUCE.\n\tResultado: fallido\n\tNombre archivo resultado que tendría: %s",reduceStruct->nombreArchivoFinal);
 			pthread_exit((void*)0);
 		}
 	}
+
+	//Espero respuesta del nodo
+	if(recv(nodo_sock,&respuestaNodo,sizeof(t_respuestaNodoReduce),MSG_WAITALL)==-1){
+		perror("recv");
+		log_error(logger,"Fallo al recibir la respuesta del nodo para un reduce");
+		respuestaParaMarta.resultado=1;
+		//envío a marta el resultado
+//		if(send(marta_sock,&respuestaParaMarta,sizeof(t_respuestaReduce),MSG_WAITALL)==-1){
+//			perror("send");
+//			log_error(logger,"Fallo el envío de la respuesta fallida a Marta");
+//		}
+		printf("SE DESCONECTO EL NODO PRINCIPAL %s %d\n",reduceStruct->ip_nodoPpal,reduceStruct->puerto_nodoPpal);
+
+		log_error(logger,"Finalizó un hilo REDUCE.\n\tResultado: fallido\n\tNombre archivo resultado que tendría: %s",reduceStruct->nombreArchivoFinal);
+		pthread_exit((void*)0);
+	}
+
+
+	respuestaParaMarta.resultado=respuestaNodo.resultado;
+
+	//si respondio KO --> Mando a marta la respuesta KO y el nodo al que no se pudo conectar
+
+	if(respuestaNodo.resultado==1){
+		memset(respuestaParaMarta.ip_nodo,'\0',20);
+		strcpy(respuestaParaMarta.ip_nodo,respuestaNodo.ip_nodoFallido);
+		respuestaParaMarta.puerto_nodo=respuestaNodo.puerto_nodoFallido;
+//		if(send(marta_sock,&respuestaParaMarta,sizeof(t_respuestaReduce),MSG_WAITALL)==-1){
+//			perror("send");
+//			log_error(logger,"Fallo el envio de la respuesta KO de un reduce a marta");
+//			log_error(logger,"Finalizó un hilo REDUCE.\n\tResultado: fallido\n\tNombre archivo resultado que tendría: %s",reduceStruct->nombreArchivoFinal);
+//			pthread_exit((void*)0);
+//		}
+		printf("SE DESCONECTO UNO DE LOS NODOS DEL REDUCE %s %d\n",respuestaNodo.ip_nodoFallido,respuestaNodo.puerto_nodoFallido);
+
+		log_error(logger,"Finalizó un hilo REDUCE.\n\tResultado: fallido\n\tNombre archivo resultado que tendría: %s",reduceStruct->nombreArchivoFinal);
+		pthread_exit((void*)0);
+	}
+
+
+	//si respondio OK --> Mando a marta la respuesta OK
+
+	if(respuestaNodo.resultado==0){
+//		if(send(marta_sock,&respuestaParaMarta,sizeof(t_respuestaReduce),MSG_WAITALL)==-1){
+//			perror("send");
+//			log_error(logger,"Fallo el envio de la respuesta OK de un reduce a marta");
+//			log_error(logger,"Finalizó un hilo REDUCE.\n\tResultado: fallido\n\tNombre archivo resultado que tendría: %s",reduceStruct->nombreArchivoFinal);
+//			pthread_exit((void*)0);
+//		}
+	}
+
+	//Si llega hasta acá, el reduce termino OK
+
+	log_info(logger,"Finalizó un hilo REDUCE.\n\tResultado: exitoso\n\tNombre archivo resultado: %s",reduceStruct->nombreArchivoFinal);
 
 	pthread_exit((void*)0);
 }
@@ -394,7 +491,7 @@ void* hilo_reduce(t_hiloReduce* reduceStruct){
 
 void* hilo_mapper(t_mapper* mapperStruct){
 	//comienzo de conexion con nodo
-	pthread_detach(pthread_self());
+	//pthread_detach(pthread_self());
 	struct sockaddr_in nodo_addr;
 	int nodo_sock;
 	int resultadoMap;

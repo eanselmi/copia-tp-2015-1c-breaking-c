@@ -44,6 +44,20 @@ typedef struct estructura_respuesta {
 	int resultado; // 0 si salio bien , y 1 si salio mal el map
 }__attribute__((packed)) t_respuestaMap;
 
+typedef struct estructura_respuesta_reduce{
+	int resultado;
+	char archivoResultadoReduce[TAM_NOMFINAL];
+	char ip_nodo[20]; //Puede ser el principal, o uno que fallo
+	int puerto_nodo; //Puede ser el principal, o uno que fallo
+}__attribute__((packed)) t_respuestaReduce;
+
+typedef struct estructura_respuesta_reduce_delnodo{
+	int resultado;
+	char ip_nodoFallido[20];
+	int puerto_nodoFallido;
+}__attribute__((packed)) t_respuestaNodoReduce;
+
+
 //Declaración de funciones
 void* hilo_mapper(t_mapper*);
 void* hilo_reduce(t_hiloReduce*);
