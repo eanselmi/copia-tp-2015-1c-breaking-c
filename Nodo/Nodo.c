@@ -347,7 +347,6 @@ void *manejador_de_escuchas(){
 					if ((nbytes=recv(socketModificado,mensaje,sizeof(mensaje),MSG_WAITALL))==-1){ //da error
 						perror("recv");
 						log_error(logger,"Falló el receive");
-						exit(-1);
 					}
 					if(nbytes==0){ //se desconectó
 						close(socketModificado);
@@ -1201,8 +1200,9 @@ void ejecutarReduce(t_list* archivosApareando,char* script,char* resultado, int*
 					}
 					pthread_exit((void*)0);
 				}
-				if(recv(unArchivo->socket,unArchivo->renglones,sizeof(unArchivo->renglones),MSG_WAITALL)==-1){
+				if(recv(unArchivo->socket,unArchivo->renglones,sizeof(unArchivo->renglones),MSG_WAITALL)<=0){
 					perror("recv");
+					log_info(logger,"Se desconecto el nodo con IP %s cuyo puerto de escucha es %d",unArchivo->ip_nodo,unArchivo->puerto_nodo);
 					log_error(logger,"Fallo al recibir los renglones de un archivo desde otro nodo");
 					respuestaNR.resultado=1;
 					respuestaNR.puerto_nodoFallido=unArchivo->puerto_nodo;
@@ -1306,8 +1306,9 @@ void ejecutarReduce(t_list* archivosApareando,char* script,char* resultado, int*
 						}
 						pthread_exit((void*)0);
 					}
-					if(recv(unArchivo->socket,unArchivo->renglones,sizeof(unArchivo->renglones),MSG_WAITALL)==-1){
+					if(recv(unArchivo->socket,unArchivo->renglones,sizeof(unArchivo->renglones),MSG_WAITALL)<=0){
 						perror("recv");
+						log_info(logger,"Se desconecto el nodo con IP %s cuyo puerto de escucha es %d",unArchivo->ip_nodo,unArchivo->puerto_nodo);
 						log_error(logger,"Fallo al recibir los renglones de un archivo desde otro nodo");
 						respuestaNR.resultado=1;
 						respuestaNR.puerto_nodoFallido=unArchivo->puerto_nodo;
