@@ -92,3 +92,4 @@ bool ordenarSegunMapYReduce (t_nodo* menorCarga,t_nodo* mayorCarga);
 void sumarCantMapper(char* nodoASumar);
 bool nodoIdMasRepetido(char*,char*);
 void restarCantMapper(char* nodoParaRestar);
+char* obtenerNombreArchivoReduce ();

@@ -1117,38 +1117,96 @@ void *atenderJob (int *socketJob) {
 		int posMapOk;
 		t_replanificarMap *mapPorNodoAnt;
 		t_replanificarMap *mapPorNodo;
-		t_list *listaMapPorNodo;
-		listaMapPorNodo=list_create();
-		//Agarro el primer elemento de la listaMapOk
+		t_list *listaMapPorNodo; //Lista de los map del mismo nodo
+		listaMapPorNodo=list_create();//Agarro el primer elemento de la listaMapOk
 		mapPorNodoAnt = list_get(listaMapOk, 0);
-		//Agrego el primer que saqué de listaMapOk en la neuva lista
-		list_add(listaMapPorNodo,mapPorNodoAnt);
+		list_add(listaMapPorNodo,mapPorNodoAnt); //Agrego el primer que saqué de listaMapOk en la nueva lista
 		//Recorro la listaMapOk y me guardo en una lista los nodos que tienen el mismo ID_NODO
-		for(posMapOk=1; posMapOk<listaMapOk;posMapOk++){
-			//Agarro el elemento de la posición posMapOk de la listaMapOk
-			mapPorNodo = list_get(listaMapOk, 0);
+		for(posMapOk=1; posMapOk<list_size(listaMapOk);posMapOk++){
+			mapPorNodo = list_get(listaMapOk, 0); //Agarro el elemento de la posición posMapOk de la listaMapOk
 			//Si el nodoID del elemento que saqué de la posición posMapOk es igual al nodoID del
 			//primer elemento que saque de listaMapOk lo agrego en la nueva lista
 			while(strcmp(mapPorNodoAnt->nodoId,mapPorNodo->nodoId)==0){
 				list_add(listaMapPorNodo,mapPorNodo);
 			}
+
+			int posRP;
+			t_nodo * nodoRP;
+			t_reduce nodoReducerParcial;
+			char *archivoReduceParcial;
+			//Recorro la listaMapPorNodo y completo la estructura t_reduce
+			for(posRP=0; posRP < list_size(listaMapPorNodo); posRP++){
+				nodoRP = list_get(listaMapPorNodo, posRP);
+				nodoReducerParcial.puerto_nodoPpal = nodoRP->puerto_escucha_nodo;
+				strcpy(nodoReducerParcial.ip_nodoPpal, nodoRP->ip);
+				archivoReduceParcial = obtenerNombreArchivoReduce();
+				strcpy(nodoReducerParcial.nombreArchivoFinal, archivoReduceParcial);
+			}
+			// Mando a ejecutar reduce
+			char mensajeReducerParcial[TAM_NOMFINAL];
+			memset(mensajeReducerParcial, '\0', TAM_NOMFINAL);
+			strcpy(mensajeReducerParcial,"ejecuta reduce");
+			if(send(*socketJob, mensajeReducerParcial,sizeof(TAM_NOMFINAL),MSG_WAITALL)==-1){
+				perror("send");
+				log_error(logger, "Fallo mandar hacer reducer");
+				//exit(-1);
+			}
+			if(send(*socketJob, &nodoReducerParcial,sizeof(t_reduce),MSG_WAITALL)==-1){
+				perror("send");
+				log_error(logger, "Fallo mandar datos para hacer reducer");
+				//exit(-1);
+			}
+			// Mando cantidad de archivos a hacer reduce
+			int cantArch = list_size(listaMapPorNodo);
+			if(send(*socketJob, &cantArch,sizeof(int),MSG_WAITALL)==-1){
+				perror("send");
+				log_error(logger, "Fallo mandar la cantidad de archivos a hacer reduce");
+				//exit(-1);
+			}
+			//Le mando los datos de cada uno de los archivos: IP Nodo, Puerto Nodo, nombreArchivo resultado de map (t_archivosReduce)
+			int posNodoOk;
+			t_replanificarMap *nodoOk;
+			t_archivosReduce archReducePorNodo;
+			memset(archReducePorNodo.archivoAAplicarReduce,'\0',TAM_NOMFINAL);
+			for(posNodoOk = 0; posNodoOk < list_size(listaMapPorNodo); posNodoOk ++){
+				nodoOk = list_get(listaMapPorNodo,posNodoOk);
+				strcpy(archReducePorNodo.archivoAAplicarReduce, nodoOk->archivoResultadoMap);
+				int posNodoGlobalRP;
+				t_nodo *nodoGlobalRP;
+				for(posNodoGlobalRP = 0; posNodoGlobalRP < list_size(listaNodos);posNodoGlobalRP ++){
+					nodoGlobalRP = list_get(listaNodos,posNodoGlobalRP);
+					if(strcmp(nodoOk->nodoId, nodoGlobalRP->nodo_id)==0){
+						strcpy(archReducePorNodo.ip_nodo, nodoGlobalRP->ip);
+						archReducePorNodo.puerto_nodo = nodoGlobalRP->puerto_escucha_nodo;
+					}
+				}
+				// Mando por cada t_replanificarMap ok, los datos de cada archivo
+				if(send(*socketJob, &archReducePorNodo,sizeof(t_archivosReduce),MSG_WAITALL)==-1){
+					perror("send");
+					log_error(logger, "Fallo mandar la archivo a hacer reduce");
+					//exit(-1);
+				}
+			}
 		}
-		// Avisarle a JOB que tiene que ejecutar Reduce
-		//Le mando a JOB t_reduce que se va a ejecuta
-		// le mando al job la cantidad de archivos a los que que hay que aplicarle Reduce
-		//Le mando los datos de cada uno de los archivos: IP Nodo, Puerto Nodo, nombreArchivo resultado de map (t_archivosReduce)
-		//Recibir la respuesta del JOB confirmando que termino con los reduce
-		// Avisarle a JOB que tiene que ejecutar Reduce
+	}
+
+		//Recibir la respuesta del JOB confirmando que termino con los reduce de los que están en el mismo nodo
+
+		// Avisarle a JOB que tiene que ejecutar Reduce final (a todos los archivoResultadoReduce de los que están en el mismo nodo)
 		//Le mando a JOB t_reduce que se va a ejecutar
 		// le mando al job la cantidad de archivos a los que que hay que aplicarle Reduce
 		//Le mando los datos de cada uno de los archivos: IP Nodo, Puerto Nodo, nombreArchivo resultado de map (t_archivosReduce)
 
-	}
 
+		//Replanificar
 
-	pthread_exit((void*)0);
-
+		pthread_exit((void*)0);
 }
+
+
+
+
+
 
 bool nodoIdMasRepetido (char* antNodoId, char* posNodoId){
 	bool esVerdadero;
@@ -1226,4 +1284,29 @@ void restarCantMapper(char* idNodoARestar){
 			unNodo->cantMappers--;
 		}
 	}
+}
+
+char* obtenerNombreArchivoReduce (){
+	char* tiempoReduce=string_new();
+	char** arrayTiempoReduce;
+	char* archivoReduceTemp=string_new();
+	char* pathArchivoReduceTemp= string_new();
+	//char **arrayNomArchivo=string_split(map->nombreArchivoDelJob,".");
+
+	strcpy(archivoReduceTemp,"/tmp/");
+//	string_append(&archivoReduceTemp,stringNroJob);
+//	string_append(&archivoReduceTemp,arrayNomArchivo[0]);
+	arrayTiempoReduce=string_split(temporal_get_string_time(),":"); //creo array con hora minutos segundos y milisegundos separados
+	string_append(&tiempoReduce,arrayTiempoReduce[0]);//Agrego horas
+	string_append(&tiempoReduce,arrayTiempoReduce[1]);//Agrego minutos
+	string_append(&tiempoReduce,arrayTiempoReduce[2]);//Agrego segundos
+	string_append(&tiempoReduce,arrayTiempoReduce[3]);//Agrego milisegundos
+	string_append(&archivoReduceTemp,"_Bloq");
+	//string_append(&archivoReduceTemp,string_itoa(map->bloqueArchivo));
+	string_append(&archivoReduceTemp,"_");
+	string_append(&archivoReduceTemp,tiempoReduce);
+	string_append(&archivoReduceTemp,"Rep.txt");
+	string_append(&pathArchivoReduceTemp,archivoReduceTemp);
+
+	return pathArchivoReduceTemp;
 }
