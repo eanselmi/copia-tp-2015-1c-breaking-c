@@ -80,6 +80,13 @@ typedef struct lista_nodos_reduce{
 	char archivoAAplicarReduce[TAM_NOMFINAL];
 } __attribute__((packed)) t_archivosReduce;
 
+typedef struct estructura_respuesta_reduceParcial{
+	int resultado; // 0 si salio bien , y 1 si salio mal el map
+	char archivoResultadoReduceParcial[TAM_NOMFINAL];
+	char ip_nodo[20];
+	int puerto_nodo;
+} t_respuestaReduceParcial;
+
 
 //Prototipos de funciones
 void *connection_handler_jobs(); // Esta funcion escucha continuamente si recibo nuevos mensajes
@@ -92,4 +99,6 @@ bool ordenarSegunMapYReduce (t_nodo* menorCarga,t_nodo* mayorCarga);
 void sumarCantMapper(char* nodoASumar);
 bool nodoIdMasRepetido(char*,char*);
 void restarCantMapper(char* nodoParaRestar);
+void sumarCantReducers(char* idNodoASumar);
+void restarCantReducers(char* idNodoARestar);
 char* obtenerNombreArchivoReduce ();
