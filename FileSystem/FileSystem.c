@@ -883,13 +883,43 @@ void actualizar_persistencia_copiar_bloque(char* nodoId,int bloque,char* nodoId_
 					n_bloque=strtok_r(NULL,";",&saveptr);
 					if (strcmp(nodoId,nodo_id)==0 && atoi(n_bloque)==bloque){
 						nuevo_n_copias++;
-						buffer_2[1]=string_itoa(nuevo_n_copias)[0];
-						strcat(buffer_2,";");
-						strcat(buffer_2,nodo_id);
-						strcat(buffer_2,";");
-						strcat(buffer_2,md5);
-						strcat(buffer_2,";");
-						strcat(buffer_2,n_bloque);
+						if (nuevo_n_copias==10){
+							int longotud_cadena=strlen(buffer_2);
+							int p;
+							for (p=longotud_cadena;p>2;p--){
+								buffer_2[p]=buffer_2[p-1];
+							}
+							buffer_2[1]=string_itoa(nuevo_n_copias)[0];
+							buffer_2[2]=string_itoa(nuevo_n_copias)[1];
+							strcat(buffer_2,";");
+							strcat(buffer_2,nodo_id);
+							strcat(buffer_2,";");
+							strcat(buffer_2,md5);
+							strcat(buffer_2,";");
+							strcat(buffer_2,n_bloque);
+						}else if (nuevo_n_copias>10){
+							int longotud_cadena=strlen(buffer_2);
+							int p;
+							for (p=longotud_cadena;p>3;p--){
+								buffer_2[p]=buffer_2[p-1];
+							}
+							buffer_2[1]=string_itoa(nuevo_n_copias)[0];
+							buffer_2[2]=string_itoa(nuevo_n_copias)[1];
+							strcat(buffer_2,";");
+							strcat(buffer_2,nodo_id);
+							strcat(buffer_2,";");
+							strcat(buffer_2,md5);
+							strcat(buffer_2,";");
+							strcat(buffer_2,n_bloque);
+						}else{
+							buffer_2[1]=string_itoa(nuevo_n_copias)[0];
+							strcat(buffer_2,";");
+							strcat(buffer_2,nodo_id);
+							strcat(buffer_2,";");
+							strcat(buffer_2,md5);
+							strcat(buffer_2,";");
+							strcat(buffer_2,n_bloque);
+						}
 
 						//Aca agrego el nuevo
 						strcat(buffer_2,";");
