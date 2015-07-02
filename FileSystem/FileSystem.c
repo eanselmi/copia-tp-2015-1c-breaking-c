@@ -341,8 +341,8 @@ int recuperar_persistencia(){
 	if (dir!=NULL){
 		int i,j;
 		int cantidad_bloques,cantidad_copias;
-		char buffer_archivo[2048];
-		memset(buffer_archivo,'\0',2048);
+		char buffer_archivo[4096];
+		memset(buffer_archivo,'\0',4096);
 		while (fgets(buffer_archivo, sizeof(buffer_archivo),dir) != NULL){
 			if (strcmp(buffer_archivo,"\n")!=0){
 				valor_persistencia=1;
@@ -374,7 +374,7 @@ int recuperar_persistencia(){
 				}
 				list_add(archivos,archivo);
 			}
-			memset(buffer_archivo,'\0',2048);
+			memset(buffer_archivo,'\0',4096);
 		}
 		fclose(dir);
 	}
