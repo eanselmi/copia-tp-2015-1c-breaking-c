@@ -675,8 +675,11 @@ void *atenderJob (int *socketJob) {
 		int cantBloques;
 		int posBloques;
 		int padre;
+		char archivoAPedirPadre[TAM_NOMFINAL];
 		char** arrayArchivo;
 		t_list *bloques;
+
+		memset(archivoAPedirPadre,'\0',TAM_NOMFINAL);
 
 		printf("Se debe trabajar en el archivo:%s\n",archivos[posicionArchivo]);
 		//Separo el nombre del archivo por barras
@@ -695,7 +698,9 @@ void *atenderJob (int *socketJob) {
 			//exit(-1);
 		}
 		//Le mando el path a FS para que me mande el padre
-		if(send(socket_fs,archivos[posicionArchivo],sizeof(TAM_NOMFINAL),MSG_WAITALL) == -1) {
+		strcpy(archivoAPedirPadre,archivos[posicionArchivo]);
+
+		if(send(socket_fs,archivoAPedirPadre,sizeof(archivoAPedirPadre),MSG_WAITALL) == -1) {
 			perror("send");
 			log_error(logger,"Fallo el envio del nombre de archivo al FS");
 			//exit(-1);

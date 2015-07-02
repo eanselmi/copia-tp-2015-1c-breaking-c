@@ -39,7 +39,6 @@ int listener; // descriptor de socket a la escucha
 struct sockaddr_in filesystem; // dirección del servidor
 struct sockaddr_in remote_client; // dirección del cliente
 char identificacion[BUF_SIZE]; // buffer para datos del cliente
-char mensaje[MENSAJE_SIZE];
 int cantidad_nodos = 0;
 int cantidad_nodos_historico = 0;
 int read_size;
@@ -1225,6 +1224,7 @@ void listar_archivos_subidos(t_list *archivos) {    //VERSION COMPLETA NO APTA P
 
 void *connection_handler_escucha(void) {
 	int i, newfd, addrlen;
+	char mensaje[BUF_SIZE];
 	while (1) {
 		read_fds = master;
 		if (select(fdmax + 1, &read_fds, NULL, NULL, NULL) == -1) {
@@ -1232,6 +1232,7 @@ void *connection_handler_escucha(void) {
 			log_error(logger, "FALLO el Select");
 			exit(-1);
 		}
+		memset(mensaje,'\0',BUF_SIZE);
 		// explorar conexiones existentes en busca de datos que leer
 		for (i = 0; i <= fdmax; i++) {
 			if (FD_ISSET(i, &read_fds)) { // ¡¡tenemos datos!!
@@ -1442,7 +1443,38 @@ void *connection_handler_escucha(void) {
 								FD_CLR(i, &master); // eliminar del conjunto maestro
 								printf("Marta se desconecto\n");
 							}else{
-								//Marta me manda algo
+								// el recv dio -1 , osea, error
+								}
+							}
+						if(read_size>0){
+							if(strcmp(mensaje,"dame padre")==0){
+								//Marta me pide el padre de un archivo (path completo)
+								char nombreArchivoPadre[60];
+								char** directoriosPorSeparado;
+								char* directorioDestino=string_new();
+								int posicionDirectorio=0;
+								memset(nombreArchivoPadre,'\0',60);
+
+								if(recv(marta_sock,nombreArchivoPadre,sizeof(nombreArchivoPadre),MSG_WAITALL)==-1){
+									perror("recv");
+									log_error(logger,"Fallo el envio del nombre del archivo a dar el padre por parte de Marta");
+								}
+
+								//Busco el padre
+								directoriosPorSeparado=string_split(nombreArchivoPadre,"/");
+								while(directoriosPorSeparado[posicionDirectorio+1]!=NULL){
+									string_append(&directorioDestino,"/");
+									string_append(&directorioDestino,directoriosPorSeparado[posicionDirectorio]);
+									posicionDirectorio++;
+								}
+								//Buscar Directorio.
+								uint32_t idPadre = BuscarPadre(directorioDestino);
+
+								//Envio el padre
+								if(send(marta_sock,&idPadre,sizeof(uint32_t),MSG_WAITALL)==-1){
+									perror("send");
+									log_error(logger,"Fallo el envio de un padre a Marta");
+								}
 							}
 						}
 					}else{
