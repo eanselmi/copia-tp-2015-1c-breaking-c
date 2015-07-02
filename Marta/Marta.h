@@ -80,12 +80,7 @@ typedef struct lista_nodos_reduce{
 	char archivoAAplicarReduce[TAM_NOMFINAL];
 } __attribute__((packed)) t_archivosReduce;
 
-typedef struct estructura_respuesta_reduceParcial{
-	int resultado; // 0 si salio bien , y 1 si salio mal el map
-	char archivoResultadoReduceParcial[TAM_NOMFINAL];
-	char ip_nodo[20];
-	int puerto_nodo;
-} t_respuestaReduceParcial;
+
 
 
 //Prototipos de funciones
