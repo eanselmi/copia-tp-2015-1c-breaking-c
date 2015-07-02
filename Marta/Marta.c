@@ -1204,12 +1204,12 @@ void *atenderJob (int *socketJob) {
 				log_error(logger,"Fallo al recibir el ok del job");
 				//exit(-1);
 			}
-			t_respuestaReduceParcial *reduceParcial;
+			t_respuestaReduce *reduceParcial;
 			int posReduce;
 			//Recorro lista de mappers y comparo cada archivoResultadoMap con el que me dio la respuesta del job, cuando coincide corta
 			for(posReduce = 0; posReduce < list_size(listaMapPorNodo); posReduce++){
 				reduceParcial = list_get(listaMapPorNodo, posReduce);
-				if(strcmp(reduceParcial->archivoResultadoReduceParcial,respuestaReduce.archivoResultadoReduce)==0){
+				if(strcmp(reduceParcial->archivoResultadoReduce,respuestaReduce.archivoResultadoReduce)==0){
 					break;
 				}
 			}
