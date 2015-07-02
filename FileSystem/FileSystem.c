@@ -573,10 +573,10 @@ void actualizar_persistencia_archivo_eliminado(char* nombre,int idPadre){
 	FILE* aux;
 	dir=fopen("archivos","r");
 	aux=fopen("auxiliar","w");
-	char buffer[2028];
-	char copia_buffer[2048];
-	memset(buffer,'\0',2048);
-	memset(copia_buffer,'\0',2048);
+	char buffer[4096];
+	char copia_buffer[4096];
+	memset(buffer,'\0',4096);
+	memset(copia_buffer,'\0',4096);
 	char *saveptr;
 	int padre;
 	char *nombre_archivo=string_new();
@@ -589,8 +589,8 @@ void actualizar_persistencia_archivo_eliminado(char* nombre,int idPadre){
 
 			}else
 				fprintf (aux,"%s",copia_buffer);
-			memset(buffer,'\0',2048);
-			memset(copia_buffer,'\0',2048);
+			memset(buffer,'\0',4096);
+			memset(copia_buffer,'\0',4096);
 		}
 	}
 	fclose(dir);
@@ -598,10 +598,10 @@ void actualizar_persistencia_archivo_eliminado(char* nombre,int idPadre){
 
 	dir=fopen("archivos","w");
 	aux=fopen("auxiliar","r");
-	memset(buffer,'\0',2048);
+	memset(buffer,'\0',4096);
 	while (fgets(buffer, sizeof(buffer),aux) != NULL){
 		fprintf (dir,"%s",buffer);
-		memset(buffer,'\0',2048);
+		memset(buffer,'\0',4096);
 	}
 	fclose(dir);
 	fclose(aux);
@@ -614,11 +614,11 @@ void actualizar_persistencia_archivo_renombrado(char* nombre,int idPadre,char *n
 		dir=fopen("archivos","r");
 		aux=fopen("auxiliar","w");
 		char buffer[2028];
-		char copia_buffer[2048];
-		memset(buffer,'\0',2048);
-		memset(copia_buffer,'\0',2048);
-		char nueva_copia[2048];
-		memset(nueva_copia,'\0',2048);
+		char copia_buffer[4096];
+		memset(buffer,'\0',4096);
+		memset(copia_buffer,'\0',4096);
+		char nueva_copia[4096];
+		memset(nueva_copia,'\0',4096);
 		int i,j;
 		char *saveptr;
 		char *padre=string_new();
@@ -661,8 +661,8 @@ void actualizar_persistencia_archivo_renombrado(char* nombre,int idPadre,char *n
 				}
 				else
 					fprintf (aux,"%s",copia_buffer);
-				memset(buffer,'\0',2048);
-				memset(copia_buffer,'\0',2048);
+				memset(buffer,'\0',4096);
+				memset(copia_buffer,'\0',4096);
 			}
 		}
 		fclose(dir);
@@ -670,10 +670,10 @@ void actualizar_persistencia_archivo_renombrado(char* nombre,int idPadre,char *n
 
 		dir=fopen("archivos","w");
 		aux=fopen("auxiliar","r");
-		memset(buffer,'\0',2048);
+		memset(buffer,'\0',4096);
 		while (fgets(buffer, sizeof(buffer),aux) != NULL){
 			fprintf (dir,"%s",buffer);
-			memset(buffer,'\0',2048);
+			memset(buffer,'\0',4096);
 		}
 		fclose(dir);
 		fclose(aux);
@@ -686,11 +686,11 @@ void actualizar_persistencia_archivo_movido(char* nombre,int idPadre,int nuevo_i
 		dir=fopen("archivos","r");
 		aux=fopen("auxiliar","w");
 		char buffer[2028];
-		char copia_buffer[2048];
-		memset(buffer,'\0',2048);
-		memset(copia_buffer,'\0',2048);
-		char nueva_copia[2048];
-		memset(nueva_copia,'\0',2048);
+		char copia_buffer[4096];
+		memset(buffer,'\0',4096);
+		memset(copia_buffer,'\0',4096);
+		char nueva_copia[4096];
+		memset(nueva_copia,'\0',4096);
 		int i,j;
 		char *saveptr;
 		char *padre=string_new();
@@ -733,8 +733,8 @@ void actualizar_persistencia_archivo_movido(char* nombre,int idPadre,int nuevo_i
 				}
 				else
 					fprintf (aux,"%s",copia_buffer);
-				memset(buffer,'\0',2048);
-				memset(copia_buffer,'\0',2048);
+				memset(buffer,'\0',4096);
+				memset(copia_buffer,'\0',4096);
 			}
 		}
 		fclose(dir);
@@ -742,10 +742,10 @@ void actualizar_persistencia_archivo_movido(char* nombre,int idPadre,int nuevo_i
 
 		dir=fopen("archivos","w");
 		aux=fopen("auxiliar","r");
-		memset(buffer,'\0',2048);
+		memset(buffer,'\0',4096);
 		while (fgets(buffer, sizeof(buffer),aux) != NULL){
 			fprintf (dir,"%s",buffer);
-			memset(buffer,'\0',2048);
+			memset(buffer,'\0',4096);
 		}
 		fclose(dir);
 		fclose(aux);
@@ -759,13 +759,13 @@ void actualizar_persistencia_eliminar_bloque(char* nodoId,int bloque){
 	dir=fopen("archivos","r");
 	aux=fopen("auxiliar","w");
 	char buffer[2028];
-	char copia_buffer[2048];
-	memset(buffer,'\0',2048);
-	char buffer_2[1024];
-	memset(buffer_2,'\0',1024);
-	memset(copia_buffer,'\0',2048);
-	char nueva_copia[2048];
-	memset(nueva_copia,'\0',2048);
+	char copia_buffer[4096];
+	memset(buffer,'\0',4096);
+	char buffer_2[2048];
+	memset(buffer_2,'\0',2048);
+	memset(copia_buffer,'\0',4096);
+	char nueva_copia[4096];
+	memset(nueva_copia,'\0',4096);
 	int i,j;
 	char *saveptr;
 	int nuevo_n_copias;
@@ -810,13 +810,13 @@ void actualizar_persistencia_eliminar_bloque(char* nodoId,int bloque){
 					}
 				}
 				strcat(nueva_copia,buffer_2);
-				memset(buffer_2,'\0',1024);
+				memset(buffer_2,'\0',2048);
 			}
 			strcat(nueva_copia,"\n");
 			fprintf (aux,"%s",nueva_copia);
-			memset(nueva_copia,'\0',2048);
-			memset(buffer,'\0',2048);
-			memset(copia_buffer,'\0',2048);
+			memset(nueva_copia,'\0',4096);
+			memset(buffer,'\0',4096);
+			memset(copia_buffer,'\0',4096);
 		}
 	}
 
@@ -826,10 +826,10 @@ void actualizar_persistencia_eliminar_bloque(char* nodoId,int bloque){
 
 	dir=fopen("archivos","w");
 	aux=fopen("auxiliar","r");
-	memset(buffer,'\0',2048);
+	memset(buffer,'\0',4096);
 	while (fgets(buffer, sizeof(buffer),aux) != NULL){
 		fprintf (dir,"%s",buffer);
-		memset(buffer,'\0',2048);
+		memset(buffer,'\0',4096);
 	}
 	fclose(dir);
 	fclose(aux);
@@ -844,13 +844,13 @@ void actualizar_persistencia_copiar_bloque(char* nodoId,int bloque,char* nodoId_
 	dir=fopen("archivos","r");
 	aux=fopen("auxiliar","w");
 	char buffer[2028];
-	char copia_buffer[2048];
-	memset(buffer,'\0',2048);
-	char buffer_2[1024];
-	memset(buffer_2,'\0',1024);
-	memset(copia_buffer,'\0',2048);
-	char nueva_copia[2048];
-	memset(nueva_copia,'\0',2048);
+	char copia_buffer[4096];
+	memset(buffer,'\0',4096);
+	char buffer_2[2048];
+	memset(buffer_2,'\0',2048);
+	memset(copia_buffer,'\0',4096);
+	char nueva_copia[4096];
+	memset(nueva_copia,'\0',4096);
 	int i,j;
 	char *saveptr;
 	int nuevo_n_copias;
@@ -910,13 +910,13 @@ void actualizar_persistencia_copiar_bloque(char* nodoId,int bloque,char* nodoId_
 					}
 				}
 				strcat(nueva_copia,buffer_2);
-				memset(buffer_2,'\0',1024);
+				memset(buffer_2,'\0',2048);
 			}
 			strcat(nueva_copia,"\n");
 			fprintf (aux,"%s",nueva_copia);
-			memset(nueva_copia,'\0',2048);
-			memset(buffer,'\0',2048);
-			memset(copia_buffer,'\0',2048);
+			memset(nueva_copia,'\0',4096);
+			memset(buffer,'\0',4096);
+			memset(copia_buffer,'\0',4096);
 		}
 	}
 
@@ -926,10 +926,10 @@ void actualizar_persistencia_copiar_bloque(char* nodoId,int bloque,char* nodoId_
 
 	dir=fopen("archivos","w");
 	aux=fopen("auxiliar","r");
-	memset(buffer,'\0',2048);
+	memset(buffer,'\0',4096);
 	while (fgets(buffer, sizeof(buffer),aux) != NULL){
 		fprintf (dir,"%s",buffer);
-		memset(buffer,'\0',2048);
+		memset(buffer,'\0',4096);
 	}
 	fclose(dir);
 	fclose(aux);
