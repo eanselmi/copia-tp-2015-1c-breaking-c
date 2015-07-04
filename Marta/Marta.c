@@ -503,6 +503,7 @@ void *connection_handler_jobs(){
 	uint32_t padreArchivoNovedad;
 	char nodoId[6];
 	int bloqueNodo;
+	int bloqueNodoDestino;
 	if ((listener = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
 		perror("socket");
 		log_info(logger,"FALLO la creacion del socket");
@@ -690,16 +691,43 @@ void *connection_handler_jobs(){
 								exit(-1);
 							}
 							printf ("...Bloque del borrar bloque: %d\n",bloqueNodo);
-
-
 							//TODO borrar bloque
-
-
-
-
 						}
 						if (strcmp(identificacion,"nuevo_bloque")==0){
 							printf ("Voy a agregar una nueva copia de un bloque de un archivo a las estructuras\n");
+							if ((nbytes = recv(socket_fs, nombreArchivoNovedad,	sizeof(nombreArchivoNovedad), MSG_WAITALL))	< 0) { //si entra aca es porque hubo un error
+								perror("recv");
+								log_error(logger,"FALLO el Recv del nombre del archivo del copiar bloque");
+								exit(-1);
+							}
+							printf("...Nombre del archivo del borrar bloque: %s\n", nombreArchivoNovedad);
+							if ((nbytes = recv(socket_fs, &padreArchivoNovedad, sizeof(uint32_t), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
+								perror("recv");
+								log_error(logger,"FALLO el Recv del padre del archivo del copiar bloque");
+								exit(-1);
+							}
+							printf ("...Padre del archivo del borrar bloque: %d\n",padreArchivoNovedad);
+							if ((nbytes = recv(socket_fs, &bloqueNodo, sizeof(int), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
+								perror("recv");
+								log_error(logger,"FALLO el Recv del bloque del nodo del copiar bloque");
+								exit(-1);
+							}
+							printf ("...Bloque del borrar bloque: %d\n",bloqueNodo);
+							memset(nodoId,'\0',6);
+							if ((nbytes = recv(socket_fs, nodoId, sizeof(nodoId), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
+								perror("recv");
+								log_error(logger,"FALLO el Recv del nodo del copiar bloque");
+								exit(-1);
+							}
+							printf("...Nodo del archivo del borrar bloque: %s\n", nodoId);
+							if ((nbytes = recv(socket_fs, &bloqueNodoDestino, sizeof(int), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
+								perror("recv");
+								log_error(logger,"FALLO el Recv del bloque del nodo destino del copiar bloque");
+								exit(-1);
+							}
+							printf ("...Bloque del borrar bloque: %d\n",bloqueNodoDestino);
+							//TODO agregar bloque a la estructura de archivo
+
 						}
 					}
 //					else{
