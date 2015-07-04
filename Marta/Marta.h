@@ -97,3 +97,6 @@ void restarCantMapper(char* nodoParaRestar);
 void sumarCantReducers(char* idNodoASumar);
 void restarCantReducers(char* idNodoARestar);
 char* obtenerNombreArchivoReduce ();
+bool archivoDisponible(t_archivo* archivo);
+bool nodoNoDisponible(t_copias* copia);
+t_archivo* buscarArchivo(char* nombre, int padre);

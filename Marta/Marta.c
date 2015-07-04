@@ -711,11 +711,20 @@ void *atenderJob (int *socketJob) {
 			log_error(logger,"Fallo el recv del padre del FS");
 			//exit(-1);
 		}
-//		padre=1;
+
 		//De cada archivo que nos manda el Job buscamos y nos traemos los bloques
+
 		bloques=buscarBloques(nombreArchivo,padre);
 		cantBloques = list_size(bloques);
 		for(posBloques=0; posBloques<cantBloques; posBloques++){ //recorremos los bloques del archivo que nos mando job
+
+			//Si el archivo no está disponible, no se hace el Job
+			if(!archivoDisponible(buscarArchivo(nombreArchivo,padre))){
+				log_info(logger,"El archivo no está disponible, no se podrá hacer el Job");
+				pthread_exit((void*)0);
+			}
+
+
 			int cantCopias;
 			t_bloque *bloque;
 			t_nodo *nodoAux;
@@ -873,6 +882,13 @@ void *atenderJob (int *socketJob) {
 
 			//buscamos en la lista general de archivos los bloques del map que fallo
 			bloquesNoMap = buscarBloques(map->nombreArchivoDelJob,map->padreArchivoJob);
+
+			//Si el archivo no está disponible, no se hace el Job
+			if(!archivoDisponible(buscarArchivo(map->nombreArchivoDelJob,map->padreArchivoJob))){
+							log_info(logger,"El archivo no está disponible, no se podrá hacer el Job");
+							pthread_exit((void*)0);
+			}
+
 			//buscamos en los bloques el bloque en el que salio mal el MAP
 			bloqueQueFallo = list_get(bloquesNoMap,map->bloqueArchivo);
 			cantidadCopias = list_size(bloqueQueFallo->copias);
@@ -1362,3 +1378,45 @@ char* obtenerNombreArchivoReduce (){
 
 	return pathArchivoReduceTemp;
 }
+
+t_archivo* buscarArchivo(char* nombreArchivo, int padre){
+	t_archivo *archivoAux;
+	int i;
+	for(i=0; i < list_size(listaArchivos); i++){ //recorre la lista global de archivos
+		archivoAux = list_get(listaArchivos,i);
+		if (strcmp(archivoAux->nombre,nombreArchivo) ==0 && archivoAux->padre==padre){ //compara el nomnre y padre del archivo del job con cada nombre y padre de archivo de la lista global
+			return archivoAux;
+		}
+	}
+}
+
+
+
+bool archivoDisponible(t_archivo* archivo){
+	int indice=0;
+	t_bloque* bloqueDelArchivo;
+	for(indice=0;indice<list_size(archivo->bloques);indice++){
+		bloqueDelArchivo=list_get(archivo->bloques,indice);
+		if(list_all_satisfy(bloqueDelArchivo->copias,(void*) nodoNoDisponible)){
+			return false;
+		}
+	}
+	return true;
+}
+
+bool nodoNoDisponible(t_copias* copia){
+	t_nodo* nodoDeListaGeneral;
+	int indice;
+	for(indice=0;indice<list_size(listaNodos);indice++){
+		nodoDeListaGeneral=list_get(listaNodos,indice);
+		if(strcmp(nodoDeListaGeneral->nodo_id,copia->nodo)==0){
+			if(nodoDeListaGeneral->estado==0){
+				return true;
+			}
+			if(nodoDeListaGeneral->estado==1){
+				return false;
+			}
+		}
+	}
+}
+
