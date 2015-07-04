@@ -1723,6 +1723,12 @@ void FormatearFilesystem() {
 			exit(-1);
 		}
 	}
+	//Abro los archivos directorios y archivos en modo w para borrarlos
+	FILE *dir;
+	dir=fopen("directorios","w");
+	fclose(dir);
+	dir=fopen("archivos","w");
+	fclose(dir);
 }
 
 char *obtenerPath(char *nombre, int dir_id){
