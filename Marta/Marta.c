@@ -1218,6 +1218,7 @@ void *atenderJob (int *socketJob) {
 			int indice;
 			mapOk = list_get(listaMapOk,posMapOK);
 			strcpy(nodoId,mapOk->nodoId);
+			//Busco si el nodoId está en la listaNodosDistintos, si no está lo agrego en esa lista
 			if(list_size(listaNodosDistintos)==0){
 				list_add(listaNodosDistintos,nodoId);
 			}
@@ -1291,56 +1292,52 @@ void *atenderJob (int *socketJob) {
 			}
 			sumarCantReducers(mapOk->nodoId);
 		}
+
 	}
 
+	//Recibir la respuesta del JOB confirmando que termino con los reduce de los que están en el mismo nodo
+	//SE ESPERAN EN UN CICLO FOR LA CANTIDAD DE RESPUESTAS IGUAL A CUANTOS REDUCE SE HALLAN ENVIADO (con tamaño de la listaMapPorNodo)
+	int posResp;
+	t_list *listaReducerParcial;
+
+	for(posResp=0;posResp<list_size(listaReducerParcial);posResp++){
+		t_respuestaReduce respuestaReduce;
+		//Recibo respuesta del Job de cada reduce
+		if(recv(*socketJob,&respuestaReduce, sizeof(t_respuestaReduce),MSG_WAITALL)==-1){
+			perror("recv");
+			log_error(logger,"Fallo al recibir el ok del job");
+			//exit(-1);
+		}
+		t_respuestaReduce *reduceParcial;
+		int posReduce;
+		//Recorro lista de mappers y comparo cada archivoResultadoMap con el que me dio la respuesta del job, cuando coincide corta
+		for(posReduce = 0; posReduce < list_size(listaReducerParcial); posReduce++){
+			reduceParcial = list_get(listaReducerParcial, posReduce);
+			if(strcmp(reduceParcial->archivoResultadoReduce,respuestaReduce.archivoResultadoReduce)==0){
+				break;
+			}
+		}
+
+		// Al resultado del map que coincidio le asigno el resultado de la respuesta del job
+		reduceParcial->resultado= respuestaReduce.resultado;
 
 
-	//
-	//		//Recibir la respuesta del JOB confirmando que termino con los reduce de los que están en el mismo nodo
-	//		//SE ESPERAN EN UN CICLO FOR LA CANTIDAD DE RESPUESTAS IGUAL A CUANTOS REDUCE SE HALLAN ENVIADO (con tamaño de la listaMapPorNodo)
-	//		int posResp;
-	//		for(posResp=0;posResp<list_size(listaMapPorNodo);posResp++){
-	//			t_respuestaReduce respuestaReduce;
-	//			//Recibo respuesta del Job de cada reduce
-	//			if(recv(*socketJob,&respuestaReduce, sizeof(t_respuestaReduce),MSG_WAITALL)==-1){
-	//				perror("recv");
-	//				log_error(logger,"Fallo al recibir el ok del job");
-	//				//exit(-1);
-	//			}
-	//			t_respuestaReduce *reduceParcial;
-	//			int posReduce;
-	//			//Recorro lista de mappers y comparo cada archivoResultadoMap con el que me dio la respuesta del job, cuando coincide corta
-	//			for(posReduce = 0; posReduce < list_size(listaMapPorNodo); posReduce++){
-	//				reduceParcial = list_get(listaMapPorNodo, posReduce);
-	//				if(strcmp(reduceParcial->archivoResultadoReduce,respuestaReduce.archivoResultadoReduce)==0){
-	//					break;
-	//				}
-	//			}
-	//
-	//			// Al resultado del map que coincidio le asigno el resultado de la respuesta del job
-	//			reduceParcial->resultado= respuestaReduce.resultado;
-	//
-	//
-	//
-	//			if(reduceParcial->resultado == 0){
-	//
-	//
-	//				// Avisarle a JOB que tiene que ejecutar Reduce final (a todos los archivoResultadoReduce de los que están en el mismo nodo)
-	//				//Le mando a JOB t_reduce que se va a ejecutar
-	//				// le mando al job la cantidad de archivos a los que que hay que aplicarle Reduce
-	//				//Le mando los datos de cada uno de los archivos: IP Nodo, Puerto Nodo, nombreArchivo resultado de map (t_archivosReduce)
-	//				//Recibo respuesta del reduce final
-	//				//Si la respuesta es OK le resto 1 a cantReducers de t_nodo
-	//				//void restarCantReducers(char* idNodoARestar);
-	//				//Si la respuesta es KO le sumo 1 a cantReducer de t_nodo y REPLANIFICAR!!!!!!!
-	//				//void sumarCantReducers(char* idNodoASumar);
-	//			}else{
-	//
-	//				/*********REPLANIFICAR REDUCE LOCAL*********/
-	//
-	//			}
-	//		}
-	//	}
+
+		if(reduceParcial->resultado == 1){
+			//Se aborta la ejecución de Reduce
+			pthread_exit((void*)0);
+		}
+
+		// Avisarle a JOB que tiene que ejecutar Reduce final (a todos los archivoResultadoReduce de los que están en el mismo nodo)
+		//Le mando a JOB t_reduce que se va a ejecutar
+		// le mando al job la cantidad de archivos a los que que hay que aplicarle Reduce
+		//Le mando los datos de cada uno de los archivos: IP Nodo, Puerto Nodo, nombreArchivo resultado de map (t_archivosReduce)
+		//Recibo respuesta del reduce final
+		//Si la respuesta es OK le resto 1 a cantReducers de t_nodo
+		//void restarCantReducers(char* idNodoARestar);
+		//Si la respuesta es KO le sumo 1 a cantReducer de t_nodo y REPLANIFICAR!!!!!!!
+		//void sumarCantReducers(char* idNodoASumar);
+	}
 	pthread_exit((void*)0);
 }
 
