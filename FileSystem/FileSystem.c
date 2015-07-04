@@ -3004,6 +3004,7 @@ void BorrarBloque() {
 	cantNodos = list_size(nodos);
 	//char* nodoId = malloc(1);
 	char nodoId[6];
+	memset(nodoId,'\0',6);
 	printf("Ingrese el ID del nodo del que desea borrar un bloque:\n");
 	scanf("%s", nodoId);
 	printf("Ingrese el número de bloque que desea borrar:\n");
@@ -3011,7 +3012,7 @@ void BorrarBloque() {
 	i = 0;
 	while (i < cantNodos && nodoEncontrado == 0) {
 		nodoBuscado = list_get(nodos, i);
-		if (strcmp(nodoBuscado->nodo_id, nodoId)==0) {
+		if (strcmp(nodoBuscado->nodo_id, nodoId)==0 && bitarray_test_bit(nodoBuscado->bloques_del_nodo,bloque)==1) {
 			nodoEncontrado = 1;
 		}
 		i++;
@@ -3029,6 +3030,7 @@ void BorrarBloque() {
 					unaCopia=list_get(unBloque->copias,k);
 					if (unaCopia->bloqueNodo==bloque && strcmp(unaCopia->nodo,nodoId)==0){
 						bloque_encontrado=1;
+
 						break;
 					}
 				}
@@ -3053,11 +3055,31 @@ void BorrarBloque() {
     			log_error(logger, "FALLO el envio del ok a Marta");
     			exit(-1);
     		}
-    	}
+    		if ((send(marta_sock, unArchivo->nombre,sizeof(unArchivo->nombre), MSG_WAITALL)) == -1) {
+    			perror("send");
+    			log_error(logger, "FALLO el envio del ok a Marta");
+    			exit(-1);
+    		}
+    		if ((send(marta_sock, &unArchivo->padre,sizeof(unArchivo->padre), MSG_WAITALL)) == -1) {
+    			perror("send");
+    			log_error(logger, "FALLO el envio del ok a Marta");
+    			exit(-1);
+    		}
+    		if ((send(marta_sock, nodoId,sizeof(nodoId), MSG_WAITALL)) == -1) {
+    			perror("send");
+    			log_error(logger, "FALLO el envio del ok a Marta");
+    			exit(-1);
+    		}
+    		if ((send(marta_sock, &bloque,sizeof(bloque), MSG_WAITALL)) == -1) {
+    			perror("send");
+    			log_error(logger, "FALLO el envio del ok a Marta");
+    			exit(-1);
+    		}
+		}
 
 	}
 	else{
-		printf("No se puede eliminar el bloque\n");
+		printf("No se puede eliminar el bloque, el nodo no existe o el bloque esta vacio\n");
 		}
 }
 
