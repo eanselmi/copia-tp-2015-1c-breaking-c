@@ -504,6 +504,9 @@ void *connection_handler_jobs(){
 	char nodoId[6];
 	int bloqueNodo;
 	int bloqueNodoDestino;
+	int cantidadBloquesArchivo=0;
+	int cantCopiasArchivoNovedad=0;
+	int a, b;
 	if ((listener = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
 		perror("socket");
 		log_info(logger,"FALLO la creacion del socket");
@@ -661,8 +664,70 @@ void *connection_handler_jobs(){
 						}
 						if (strcmp(identificacion,"nuevo_arch")==0){
 							printf ("Voy a agregar un nuevo archivo a las estructuras\n");
-							//TODO hacer recv de nuevo archivo
+							//TODO revisar recv de nuevo archivo
+							t_archivo* nuevoArchivo = malloc(sizeof(t_archivo));
+							memset(nombreArchivoNovedad,'\0',200);
+							if ((nbytes = recv(socket_fs, nombreArchivoNovedad, sizeof(nombreArchivoNovedad), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
+								perror("recv");
+								log_error(logger,"FALLO el Recv del nombre del archivo novedad");
+								exit(-1);
+							}
+							printf ("...Nombre Archivo: %s\n",nombreArchivoNovedad);
+							if ((nbytes = recv(socket_fs, &padreArchivoNovedad, sizeof(uint32_t), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
+								perror("recv");
+								log_error(logger,"FALLO el Recv del padre del archivo");
+								exit(-1);
+							}
+							printf ("...Padre del archivo: %d\n",padreArchivoNovedad);
+							nuevoArchivo->nombre=string_new();
+							strcpy(nuevoArchivo->nombre, nombreArchivoNovedad);
+							nuevoArchivo->padre = padreArchivoNovedad;
+							if ((nbytes = recv(socket_fs, &cantidadBloquesArchivo, sizeof(int), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
+								perror("recv");
+								log_error(logger,"FALLO el Recv de cantidad de bloques del archivo");
+								exit(-1);
+							}
+							printf ("...Cantidad de bloques del archivo: %d\n",cantidadBloquesArchivo);
+							nuevoArchivo->bloques = list_create();
+							a=0;
+							while (a < cantidadBloquesArchivo){
+								t_bloque* bloqueArchivoNovedad = malloc(sizeof(t_bloque));
+								bloqueArchivoNovedad->copias = list_create();
+								if ((nbytes = recv(socket_fs, &cantCopiasArchivoNovedad, sizeof(int), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
+									perror("recv");
+									log_error(logger,"FALLO el Recv de cantidad de copias del bloque del archivo");
+									exit(-1);
+								}
+								printf ("... ...Cantidad de copias del bloque:%d\n",cantCopiasArchivoNovedad);
+								b=0;
+								while (b < cantCopiasArchivoNovedad){
+									t_copias* copiaBloqueNovedad = malloc(sizeof(t_copias));
+									memset(nodoId,'\0',6);
+									if ((nbytes = recv(socket_fs, nodoId, sizeof(nodoId), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
+										perror("recv");
+										log_error(logger,"FALLO el Recv del nodo de la copia del archivo");
+										exit(-1);
+									}
+									printf ("... ... ...Nodo ID: %s\n",nodoId);
+									if ((nbytes = recv(socket_fs, &bloqueNodo, sizeof(int), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
+										perror("recv");
+										log_error(logger,"FALLO el Recv del bloque del nodo donde está el archivo");
+										exit(-1);
+									}
+									printf ("... ... ...Bloque Nodo: %d\n",bloqueNodo);
+									copiaBloqueNovedad->nodo=string_new();
+									strcpy(copiaBloqueNovedad->nodo, nodoId);
+									copiaBloqueNovedad->bloqueNodo =bloqueNodo;
+									list_add(bloqueArchivoNovedad->copias, copiaBloqueNovedad);
+									b++;
+								}
+								list_add(nuevoArchivo->bloques,bloqueArchivoNovedad);
+								a++;
+							}
+							list_add(listaArchivos, nuevoArchivo);
 						}
+
+
 						if (strcmp(identificacion,"elim_bloque")==0){
 							printf ("Voy a eliminar una copia de un bloque de un archivo a las estructuras\n");
 							memset(nombreArchivoNovedad, '\0',200);
