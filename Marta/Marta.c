@@ -497,6 +497,9 @@ void *connection_handler_jobs(){
 	int listener, nbytes;
 	int *socketJob;
 	char handshake[BUF_SIZE];
+	char nombreArchivoNovedad[200];
+	char nuevoNombreArchivoNovedad[200];
+	uint32_t padreArchivoNovedad;
 	if ((listener = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
 		perror("socket");
 		log_info(logger,"FALLO la creacion del socket");
@@ -582,15 +585,49 @@ void *connection_handler_jobs(){
 								exit(-1);
 							}
 						}
+						//UPDATES DE MARTA, novedades que envia el FS
 						printf ("%s\n",identificacion);
 						if (strcmp(identificacion,"marta_formatea")==0){
 							printf ("Voy a formatear las estructuras por pedido del FS\n");
+							//TODO limpiar estructuras de Marta
 						}
 						if (strcmp(identificacion,"elim_arch")==0){
 							printf ("Voy a borrar un archivo de las estructuras\n");
+							if ((nbytes = recv(socket_fs, nombreArchivoNovedad,	sizeof(nombreArchivoNovedad), MSG_WAITALL))	< 0) { //si entra aca es porque hubo un error
+								perror("recv");
+								log_error(logger,"FALLO el Recv del nombre del archivo a eliminar");
+								exit(-1);
+							}
+							printf("...Nombre Archivo a eliminar: %s\n", nombreArchivoNovedad);
+							if ((nbytes = recv(socket_fs, &padreArchivoNovedad, sizeof(uint32_t), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
+								perror("recv");
+								log_error(logger,"FALLO el Recv del padre del archivo a eliminar");
+								exit(-1);
+							}
+							printf ("...Padre del archivo a eliminar: %d\n",padreArchivoNovedad);
+							//TODO limpiar estructuras del archivo
 						}
 						if (strcmp(identificacion,"renom_arch")==0){
 							printf ("Voy a renombrar un archivo de las estructuras\n");
+							if ((nbytes = recv(socket_fs, nombreArchivoNovedad,	sizeof(nombreArchivoNovedad), MSG_WAITALL))	< 0) { //si entra aca es porque hubo un error
+								perror("recv");
+								log_error(logger,"FALLO el Recv del nombre del archivo a eliminar");
+								exit(-1);
+							}
+							printf("...Nombre Archivo a renombrar: %s\n", nombreArchivoNovedad);
+							if ((nbytes = recv(socket_fs, &padreArchivoNovedad, sizeof(uint32_t), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
+								perror("recv");
+								log_error(logger,"FALLO el Recv del padre del archivo a eliminar");
+								exit(-1);
+							}
+							printf ("...Padre del archivo a renombrar: %d\n",padreArchivoNovedad);
+							if ((nbytes = recv(socket_fs, nuevoNombreArchivoNovedad,	sizeof(nuevoNombreArchivoNovedad), MSG_WAITALL))	< 0) { //si entra aca es porque hubo un error
+								perror("recv");
+								log_error(logger,"FALLO el Recv del nombre del archivo a eliminar");
+								exit(-1);
+							}
+							printf("...Nombre Archivo a renombrado: %s\n", nuevoNombreArchivoNovedad);
+							//TODO modificar el nombre del archivo
 						}
 						if (strcmp(identificacion,"mov_arch")==0){
 							printf ("Voy a mover un archivo de las estructuras\n");
@@ -711,11 +748,20 @@ void *atenderJob (int *socketJob) {
 			log_error(logger,"Fallo el recv del padre del FS");
 			//exit(-1);
 		}
-//		padre=1;
+
 		//De cada archivo que nos manda el Job buscamos y nos traemos los bloques
+
 		bloques=buscarBloques(nombreArchivo,padre);
 		cantBloques = list_size(bloques);
 		for(posBloques=0; posBloques<cantBloques; posBloques++){ //recorremos los bloques del archivo que nos mando job
+
+			//Si el archivo no está disponible, no se hace el Job
+			if(!archivoDisponible(buscarArchivo(nombreArchivo,padre))){
+				log_info(logger,"El archivo no está disponible, no se podrá hacer el Job");
+				pthread_exit((void*)0);
+			}
+
+
 			int cantCopias;
 			t_bloque *bloque;
 			t_nodo *nodoAux;
@@ -873,6 +919,13 @@ void *atenderJob (int *socketJob) {
 
 			//buscamos en la lista general de archivos los bloques del map que fallo
 			bloquesNoMap = buscarBloques(map->nombreArchivoDelJob,map->padreArchivoJob);
+
+			//Si el archivo no está disponible, no se hace el Job
+			if(!archivoDisponible(buscarArchivo(map->nombreArchivoDelJob,map->padreArchivoJob))){
+							log_info(logger,"El archivo no está disponible, no se podrá hacer el Job");
+							pthread_exit((void*)0);
+			}
+
 			//buscamos en los bloques el bloque en el que salio mal el MAP
 			bloqueQueFallo = list_get(bloquesNoMap,map->bloqueArchivo);
 			cantidadCopias = list_size(bloqueQueFallo->copias);
@@ -1362,3 +1415,45 @@ char* obtenerNombreArchivoReduce (){
 
 	return pathArchivoReduceTemp;
 }
+
+t_archivo* buscarArchivo(char* nombreArchivo, int padre){
+	t_archivo *archivoAux;
+	int i;
+	for(i=0; i < list_size(listaArchivos); i++){ //recorre la lista global de archivos
+		archivoAux = list_get(listaArchivos,i);
+		if (strcmp(archivoAux->nombre,nombreArchivo) ==0 && archivoAux->padre==padre){ //compara el nomnre y padre del archivo del job con cada nombre y padre de archivo de la lista global
+			return archivoAux;
+		}
+	}
+}
+
+
+
+bool archivoDisponible(t_archivo* archivo){
+	int indice=0;
+	t_bloque* bloqueDelArchivo;
+	for(indice=0;indice<list_size(archivo->bloques);indice++){
+		bloqueDelArchivo=list_get(archivo->bloques,indice);
+		if(list_all_satisfy(bloqueDelArchivo->copias,(void*) nodoNoDisponible)){
+			return false;
+		}
+	}
+	return true;
+}
+
+bool nodoNoDisponible(t_copias* copia){
+	t_nodo* nodoDeListaGeneral;
+	int indice;
+	for(indice=0;indice<list_size(listaNodos);indice++){
+		nodoDeListaGeneral=list_get(listaNodos,indice);
+		if(strcmp(nodoDeListaGeneral->nodo_id,copia->nodo)==0){
+			if(nodoDeListaGeneral->estado==0){
+				return true;
+			}
+			if(nodoDeListaGeneral->estado==1){
+				return false;
+			}
+		}
+	}
+}
+
