@@ -3205,21 +3205,52 @@ void CopiarBloque() {
 			if (bloque_encontrado==1){
 				list_add(unBloque->copias,copia_temporal);
 				actualizar_persistencia_copiar_bloque(nodo_origen,bloque_origen,nodo_destino,bloque_destino);
-
-				//actualizo a marta
-				if(marta_presente == 1){
-					memset(identificacion,'\0',BUF_SIZE);
-					strcpy(identificacion, "nuevo_bloque");
-					if ((send(marta_sock, identificacion,sizeof(identificacion), MSG_WAITALL)) == -1) {
-						perror("send");
-						log_error(logger, "FALLO el envio del ok a Marta");
-						exit(-1);
-					}
-				}
 				break;
 			}
 		}
 		if (bloque_encontrado==1) break;
+	}
+	if (bloque_encontrado==1){
+		//actualizo a marta
+		if(marta_presente == 1){
+			memset(identificacion,'\0',BUF_SIZE);
+			strcpy(identificacion, "nuevo_bloque");
+			if ((send(marta_sock, identificacion,sizeof(identificacion), MSG_WAITALL)) == -1) {
+				perror("send");
+				log_error(logger, "FALLO el envio del ok a Marta");
+				exit(-1);
+			}
+			if ((send(marta_sock, unArchivo->nombre,sizeof(unArchivo->nombre), MSG_WAITALL)) == -1) {
+				perror("send");
+				log_error(logger, "FALLO el envio del ok a Marta");
+				exit(-1);
+			}
+
+			if ((send(marta_sock, &unArchivo->padre,sizeof(unArchivo->padre), MSG_WAITALL)) == -1) {
+				perror("send");
+				log_error(logger, "FALLO el envio del ok a Marta");
+				exit(-1);
+			}
+			if ((send(marta_sock, &j,sizeof(j), MSG_WAITALL)) == -1) {
+				perror("send");
+				log_error(logger, "FALLO el envio del ok a Marta");
+				exit(-1);
+			}
+
+			if ((send(marta_sock, nodo_destino,sizeof(nodo_destino), MSG_WAITALL)) == -1) {
+				perror("send");
+				log_error(logger, "FALLO el envio del ok a Marta");
+				exit(-1);
+			}
+
+			if ((send(marta_sock, &bloque_destino,sizeof(bloque_destino), MSG_WAITALL)) == -1) {
+				perror("send");
+				log_error(logger, "FALLO el envio del ok a Marta");
+				exit(-1);
+			}
+
+		}
+
 	}
 }
 
