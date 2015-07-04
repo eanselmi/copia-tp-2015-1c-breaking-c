@@ -1155,15 +1155,18 @@ void *atenderJob (int *socketJob) {
 
 	}
 
-/************************************************************************************************************************************************
- * CON COMBINER
- * ************************************************************************************************************************************************/
+	/************************************************************************************************************************************************
+	 * CON COMBINER
+	 * ************************************************************************************************************************************************/
 
 	if(strcmp(mensajeCombiner,"SI")==0){
 		t_replanificarMap *mapOk;
 		t_list *listaMapOk; //Lista de nodo en los que el map salió OK
+		t_list *listaNodosDistintos;
 		listaMapOk = list_create();
 		int posMapper;
+		int posMapOK;
+		listaNodosDistintos = list_create();
 		//Recorrer la lista t_replanificarMap y guardo en una lista todos los nodos en los que map salió OK
 		for(posMapper=0;posMapper<list_size(listaMappers);posMapper++){
 			mapOk = list_get(listaMappers,posMapper);
@@ -1171,121 +1174,135 @@ void *atenderJob (int *socketJob) {
 				list_add(listaMapOk,mapOk);
 			}
 		}
-
-		int posMapOk;
-		t_replanificarMap *mapPorNodoAnt;
-		t_replanificarMap *mapPorNodo;
-		t_list *listaMapPorNodo; //Lista de los map del mismo nodo
-		listaMapPorNodo=list_create();//Agarro el primer elemento de la listaMapOk
-		mapPorNodoAnt = list_get(listaMapOk, 0);
-		list_add(listaMapPorNodo,mapPorNodoAnt); //Agrego el primer que saqué de listaMapOk en la nueva lista
-		//Recorro la listaMapOk y me guardo en una lista los nodos que tienen el mismo ID_NODO
-		for(posMapOk=1; posMapOk<list_size(listaMapOk);posMapOk++){
-			mapPorNodo = list_get(listaMapOk, 0); //Agarro el elemento de la posición posMapOk de la listaMapOk
-			//Si el nodoID del elemento que saqué de la posición posMapOk es igual al nodoID del
-			//primer elemento que saque de listaMapOk lo agrego en la nueva lista
-			while(strcmp(mapPorNodoAnt->nodoId,mapPorNodo->nodoId)==0){
-				list_add(listaMapPorNodo,mapPorNodo);
+		//Guardo en la listaNodosDistintos todos los nodoId que hay que mandar para hacer reduce
+		for(posMapOK=0;list_size(listaMapOk);posMapOK++){
+			char *nodoId=string_new();
+			int indice;
+			mapOk = list_get(listaMapOk,posMapOK);
+			strcpy(nodoId,mapOk->nodoId);
+			if(list_size(listaNodosDistintos)==0){
+				list_add(listaNodosDistintos,nodoId);
 			}
-
-			int posRP;
-			t_nodo * nodoRP;
-			t_reduce nodoReducerParcial;
-			char *archivoReduceParcial;
-			//Recorro la listaMapPorNodo y completo la estructura t_reduce
-			for(posRP=0; posRP < list_size(listaMapPorNodo); posRP++){
-				nodoRP = list_get(listaMapPorNodo, posRP);
-				nodoReducerParcial.puerto_nodoPpal = nodoRP->puerto_escucha_nodo;
-				strcpy(nodoReducerParcial.ip_nodoPpal, nodoRP->ip);
-				archivoReduceParcial = obtenerNombreArchivoReduce();
-				strcpy(nodoReducerParcial.nombreArchivoFinal, archivoReduceParcial);
-			}
-			// Mando a ejecutar reduce
-			char mensajeReducerParcial[TAM_NOMFINAL];
-			memset(mensajeReducerParcial, '\0', TAM_NOMFINAL);
-			strcpy(mensajeReducerParcial,"ejecuta reduce");
-			if(send(*socketJob, mensajeReducerParcial,sizeof(TAM_NOMFINAL),MSG_WAITALL)==-1){
-				perror("send");
-				log_error(logger, "Fallo mandar hacer reducer");
-				//exit(-1);
-			}
-			if(send(*socketJob, &nodoReducerParcial,sizeof(t_reduce),MSG_WAITALL)==-1){
-				perror("send");
-				log_error(logger, "Fallo mandar datos para hacer reducer");
-				//exit(-1);
-			}
-			// Mando cantidad de archivos a hacer reduce
-			int cantArch = list_size(listaMapPorNodo);
-			if(send(*socketJob, &cantArch,sizeof(int),MSG_WAITALL)==-1){
-				perror("send");
-				log_error(logger, "Fallo mandar la cantidad de archivos a hacer reduce");
-				//exit(-1);
-			}
-			//Le mando los datos de cada uno de los archivos: IP Nodo, Puerto Nodo, nombreArchivo resultado de map (t_archivosReduce)
-			int posNodoOk;
-			t_replanificarMap *nodoOk;
-			t_archivosReduce archReducePorNodo;
-			memset(archReducePorNodo.archivoAAplicarReduce,'\0',TAM_NOMFINAL);
-			for(posNodoOk = 0; posNodoOk < list_size(listaMapPorNodo); posNodoOk ++){
-				nodoOk = list_get(listaMapPorNodo,posNodoOk);
-				strcpy(archReducePorNodo.archivoAAplicarReduce, nodoOk->archivoResultadoMap);
-				int posNodoGlobalRP;
-				t_nodo *nodoGlobalRP;
-				for(posNodoGlobalRP = 0; posNodoGlobalRP < list_size(listaNodos);posNodoGlobalRP ++){
-					nodoGlobalRP = list_get(listaNodos,posNodoGlobalRP);
-					if(strcmp(nodoOk->nodoId, nodoGlobalRP->nodo_id)==0){
-						strcpy(archReducePorNodo.ip_nodo, nodoGlobalRP->ip);
-						archReducePorNodo.puerto_nodo = nodoGlobalRP->puerto_escucha_nodo;
-					}
+			for(indice=0;indice<list_size(listaNodosDistintos);indice++){
+				char* nodoDeLaLista=list_get(listaNodosDistintos,indice);
+				if(strcmp(nodoDeLaLista,nodoId)!=0){
+					list_add(listaNodosDistintos,nodoId);
 				}
-				// Mando por cada t_replanificarMap ok, los datos de cada archivo
-				if(send(*socketJob, &archReducePorNodo,sizeof(t_archivosReduce),MSG_WAITALL)==-1){
+			}
+		}
+		int i;
+		t_list *listaMapDelNodo;
+		listaMapDelNodo = list_create();
+		for(i=0;i<list_size(listaNodosDistintos);i++){
+			char* nodoDistinto=list_get(listaNodosDistintos,i);
+			int j;
+			for(j=0; j<list_size(listaMapOk);j++){
+				t_replanificarMap *nodoMapOk;
+				nodoMapOk = list_get(listaMapOk,j);
+				if(strcmp(nodoMapOk->nodoId,nodoDistinto)==0){
+					list_add(listaMapDelNodo,nodoMapOk);
+				}
+			}
+			if(list_size(listaMapDelNodo)>1){
+				// Mando a ejecutar reduce
+				char mensajeReducerParcial[TAM_NOMFINAL];
+				memset(mensajeReducerParcial, '\0', TAM_NOMFINAL);
+				strcpy(mensajeReducerParcial,"ejecuta reduce");
+				if(send(*socketJob, mensajeReducerParcial,sizeof(TAM_NOMFINAL),MSG_WAITALL)==-1){
 					perror("send");
-					log_error(logger, "Fallo mandar la archivo a hacer reduce");
+					log_error(logger, "Fallo mandar hacer reducer");
 					//exit(-1);
 				}
-			}
-		}
-		//Recibir la respuesta del JOB confirmando que termino con los reduce de los que están en el mismo nodo
-		//SE ESPERAN EN UN CICLO FOR LA CANTIDAD DE RESPUESTAS IGUAL A CUANTOS REDUCE SE HALLAN ENVIADO (con tamaño de la listaMapPorNodo)
-		int posResp;
-		for(posResp=0;posResp<list_size(listaMapPorNodo);posResp++){
-			t_respuestaReduce respuestaReduce;
-			//Recibo respuesta del Job de cada reduce
-			if(recv(*socketJob,&respuestaReduce, sizeof(t_respuestaReduce),MSG_WAITALL)==-1){
-				perror("recv");
-				log_error(logger,"Fallo al recibir el ok del job");
-				//exit(-1);
-			}
-			t_respuestaReduce *reduceParcial;
-			int posReduce;
-			//Recorro lista de mappers y comparo cada archivoResultadoMap con el que me dio la respuesta del job, cuando coincide corta
-			for(posReduce = 0; posReduce < list_size(listaMapPorNodo); posReduce++){
-				reduceParcial = list_get(listaMapPorNodo, posReduce);
-				if(strcmp(reduceParcial->archivoResultadoReduce,respuestaReduce.archivoResultadoReduce)==0){
-					break;
+				t_reduce nodoReducerParcial;
+				if(send(*socketJob, &nodoReducerParcial,sizeof(t_reduce),MSG_WAITALL)==-1){
+					perror("send");
+					log_error(logger, "Fallo mandar datos para hacer reducer");
+					//exit(-1);
+				}
+				// Mando cantidad de archivos a hacer reduce
+				int cantArch = list_size(listaMapDelNodo);
+				if(send(*socketJob, &cantArch,sizeof(int),MSG_WAITALL)==-1){
+					perror("send");
+					log_error(logger, "Fallo mandar la cantidad de archivos a hacer reduce");
+					//exit(-1);
+				}
+				//Le mando los datos de cada uno de los archivos: IP Nodo, Puerto Nodo, nombreArchivo resultado de map (t_archivosReduce)
+				int posNodoOk;
+				t_replanificarMap *nodoOk;
+				t_archivosReduce archReducePorNodo;
+				memset(archReducePorNodo.archivoAAplicarReduce,'\0',TAM_NOMFINAL);
+				for(posNodoOk = 0; posNodoOk < list_size(listaMapDelNodo); posNodoOk ++){
+					nodoOk = list_get(listaMapDelNodo,posNodoOk);
+					strcpy(archReducePorNodo.archivoAAplicarReduce, nodoOk->archivoResultadoMap);
+					int posNodoGlobalRP;
+					t_nodo *nodoGlobalRP;
+					for(posNodoGlobalRP = 0; posNodoGlobalRP < list_size(listaNodos);posNodoGlobalRP ++){
+						nodoGlobalRP = list_get(listaNodos,posNodoGlobalRP);
+						if(strcmp(nodoOk->nodoId, nodoGlobalRP->nodo_id)==0){
+							strcpy(archReducePorNodo.ip_nodo, nodoGlobalRP->ip);
+							archReducePorNodo.puerto_nodo = nodoGlobalRP->puerto_escucha_nodo;
+						}
+					}
+					// Mando por cada t_replanificarMap ok, los datos de cada archivo
+					if(send(*socketJob, &archReducePorNodo,sizeof(t_archivosReduce),MSG_WAITALL)==-1){
+						perror("send");
+						log_error(logger, "Fallo mandar la archivo a hacer reduce");
+						//exit(-1);
+					}
 				}
 			}
-			// Al resultado del map que coincidio le asigno el resultado de la respuesta del job
-			reduceParcial->resultado= respuestaReduce.resultado;
-
-			if(reduceParcial->resultado == 0){
-				// Avisarle a JOB que tiene que ejecutar Reduce final (a todos los archivoResultadoReduce de los que están en el mismo nodo)
-				//Le mando a JOB t_reduce que se va a ejecutar
-				// le mando al job la cantidad de archivos a los que que hay que aplicarle Reduce
-				//Le mando los datos de cada uno de los archivos: IP Nodo, Puerto Nodo, nombreArchivo resultado de map (t_archivosReduce)
-				//Recibo respuesta del reduce final
-				//Si la respuesta es OK le resto 1 a cantReducers de t_nodo
-				//void restarCantReducers(char* idNodoARestar);
-				//Si la respuesta es KO le sumo 1 a cantReducer de t_nodo y REPLANIFICAR!!!!!!!
-				//void sumarCantReducers(char* idNodoASumar);
-			}else{
-
-				/*********REPLANIFICAR REDUCE LOCAL*********/
-
-			}
+			sumarCantReducers(mapOk->nodoId);
 		}
 	}
+
+
+
+	//
+	//		//Recibir la respuesta del JOB confirmando que termino con los reduce de los que están en el mismo nodo
+	//		//SE ESPERAN EN UN CICLO FOR LA CANTIDAD DE RESPUESTAS IGUAL A CUANTOS REDUCE SE HALLAN ENVIADO (con tamaño de la listaMapPorNodo)
+	//		int posResp;
+	//		for(posResp=0;posResp<list_size(listaMapPorNodo);posResp++){
+	//			t_respuestaReduce respuestaReduce;
+	//			//Recibo respuesta del Job de cada reduce
+	//			if(recv(*socketJob,&respuestaReduce, sizeof(t_respuestaReduce),MSG_WAITALL)==-1){
+	//				perror("recv");
+	//				log_error(logger,"Fallo al recibir el ok del job");
+	//				//exit(-1);
+	//			}
+	//			t_respuestaReduce *reduceParcial;
+	//			int posReduce;
+	//			//Recorro lista de mappers y comparo cada archivoResultadoMap con el que me dio la respuesta del job, cuando coincide corta
+	//			for(posReduce = 0; posReduce < list_size(listaMapPorNodo); posReduce++){
+	//				reduceParcial = list_get(listaMapPorNodo, posReduce);
+	//				if(strcmp(reduceParcial->archivoResultadoReduce,respuestaReduce.archivoResultadoReduce)==0){
+	//					break;
+	//				}
+	//			}
+	//
+	//			// Al resultado del map que coincidio le asigno el resultado de la respuesta del job
+	//			reduceParcial->resultado= respuestaReduce.resultado;
+	//
+	//
+	//
+	//			if(reduceParcial->resultado == 0){
+	//
+	//
+	//				// Avisarle a JOB que tiene que ejecutar Reduce final (a todos los archivoResultadoReduce de los que están en el mismo nodo)
+	//				//Le mando a JOB t_reduce que se va a ejecutar
+	//				// le mando al job la cantidad de archivos a los que que hay que aplicarle Reduce
+	//				//Le mando los datos de cada uno de los archivos: IP Nodo, Puerto Nodo, nombreArchivo resultado de map (t_archivosReduce)
+	//				//Recibo respuesta del reduce final
+	//				//Si la respuesta es OK le resto 1 a cantReducers de t_nodo
+	//				//void restarCantReducers(char* idNodoARestar);
+	//				//Si la respuesta es KO le sumo 1 a cantReducer de t_nodo y REPLANIFICAR!!!!!!!
+	//				//void sumarCantReducers(char* idNodoASumar);
+	//			}else{
+	//
+	//				/*********REPLANIFICAR REDUCE LOCAL*********/
+	//
+	//			}
+	//		}
+	//	}
 	pthread_exit((void*)0);
 }
 
