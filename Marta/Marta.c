@@ -594,6 +594,7 @@ void *connection_handler_jobs(){
 						}
 						if (strcmp(identificacion,"elim_arch")==0){
 							printf ("Voy a borrar un archivo de las estructuras\n");
+							memset(nombreArchivoNovedad, '\0',200);
 							if ((nbytes = recv(socket_fs, nombreArchivoNovedad,	sizeof(nombreArchivoNovedad), MSG_WAITALL))	< 0) { //si entra aca es porque hubo un error
 								perror("recv");
 								log_error(logger,"FALLO el Recv del nombre del archivo a eliminar");
@@ -610,34 +611,37 @@ void *connection_handler_jobs(){
 						}
 						if (strcmp(identificacion,"renom_arch")==0){
 							printf ("Voy a renombrar un archivo de las estructuras\n");
+							memset(nombreArchivoNovedad, '\0',200);
+							memset(nuevoNombreArchivoNovedad, '\0',200);
 							if ((nbytes = recv(socket_fs, nombreArchivoNovedad,	sizeof(nombreArchivoNovedad), MSG_WAITALL))	< 0) { //si entra aca es porque hubo un error
 								perror("recv");
-								log_error(logger,"FALLO el Recv del nombre del archivo a eliminar");
+								log_error(logger,"FALLO el Recv del nombre viejo del archivo a renombrar");
 								exit(-1);
 							}
 							printf("...Nombre Archivo a renombrar: %s\n", nombreArchivoNovedad);
 							if ((nbytes = recv(socket_fs, &padreArchivoNovedad, sizeof(uint32_t), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
 								perror("recv");
-								log_error(logger,"FALLO el Recv del padre del archivo a eliminar");
+								log_error(logger,"FALLO el Recv del padre del archivo a renombrar");
 								exit(-1);
 							}
 							printf ("...Padre del archivo a renombrar: %d\n",padreArchivoNovedad);
 							if ((nbytes = recv(socket_fs, nuevoNombreArchivoNovedad,	sizeof(nuevoNombreArchivoNovedad), MSG_WAITALL))	< 0) { //si entra aca es porque hubo un error
 								perror("recv");
-								log_error(logger,"FALLO el Recv del nombre del archivo a eliminar");
+								log_error(logger,"FALLO el Recv del nombre del archivo a renombrar");
 								exit(-1);
 							}
-							printf("...Nombre Archivo a renombrado: %s\n", nuevoNombreArchivoNovedad);
+							printf("...Nombre nuevo de archivo a renombrado: %s\n", nuevoNombreArchivoNovedad);
 							//TODO modificar el nombre del archivo
 						}
 						if (strcmp(identificacion,"mov_arch")==0){
 							printf ("Voy a mover un archivo de las estructuras\n");
+							memset(nombreArchivoNovedad, '\0',200);
 							if ((nbytes = recv(socket_fs, nombreArchivoNovedad,	sizeof(nombreArchivoNovedad), MSG_WAITALL))	< 0) { //si entra aca es porque hubo un error
 								perror("recv");
-								log_error(logger,"FALLO el Recv del nombre del archivo a eliminar");
+								log_error(logger,"FALLO el Recv del nombre del archivo a mover");
 								exit(-1);
 							}
-							printf("...Nombre Archivo a renombrar: %s\n", nombreArchivoNovedad);
+							printf("...Nombre Archivo a mover: %s\n", nombreArchivoNovedad);
 							if ((nbytes = recv(socket_fs, &padreArchivoNovedad, sizeof(uint32_t), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
 								perror("recv");
 								log_error(logger,"FALLO el Recv del viejo padre del archivo");
