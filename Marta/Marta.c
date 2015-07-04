@@ -757,7 +757,14 @@ void *atenderJob (int *socketJob) {
 
 			//Si el archivo no está disponible, no se hace el Job
 			if(!archivoDisponible(buscarArchivo(nombreArchivo,padre))){
+				char msjJob[BUF_SIZE];
+				memset(msjJob,'\0',BUF_SIZE);
+				strcpy(msjJob,"arch no disp");
 				log_info(logger,"El archivo no está disponible, no se podrá hacer el Job");
+				if(send(*socketJob,msjJob,sizeof(msjJob),MSG_WAITALL)==-1){
+					perror("Send");
+					log_error(logger,"Fallo el envio del mensaje \"archivo no disponible\" al job");
+				}
 				pthread_exit((void*)0);
 			}
 
@@ -922,8 +929,15 @@ void *atenderJob (int *socketJob) {
 
 			//Si el archivo no está disponible, no se hace el Job
 			if(!archivoDisponible(buscarArchivo(map->nombreArchivoDelJob,map->padreArchivoJob))){
-							log_info(logger,"El archivo no está disponible, no se podrá hacer el Job");
-							pthread_exit((void*)0);
+				char msjJob[BUF_SIZE];
+				memset(msjJob,'\0',BUF_SIZE);
+				strcpy(msjJob,"arch no disp");
+				log_info(logger,"El archivo no está disponible, no se podrá hacer el Job");
+				if(send(*socketJob,msjJob,sizeof(msjJob),MSG_WAITALL)==-1){
+					perror("Send");
+					log_error(logger,"Fallo el envio del mensaje \"archivo no disponible\" al job");
+				}
+				pthread_exit((void*)0);
 			}
 
 			//buscamos en los bloques el bloque en el que salio mal el MAP

@@ -255,6 +255,18 @@ int main(void){
 							}
 						}
 
+						//EL JOB NO SE PUEDE REALIZAR POR ARCHIVO NO DISPONIBLE//
+
+						if(strncmp(accion,"arch no disp",12)==0){
+							log_error(logger,"El archivo a donde se quiere aplicar el Job no está disponible");
+							close(marta_sock);
+							log_info(logger,"El job se desconectó de Marta. IP Marta: %s, Puerto Marta: %d",config_get_string_value(configurador,"IP_MARTA"),config_get_int_value(configurador,"PUERTO_MARTA"));
+							log_destroy(logger); //se elimina la instancia de log
+							log_destroy(logger_archivo);
+							config_destroy(configurador);
+							return 0;
+						}
+
 						//FINALIZAR//
 
 						if(strncmp(accion,"finaliza",8)==0){
