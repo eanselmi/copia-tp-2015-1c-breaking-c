@@ -1779,6 +1779,9 @@ void EliminarArchivo() {
 	t_nodo* nodoBuscado;
 	char path[200];
 	memset(path,'\0',200);
+	char nombre_para_marta[200];
+	memset(nombre_para_marta,'\0',200);
+	uint32_t padre_para_marta;
 	char* directorio=string_new();
 	int j,m,posicionDirectorio=0;
 	char nombreArchivo[200];
@@ -1813,6 +1816,8 @@ void EliminarArchivo() {
 		}
 		archivo = list_get(archivos, posArchivo);
 		strcpy(nombreArchivo,archivo->nombre);
+		strcpy(nombre_para_marta,archivo->nombre);
+		padre_para_marta=archivo->padre;
 		for (i=0;i<list_size(archivo->bloques);i++){
 			bloque=list_get(archivo->bloques,i);
 			for (j=0;j<list_size(bloque->copias);j++){
@@ -1844,16 +1849,16 @@ void EliminarArchivo() {
 				log_error(logger, "FALLO el envio del ok a Marta");
 				exit(-1);
 			}
-			/*if ((send(marta_sock, identificacion,sizeof(identificacion), MSG_WAITALL)) == -1) {
+			if ((send(marta_sock, nombre_para_marta,sizeof(nombre_para_marta), MSG_WAITALL)) == -1) {
 				perror("send");
 				log_error(logger, "FALLO el envio del ok a Marta");
 				exit(-1);
 			}
-			if ((send(marta_sock, identificacion,sizeof(identificacion), MSG_WAITALL)) == -1) {
+			if ((send(marta_sock, padre_para_marta,sizeof(padre_para_marta), MSG_WAITALL)) == -1) {
 				perror("send");
 				log_error(logger, "FALLO el envio del ok a Marta");
 				exit(-1);
-			}*/
+			}
 		}
 	}else printf ("No hay archivos cargados en MDFS\n");
 
