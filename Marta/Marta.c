@@ -498,6 +498,7 @@ void *connection_handler_jobs(){
 	int *socketJob;
 	char handshake[BUF_SIZE];
 	char nombreArchivoNovedad[200];
+	char nuevoNombreArchivoNovedad[200];
 	uint32_t padreArchivoNovedad;
 	if ((listener = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
 		perror("socket");
@@ -603,11 +604,30 @@ void *connection_handler_jobs(){
 								log_error(logger,"FALLO el Recv del padre del archivo a eliminar");
 								exit(-1);
 							}
-							printf ("...Padre del archivo: %d\n",padreArchivoNovedad);
+							printf ("...Padre del archivo a eliminar: %d\n",padreArchivoNovedad);
 							//TODO limpiar estructuras del archivo
 						}
 						if (strcmp(identificacion,"renom_arch")==0){
 							printf ("Voy a renombrar un archivo de las estructuras\n");
+							if ((nbytes = recv(socket_fs, nombreArchivoNovedad,	sizeof(nombreArchivoNovedad), MSG_WAITALL))	< 0) { //si entra aca es porque hubo un error
+								perror("recv");
+								log_error(logger,"FALLO el Recv del nombre del archivo a eliminar");
+								exit(-1);
+							}
+							printf("...Nombre Archivo a renombrar: %s\n", nombreArchivoNovedad);
+							if ((nbytes = recv(socket_fs, &padreArchivoNovedad, sizeof(uint32_t), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
+								perror("recv");
+								log_error(logger,"FALLO el Recv del padre del archivo a eliminar");
+								exit(-1);
+							}
+							printf ("...Padre del archivo a renombrar: %d\n",padreArchivoNovedad);
+							if ((nbytes = recv(socket_fs, nuevoNombreArchivoNovedad,	sizeof(nuevoNombreArchivoNovedad), MSG_WAITALL))	< 0) { //si entra aca es porque hubo un error
+								perror("recv");
+								log_error(logger,"FALLO el Recv del nombre del archivo a eliminar");
+								exit(-1);
+							}
+							printf("...Nombre Archivo a renombrado: %s\n", nuevoNombreArchivoNovedad);
+							//TODO modificar el nombre del archivo
 						}
 						if (strcmp(identificacion,"mov_arch")==0){
 							printf ("Voy a mover un archivo de las estructuras\n");
