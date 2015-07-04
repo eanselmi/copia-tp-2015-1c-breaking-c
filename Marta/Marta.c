@@ -499,6 +499,7 @@ void *connection_handler_jobs(){
 	char handshake[BUF_SIZE];
 	char nombreArchivoNovedad[200];
 	char nuevoNombreArchivoNovedad[200];
+	uint32_t nuevoPadreArchivoNovedad;
 	uint32_t padreArchivoNovedad;
 	if ((listener = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
 		perror("socket");
@@ -631,6 +632,25 @@ void *connection_handler_jobs(){
 						}
 						if (strcmp(identificacion,"mov_arch")==0){
 							printf ("Voy a mover un archivo de las estructuras\n");
+							if ((nbytes = recv(socket_fs, nombreArchivoNovedad,	sizeof(nombreArchivoNovedad), MSG_WAITALL))	< 0) { //si entra aca es porque hubo un error
+								perror("recv");
+								log_error(logger,"FALLO el Recv del nombre del archivo a eliminar");
+								exit(-1);
+							}
+							printf("...Nombre Archivo a renombrar: %s\n", nombreArchivoNovedad);
+							if ((nbytes = recv(socket_fs, &padreArchivoNovedad, sizeof(uint32_t), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
+								perror("recv");
+								log_error(logger,"FALLO el Recv del viejo padre del archivo");
+								exit(-1);
+							}
+							printf("...Viejo padre del archivo: %d\n", padreArchivoNovedad);
+							if ((nbytes = recv(socket_fs, &nuevoPadreArchivoNovedad, sizeof(uint32_t), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
+								perror("recv");
+								log_error(logger,"FALLO el Recv del nuevo padre del archivo");
+								exit(-1);
+							}
+							printf("...Nuevo padre del archivo: %d\n", nuevoPadreArchivoNovedad);
+							//TODO modificar el padre del archivo
 						}
 						if (strcmp(identificacion,"nuevo_arch")==0){
 							printf ("Voy a agregar un nuevo archivo a las estructuras\n");
