@@ -1916,21 +1916,21 @@ void RenombrarArchivo() {
 				log_error(logger, "FALLO el envio del ok a Marta");
 				exit(-1);
 			}
-			/*if ((send(marta_sock, identificacion,sizeof(identificacion), MSG_WAITALL)) == -1) {
+			if ((send(marta_sock, viejoNombre,sizeof(viejoNombre), MSG_WAITALL)) == -1) {
 				perror("send");
 				log_error(logger, "FALLO el envio del ok a Marta");
 				exit(-1);
 			}
-			if ((send(marta_sock, identificacion,sizeof(identificacion), MSG_WAITALL)) == -1) {
+			if ((send(marta_sock, idPadre,sizeof(idPadre), MSG_WAITALL)) == -1) {
 				perror("send");
 				log_error(logger, "FALLO el envio del ok a Marta");
 				exit(-1);
 			}
-			if ((send(marta_sock, identificacion,sizeof(identificacion), MSG_WAITALL)) == -1) {
+			if ((send(marta_sock, nuevoNombre,sizeof(nuevoNombre), MSG_WAITALL)) == -1) {
 				perror("send");
 				log_error(logger, "FALLO el envio del ok a Marta");
 				exit(-1);
-			}*/
+			}
 		}
 	}else printf ("No hay archivos cargados en MDFS\n");
 
