@@ -1854,7 +1854,7 @@ void EliminarArchivo() {
 				log_error(logger, "FALLO el envio del ok a Marta");
 				exit(-1);
 			}
-			if ((send(marta_sock, padre_para_marta,sizeof(padre_para_marta), MSG_WAITALL)) == -1) {
+			if ((send(marta_sock, &padre_para_marta,sizeof(padre_para_marta), MSG_WAITALL)) == -1) {
 				perror("send");
 				log_error(logger, "FALLO el envio del ok a Marta");
 				exit(-1);
@@ -1921,7 +1921,7 @@ void RenombrarArchivo() {
 				log_error(logger, "FALLO el envio del ok a Marta");
 				exit(-1);
 			}
-			if ((send(marta_sock, idPadre,sizeof(idPadre), MSG_WAITALL)) == -1) {
+			if ((send(marta_sock, &idPadre,sizeof(idPadre), MSG_WAITALL)) == -1) {
 				perror("send");
 				log_error(logger, "FALLO el envio del ok a Marta");
 				exit(-1);
@@ -1996,21 +1996,21 @@ void MoverArchivo() {
 				log_error(logger, "FALLO el envio del ok a Marta");
 				exit(-1);
 			}
-		/*	if ((send(marta_sock, identificacion,sizeof(identificacion), MSG_WAITALL)) == -1) {
+			if ((send(marta_sock, archivo->nombre,sizeof(archivo->nombre), MSG_WAITALL)) == -1) {
 				perror("send");
 				log_error(logger, "FALLO el envio del ok a Marta");
 				exit(-1);
 			}
-			if ((send(marta_sock, identificacion,sizeof(identificacion), MSG_WAITALL)) == -1) {
+			if ((send(marta_sock, &idPadre,sizeof(idPadre), MSG_WAITALL)) == -1) {
 				perror("send");
 				log_error(logger, "FALLO el envio del ok a Marta");
 				exit(-1);
 			}
-			if ((send(marta_sock, identificacion,sizeof(identificacion), MSG_WAITALL)) == -1) {
+			if ((send(marta_sock, &idPadreNuevo,sizeof(idPadreNuevo), MSG_WAITALL)) == -1) {
 				perror("send");
 				log_error(logger, "FALLO el envio del ok a Marta");
 				exit(-1);
-			}*/
+			}
 		}
 	}
 }
