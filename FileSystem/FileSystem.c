@@ -307,6 +307,7 @@ int recuperar_persistencia(){
 	dir=fopen("directorios","r");
 	if (dir!=NULL){
 		indiceDirectorios[idYaUsado]= 1; //reservo raíz
+		directoriosDisponibles = (MAX_DIRECTORIOS - 1);
 		while (fgets(buffer, sizeof(buffer),dir) != NULL){
 			if (strcmp(buffer,"\n")!=0){
 				recupero_directorios=1;
@@ -321,7 +322,7 @@ int recuperar_persistencia(){
 				list_add(directorios,directorio);
 				//actualizo los indices ocupados de los directorios existentes en archivo de persistencia
 				indiceDirectorios[idYaUsado]= 1;
-				directoriosDisponibles = (MAX_DIRECTORIOS - 1);
+				directoriosDisponibles--; //actualizo mi variable para saber cuantos me quedan para crear que no supere el limite
 				memset(buffer,'\0',200);
 			}
 		}
