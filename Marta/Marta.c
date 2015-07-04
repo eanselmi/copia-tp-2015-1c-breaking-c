@@ -497,6 +497,8 @@ void *connection_handler_jobs(){
 	int listener, nbytes;
 	int *socketJob;
 	char handshake[BUF_SIZE];
+	char nombreArchivoNovedad[200];
+	uint32_t padreArchivoNovedad;
 	if ((listener = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
 		perror("socket");
 		log_info(logger,"FALLO la creacion del socket");
@@ -582,12 +584,27 @@ void *connection_handler_jobs(){
 								exit(-1);
 							}
 						}
+						//UPDATES DE MARTA, novedades que envia el FS
 						printf ("%s\n",identificacion);
 						if (strcmp(identificacion,"marta_formatea")==0){
 							printf ("Voy a formatear las estructuras por pedido del FS\n");
+							//TODO limpiar estructuras de Marta
 						}
 						if (strcmp(identificacion,"elim_arch")==0){
 							printf ("Voy a borrar un archivo de las estructuras\n");
+							if ((nbytes = recv(socket_fs, nombreArchivoNovedad,	sizeof(nombreArchivoNovedad), MSG_WAITALL))	< 0) { //si entra aca es porque hubo un error
+								perror("recv");
+								log_error(logger,"FALLO el Recv del nombre del archivo a eliminar");
+								exit(-1);
+							}
+							printf("...Nombre Archivo a eliminar: %s\n", nombreArchivoNovedad);
+							if ((nbytes = recv(socket_fs, &padreArchivoNovedad, sizeof(uint32_t), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
+								perror("recv");
+								log_error(logger,"FALLO el Recv del padre del archivo a eliminar");
+								exit(-1);
+							}
+							printf ("...Padre del archivo: %d\n",padreArchivoNovedad);
+							//TODO limpiar estructuras del archivo
 						}
 						if (strcmp(identificacion,"renom_arch")==0){
 							printf ("Voy a renombrar un archivo de las estructuras\n");
