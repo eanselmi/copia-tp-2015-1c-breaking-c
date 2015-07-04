@@ -2744,8 +2744,6 @@ int CopiarArchivoAMDFS(){
     	archivo_temporal->padre=idPadre; //modifico al path del archivo en el MDFS
     	fclose(archivoLocal);
 
-
-
     	if(marta_presente == 1){
     		memset(identificacion,'\0',BUF_SIZE);
     		strcpy(identificacion, "nuevo_arch");
@@ -2753,6 +2751,50 @@ int CopiarArchivoAMDFS(){
     			perror("send");
     			log_error(logger, "FALLO el envio del ok a Marta");
     			exit(-1);
+    		}
+    		if ((send(marta_sock, archivo_temporal->nombre,sizeof(archivo_temporal->nombre), MSG_WAITALL)) == -1) {
+    			perror("send");
+    			log_error(logger, "FALLO el envio del ok a Marta");
+    			exit(-1);
+    		}
+    		if ((send(marta_sock, &archivo_temporal->padre,sizeof(uint32_t), MSG_WAITALL)) == -1) {
+    			perror("send");
+    			log_error(logger, "FALLO el envio del ok a Marta");
+    			exit(-1);
+    		}
+    		int cantidad_bloques=list_size(archivo_temporal->bloques);
+    		if ((send(marta_sock, &cantidad_bloques,sizeof(int), MSG_WAITALL)) == -1) {
+    			perror("send");
+    			log_error(logger, "FALLO el envio del ok a Marta");
+    			exit(-1);
+    		}
+
+    		for (cantidad_bloques=0;cantidad_bloques<list_size(archivo_temporal->bloques);cantidad_bloques++){
+    			t_bloque *unBloque;
+    			unBloque=list_get(archivo_temporal->bloques,cantidad_bloques);
+    			int cantidad_copias=list_size(unBloque->copias);
+    			if ((send(marta_sock, &cantidad_copias,sizeof(int), MSG_WAITALL)) == -1) {
+    				perror("send");
+    				log_error(logger, "FALLO el envio del ok a Marta");
+    				exit(-1);
+    			}
+    			for (cantidad_copias=0;cantidad_copias<list_size(unBloque->copias);cantidad_copias++){
+    				t_copias *unaCopia;
+    				unaCopia=list_get(unBloque->copias,cantidad_copias);
+    				char nodo_id_para_enviar[6];
+    				memset(nodo_id_para_enviar,'\0',6);
+    				strcpy(nodo_id_para_enviar,unaCopia->nodo);
+    				if ((send(marta_sock, nodo_id_para_enviar,sizeof(nodo_id_para_enviar), MSG_WAITALL)) == -1) {
+    					perror("send");
+    					log_error(logger, "FALLO el envio del ok a Marta");
+    					exit(-1);
+    				}
+    				if ((send(marta_sock, &unaCopia->bloqueNodo,sizeof(int), MSG_WAITALL)) == -1) {
+    					perror("send");
+    					log_error(logger, "FALLO el envio del ok a Marta");
+    					exit(-1);
+    				}
+    			}
     		}
     	}
 
