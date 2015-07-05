@@ -1705,6 +1705,7 @@ void *atenderJob (int *socketJob) {
 				//exit(-1);
 			}
 		}
+
 		sumarCantReducers(nodoRF->nodo_id);
 
 		//ACA RECIBIRIA LA RESPUESTA, A CONTINUACION DE ENVIAR EL ULTIMO REDUCE, PORQUE ES UNA SOLA//
@@ -1717,10 +1718,16 @@ void *atenderJob (int *socketJob) {
 
 		if(respuestaReduceFinal.resultado == 1){
 			//Se aborta la ejecución de Reduce
+			char jobAborta[BUF_SIZE];
+			memset(jobAborta,'\0',BUF_SIZE);
 			log_info(logger,"Falló el Reduce %s. Se abortará el job",respuestaReduceFinal.archivoResultadoReduce);
+			strcpy(jobAborta,"aborta");
+			if(send(*socketJob,jobAborta,sizeof(jobAborta),MSG_WAITALL)==-1){
+				log_error(logger,"Fallo el envío al Job de que aborte por falla de un reduce");
+			}
 			t_nodo *nodoARestar = buscarNodoPorIPYPuerto(respuestaReduceFinal.ip_nodo,respuestaReduceFinal.puerto_nodo);
 			restarCantReducers(nodoARestar->nodo_id);
-			jobAbortado=1; //Se marca el flag del job abortado. Se esperan las demas respuestas para bajar 1 en cantreducers de los nodos
+			pthread_exit((void*)0);
 		}
 		if(respuestaReduceFinal.resultado == 0){
 			printf("Reduce %s exitoso\n",respuestaReduceFinal.archivoResultadoReduce);
@@ -1728,16 +1735,19 @@ void *atenderJob (int *socketJob) {
 			restarCantReducers(nodoARestar->nodo_id);
 		}
 
-		if(jobAbortado==1){
-			//Si entra acá significa que salio mal algun reduce
-			char jobAborta[BUF_SIZE];
-			memset(jobAborta,'\0',BUF_SIZE);
-			strcpy(jobAborta,"aborta");
-			if(send(*socketJob,jobAborta,sizeof(jobAborta),MSG_WAITALL)==-1){
-				log_error(logger,"Fallo el envío al Job de que aborte por falla de un reduce");
-			}
-			pthread_exit((void*)0);
+		//Si llega hasta acá, el Job con combiner termino OK
+		//Le digo al Job que finalice
+		char finaliza[BUF_SIZE];
+		memset(finaliza,'\0',BUF_SIZE);
+		strcpy(finaliza,"finaliza");
+		if(send(*socketJob,finaliza,sizeof(finaliza),MSG_WAITALL)==-1){
+			perror("send");
+			log_error(logger,"Fallo al enviarle al Job que finalize");
 		}
+
+		//Le digo al FS que se copie el resultado
+		printf("El job con combiner termino OK\nMandar a FS que busque el resultado %s en el nodo con IP %s puerto %d\n",nodoReduceFinal.nombreArchivoFinal,nodoReduceFinal.ip_nodoPpal,nodoReduceFinal.puerto_nodoPpal);
+
 	}
 
 	pthread_exit((void*)0);
