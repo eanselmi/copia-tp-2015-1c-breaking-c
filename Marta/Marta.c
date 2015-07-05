@@ -1276,6 +1276,7 @@ void *atenderJob (int *socketJob) {
 
 	//Si es sin combiner manda a hacer reduce al nodo que tenga mas archivos resultados MAP
 	if(strcmp(mensajeCombiner, "NO")==0){
+		int jobAbort=0;
 		int posicionMapper;
 		t_replanificarMap *mapperOk;
 		t_list* listaNodosMapperOk;
@@ -1319,28 +1320,28 @@ void *atenderJob (int *socketJob) {
 			}
 
 		}
-//		char* tiempoReplanificado=string_new();
-//		char** arrayTiempoReplanificado;
-//		char* archivoReplanificadoTemp=string_new();
-//		char* pathArchivoRTemp= string_new();
-//		char **arrayNomArchivo=string_split(map->nombreArchivoDelJob,".");
-//
-//		strcpy(pathArchivoRTemp,"/tmp/");
-//		strcpy(archivoReplanificadoTemp,arrayNomArchivo[0]);
-//		arrayTiempoReplanificado=string_split(temporal_get_string_time(),":"); //creo array con hora minutos segundos y milisegundos separados
-//		string_append(&tiempoReplanificado,arrayTiempoReplanificado[0]);//Agrego horas
-//		string_append(&tiempoReplanificado,arrayTiempoReplanificado[1]);//Agrego minutos
-//		string_append(&tiempoReplanificado,arrayTiempoReplanificado[2]);//Agrego segundos
-//		string_append(&tiempoReplanificado,arrayTiempoReplanificado[3]);//Agrego milisegundos
-//		string_append(&archivoReplanificadoTemp,tiempoReplanificado); //Concateno la fecha en formato hhmmssmmmm
-//		string_append(&archivoReplanificadoTemp,"_Bloq");
-//		string_append(&archivoReplanificadoTemp,string_itoa(map->bloqueArchivo));
-//		string_append(&archivoReplanificadoTemp,tiempoReplanificado);
-//		string_append(&archivoReplanificadoTemp,"Rep");
-//		string_append(&archivoReplanificadoTemp,".txt");
-//		string_append(&pathArchivoRTemp,archivoReplanificadoTemp);
-//		strcpy(datosReplanificacionMap.archivoResultadoMap,pathArchivoRTemp);
-// Mando a ejecutar reduce
+		//Completo estructura del nodo que le voy a mandar a JOB
+		strcpy(nodoReducer.ip_nodoPpal,nodoG->ip);
+		nodoReducer.puerto_nodoPpal = nodoG->puerto_escucha_nodo;
+
+		char* tiempoReduce=string_new();
+		char** arrayTiempoReduce;
+		char* archivoReduceTemp=string_new();
+
+		string_append(&archivoReduceTemp,"/tmp/Job");
+		string_append(&archivoReduceTemp,stringNroJob);
+		arrayTiempoReduce=string_split(temporal_get_string_time(),":"); //creo array con hora minutos segundos y milisegundos separados
+		string_append(&tiempoReduce,arrayTiempoReduce[0]);//Agrego horas
+		string_append(&tiempoReduce,arrayTiempoReduce[1]);//Agrego minutos
+		string_append(&tiempoReduce,arrayTiempoReduce[2]);//Agrego segundos
+		string_append(&tiempoReduce,arrayTiempoReduce[3]);//Agrego milisegundos
+		string_append(&archivoReduceTemp,"_ReduceSinCombiner_");
+		string_append(&archivoReduceTemp,tiempoReduce);
+		string_append(&archivoReduceTemp,".txt");
+
+		strcpy(nodoReducer.nombreArchivoFinal,archivoReduceTemp);
+
+		// Mando a ejecutar reduce
 		char mensajeReducer[TAM_NOMFINAL];
 		memset(mensajeReducer, '\0', TAM_NOMFINAL);
 		strcpy(mensajeReducer,"ejecuta reduce");
@@ -1383,11 +1384,39 @@ void *atenderJob (int *socketJob) {
 				//exit(-1);
 			}
 		}
+		//ACA RECIBO LA RESPUESTA DE JOB
+		t_respuestaReduce respuestaReduceFinal;
+		if(recv(*socketJob,&respuestaReduceFinal, sizeof(t_respuestaReduce),MSG_WAITALL)==-1){
+			perror("recv");
+			log_error(logger,"Fallo al recibir el ok del job");
+			//exit(-1);
+		}
 
-		//Replanificar reduce sin combiner
+		if(respuestaReduceFinal.resultado == 1){
+			//Se aborta la ejecución de Reduce
+			log_info(logger,"Falló el Reduce %s. Se abortará el job",respuestaReduceFinal.archivoResultadoReduce);
+			t_nodo *nodoARestar = buscarNodoPorIPYPuerto(respuestaReduceFinal.ip_nodo,respuestaReduceFinal.puerto_nodo);
+			restarCantReducers(nodoARestar->nodo_id);
+			jobAbort=1; //Se marca el flag del job abortado. Se esperan las demas respuestas para bajar 1 en cantreducers de los nodos
+		}
+		if(respuestaReduceFinal.resultado == 0){
+			printf("Reduce %s exitoso\n",respuestaReduceFinal.archivoResultadoReduce);
+			t_nodo *nodoARestar = buscarNodoPorIPYPuerto(respuestaReduceFinal.ip_nodo,respuestaReduceFinal.puerto_nodo);
+			restarCantReducers(nodoARestar->nodo_id);
+		}
 
-
+		if(jobAbort==1){
+			//Si entra acá significa que salio mal algun reduce
+			char jobAborta[BUF_SIZE];
+			memset(jobAborta,'\0',BUF_SIZE);
+			strcpy(jobAborta,"aborta");
+			if(send(*socketJob,jobAborta,sizeof(jobAborta),MSG_WAITALL)==-1){
+				log_error(logger,"Fallo el envío al Job de que aborte por falla de un reduce");
+			}
+			pthread_exit((void*)0);
+		}
 	}
+
 
 	/************************************************************************************************************************************************
 	 * CON COMBINER
@@ -1571,6 +1600,7 @@ void *atenderJob (int *socketJob) {
 		}
 
 		//Si llega acá, salieron todos los reduce parciales bien//
+
 		/****REDUCE FINAL****/
 
 		//Buscar el nodo con menos carga para asignar a hacer reduce final
@@ -1678,14 +1708,37 @@ void *atenderJob (int *socketJob) {
 		sumarCantReducers(nodoRF->nodo_id);
 
 		//ACA RECIBIRIA LA RESPUESTA, A CONTINUACION DE ENVIAR EL ULTIMO REDUCE, PORQUE ES UNA SOLA//
-		//Recibo respuesta del reduce final
-		//Si la respuesta es OK le resto 1 a cantReducers de t_nodo
-		//void restarCantReducers(char* idNodoARestar);
-		//Si la respuesta es KO le resto 1 a cantReducer de t_nodo y aborto el Job
+		t_respuestaReduce respuestaReduceFinal;
+		if(recv(*socketJob,&respuestaReduceFinal, sizeof(t_respuestaReduce),MSG_WAITALL)==-1){
+			perror("recv");
+			log_error(logger,"Fallo al recibir el ok del job");
+			//exit(-1);
+		}
 
+		if(respuestaReduceFinal.resultado == 1){
+			//Se aborta la ejecución de Reduce
+			log_info(logger,"Falló el Reduce %s. Se abortará el job",respuestaReduceFinal.archivoResultadoReduce);
+			t_nodo *nodoARestar = buscarNodoPorIPYPuerto(respuestaReduceFinal.ip_nodo,respuestaReduceFinal.puerto_nodo);
+			restarCantReducers(nodoARestar->nodo_id);
+			jobAbortado=1; //Se marca el flag del job abortado. Se esperan las demas respuestas para bajar 1 en cantreducers de los nodos
+		}
+		if(respuestaReduceFinal.resultado == 0){
+			printf("Reduce %s exitoso\n",respuestaReduceFinal.archivoResultadoReduce);
+			t_nodo *nodoARestar = buscarNodoPorIPYPuerto(respuestaReduceFinal.ip_nodo,respuestaReduceFinal.puerto_nodo);
+			restarCantReducers(nodoARestar->nodo_id);
+		}
 
+		if(jobAbortado==1){
+			//Si entra acá significa que salio mal algun reduce
+			char jobAborta[BUF_SIZE];
+			memset(jobAborta,'\0',BUF_SIZE);
+			strcpy(jobAborta,"aborta");
+			if(send(*socketJob,jobAborta,sizeof(jobAborta),MSG_WAITALL)==-1){
+				log_error(logger,"Fallo el envío al Job de que aborte por falla de un reduce");
+			}
+			pthread_exit((void*)0);
+		}
 	}
-
 
 	pthread_exit((void*)0);
 }
