@@ -669,7 +669,10 @@ void *connection_handler_jobs(){
 								exit(-1);
 							}
 							printf("...Nombre nuevo de archivo a renombrado: %s\n", nuevoNombreArchivoNovedad);
-							//TODO modificar el nombre del archivo
+							int posArchivo = buscarArchivo(nombreArchivoNovedad, padreArchivoNovedad);
+							t_archivo* archivoAux;
+							archivoAux = list_get(listaArchivos, posArchivo);
+							strcpy(archivoAux->nombre, nuevoNombreArchivoNovedad);
 						}
 						if (strcmp(identificacion,"mov_arch")==0){
 							printf ("Voy a mover un archivo de las estructuras\n");
@@ -696,7 +699,6 @@ void *connection_handler_jobs(){
 						}
 						if (strcmp(identificacion,"nuevo_arch")==0){
 							printf ("Voy a agregar un nuevo archivo a las estructuras\n");
-							//TODO revisar recv de nuevo archivo
 							t_archivo* nuevoArchivo = malloc(sizeof(t_archivo));
 							memset(nombreArchivoNovedad,'\0',200);
 							if ((nbytes = recv(socket_fs, nombreArchivoNovedad, sizeof(nombreArchivoNovedad), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
