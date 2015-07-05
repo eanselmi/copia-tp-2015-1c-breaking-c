@@ -1346,20 +1346,21 @@ void *atenderJob (int *socketJob) {
 			}
 		}
 		//Guardo en la listaNodosDistintos todos los nodoId que hay que mandar para hacer reduce
-		for(posMapOK=0;list_size(listaMapOk);posMapOK++){
+		for(posMapOK=0;posMapOK<list_size(listaMapOk);posMapOK++){
 			char *nodoId=string_new();
 			int indice;
+			int agregar=1;
 			mapOk = list_get(listaMapOk,posMapOK);
 			strcpy(nodoId,mapOk->nodoId);
 			//Busco si el nodoId está en la listaNodosDistintos, si no está lo agrego en esa lista
-			if(list_size(listaNodosDistintos)==0){
-				list_add(listaNodosDistintos,nodoId);
-			}
 			for(indice=0;indice<list_size(listaNodosDistintos);indice++){
 				char* nodoDeLaLista=list_get(listaNodosDistintos,indice);
-				if(strcmp(nodoDeLaLista,nodoId)!=0){
-					list_add(listaNodosDistintos,nodoId);
+				if(strcmp(nodoDeLaLista,nodoId)==0){
+					agregar=0;
 				}
+			}
+			if(agregar==1){
+				list_add(listaNodosDistintos,nodoId);
 			}
 		}
 		int i;
@@ -1395,7 +1396,6 @@ void *atenderJob (int *socketJob) {
 					//exit(-1);
 				}
 				//Mando los datos del Nodo Principal y el nombre del archivo resultado//
-
 
 				strcpy(nodoReducerParcial.ip_nodoPpal,nodoPrincipal->ip);
 				nodoReducerParcial.puerto_nodoPpal=nodoPrincipal->puerto_escucha_nodo;
