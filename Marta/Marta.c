@@ -759,32 +759,32 @@ void *connection_handler_jobs(){
 							list_add(listaArchivos, nuevoArchivo);
 
 							//listar para ver si se agregó bien a la lista
-							int ii,jj,kk,cant_archivos,cant_bloques,cant_copias;
-									t_archivo *archi=malloc(sizeof(t_archivo));
-									t_bloque *bloque=malloc(sizeof(t_bloque));
-									t_copias *copia=malloc(sizeof(t_copias));
-									cant_archivos = list_size(listaArchivos);
-									if (cant_archivos==0){
-										printf ("No hay archivos cargados en MDFS\n");
+							int iu,ju,ku, cant_archivosu,cant_bloquesu,cant_copiasu;
+							t_archivo *archiu;
+							t_bloque *bloqueu;
+							t_copias *copiau;
+							cant_archivosu = list_size(listaArchivos);
+							if (cant_archivosu==0){
+								printf ("No hay archivos cargados en MDFS\n");
+							}
+							for (iu = 0; iu < cant_archivosu; iu++) {
+								archiu = list_get(listaArchivos, iu);
+								printf("\n\n");
+								printf("Archivo: %s\nPadre: %d\n",archiu->nombre,archiu->padre);
+								printf("\n");
+								cant_bloquesu=list_size(archiu->bloques);
+								for (ju = 0; ju < cant_bloquesu; ju++){
+									bloqueu=list_get(archiu->bloques,ju);
+									printf ("Numero de bloque: %d\n",ju);
+									cant_copiasu=list_size(bloqueu->copias);
+									for (ku=0;ku<cant_copiasu;ku++){
+										copiau=list_get(bloqueu->copias,ku);
+										printf ("Copia %d del bloque %d\n",ku,ju);
+										printf ("----------------------\n");
+										printf ("	Nodo: %s\n	Bloque: %d\n\n",copiau->nodo,copiau->bloqueNodo);
 									}
-									for (ii = 0; ii < cant_archivos; ii++) {
-										archi = list_get(listaArchivos, ii);
-										printf("\n\n");
-										printf("Archivo: %s\nPadre: %d\n",archi->nombre,archi->padre);
-										printf("\n");
-										cant_bloques=list_size(archi->bloques);
-										for (jj = 0; jj < cant_bloques; jj++){
-											bloque=list_get(archi->bloques,jj);
-											printf ("Numero de bloque: %d\n",jj);
-											cant_copias=list_size(bloque->copias);
-											for (kk=0;kk<cant_copias;kk++){
-												copia=list_get(bloque->copias,kk);
-												printf ("Copia %d del bloque %d\n",kk,jj);
-												printf ("----------------------\n");
-												printf ("	Nodo: %s\n	Bloque: %d\n\n",copia->nodo,copia->bloqueNodo);
-											}
-										}
-									}
+								}
+							}
 
 
 
