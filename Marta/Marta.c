@@ -451,9 +451,9 @@ int main(int argc, char**argv){
 	//VOY A LISTAR LA LISTA DE ARCHIVOS PARA VER SI LLEGO BIEN
 
 	int ii,jj,kk,cant_archivos,cant_bloques,cant_copias;
-		t_archivo *archi=malloc(sizeof(t_archivo));
-		t_bloque *bloque=malloc(sizeof(t_bloque));
-		t_copias *copia=malloc(sizeof(t_copias));
+		t_archivo *archi;
+		t_bloque *bloque;
+		t_copias *copia;
 		cant_archivos = list_size(listaArchivos);
 		if (cant_archivos==0){
 			printf ("No hay archivos cargados en MDFS\n");
@@ -789,7 +789,7 @@ void *connection_handler_jobs(){
 
 
 						}
-						//fin uodate nuevo_arch
+						//fin update nuevo_arch
 
 						if (strcmp(identificacion,"elim_bloque")==0){
 							printf ("Voy a eliminar una copia de un bloque de un archivo a las estructuras\n");
