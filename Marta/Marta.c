@@ -1516,13 +1516,21 @@ void *atenderJob (int *socketJob) {
 
 		if(respuestaReduce.resultado == 1){
 			//Se aborta la ejecución de Reduce
-			log_info(logger,"Se aborta el job");
+			log_info(logger,"Falló el Reduce %s. Se aborta el job",respuestaReduce.archivoResultadoReduce);
+//			char jobAborta[BUF_SIZE];
+//			memset(jobAborta,'\0',BUF_SIZE);
+//			strcpy(jobAborta,"aborta");
+//			if(send(*socketJob,jobAborta,sizeof(jobAborta),MSG_WAITALL)==-1){
+//				log_error(logger,"Fallo el envío al Job de que aborte por falla de un reduce");
+//			}
+			t_nodo *nodoARestar = buscarNodoPorIPYPuerto(respuestaReduce.ip_nodo,respuestaReduce.puerto_nodo);
+			restarCantReducers(nodoARestar->nodo_id);
 			pthread_exit((void*)0);
 		}
 		if(respuestaReduce.resultado == 0){
+			printf("Reduce %s exitoso\n",respuestaReduce.archivoResultadoReduce);
 			t_nodo *nodoARestar = buscarNodoPorIPYPuerto(respuestaReduce.ip_nodo,respuestaReduce.puerto_nodo);
 			restarCantReducers(nodoARestar->nodo_id);
-
 		}
 	}
 		// Avisarle a JOB que tiene que ejecutar Reduce final
