@@ -70,7 +70,6 @@ typedef struct estructura_replanificar_map {
 typedef struct estructura_reduce {
 	char ip_nodoPpal[20];
 	int puerto_nodoPpal;
-//	t_list* listaNodos; //una lista que tenga los otros nodos y archivos a donde aplicar reduce (lista de t_reduce_otrosnodos)
 	char nombreArchivoFinal[TAM_NOMFINAL];
 } __attribute__((packed)) t_reduce;
 
@@ -102,5 +101,3 @@ bool nodoNoDisponible(t_copias* copia);
 t_archivo* buscarArchivo(char* nombre, int padre);
 t_nodo* traerNodo(char* idNodo);
 t_nodo* buscarNodoPorIPYPuerto(char* ipNodo,int puertoNodo);
-bool estaPresente(char* nodoID,char* nodoACOMP);
-
