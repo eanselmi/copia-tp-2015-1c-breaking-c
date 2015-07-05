@@ -102,3 +102,5 @@ bool nodoNoDisponible(t_copias* copia);
 t_archivo* buscarArchivo(char* nombre, int padre);
 t_nodo* traerNodo(char* idNodo);
 t_nodo* buscarNodoPorIPYPuerto(char* ipNodo,int puertoNodo);
+bool estaPresente(char* nodoID,char* nodoACOMP);
+
