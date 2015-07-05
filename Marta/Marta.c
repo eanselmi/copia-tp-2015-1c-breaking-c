@@ -1426,6 +1426,7 @@ void *atenderJob (int *socketJob) {
 				list_add(listaNodosDistintos,nodoId);
 			}
 		}
+
 		int i;
 		t_list *listaMapDelNodo;
 		for(i=0;i<list_size(listaNodosDistintos);i++){
@@ -1562,31 +1563,121 @@ void *atenderJob (int *socketJob) {
 				restarCantReducers(nodoARestar->nodo_id);
 			}
 		}
+		/****REDUCE FINAL****/
+
 		//Buscar el nodo con menos carga para asignar a hacer reduce final
-		for(i=0;i<list_size(listaNodosDistintos);i++){
-			t_nodo* nodoGeneral;
-			t_list* listaMismoNodos  ; //Lista para buscar el nodo con menos carga
-			t_nodo *nodoReduceFinal; //Nodo que se va a asignar para hacer el reduce final
-			listaMismoNodos = list_create();
-			char* nodoDistinto = list_get(listaNodosDistintos,i);
+		int posDistintos;
+		t_list* listaMismoNodo; //Lista para buscar el nodo con menos carga
+		t_nodo* nodoGeneral;
+		for(posDistintos=0;posDistintos<list_size(listaNodosDistintos);posDistintos++){
+			listaMismoNodo = list_create();
+			char* nodoDistinto = list_get(listaNodosDistintos,posDistintos);
 			nodoGeneral = traerNodo(nodoDistinto);
-			list_add(listaMismoNodos,nodoGeneral);
-			// Ordenamos la sublista segun la suma de la cantidad de map y reduce
-			list_sort(listaMismoNodos, (void*) ordenarSegunMapYReduce);
-			nodoReduceFinal = list_get(listaMismoNodos,0); // Nos traemos el nodo con menos carga
+			list_add(listaMismoNodo,nodoGeneral);
+		}
+		// Ordenamos la sublista segun la suma de la cantidad de map y reduce
+		list_sort(listaMismoNodo, (void*) ordenarSegunMapYReduce);
+		t_nodo *nodoRF; //Nodo que se va a asignar para hacer el reduce final
+		nodoRF = list_get(listaMismoNodo,0); // Nos traemos el nodo con menos carga
+
+		//Inicializo estructura del nodo que voy a mandarle a JOB
+		t_reduce nodoReduceFinal; //Nodo con los datos que se va a mandar a JOB
+		memset(nodoReduceFinal.ip_nodoPpal,'\0',20);
+		memset(nodoReduceFinal.nombreArchivoFinal,'\0',TAM_NOMFINAL);
+
+		//Completo estructura del nodo que le voy a mandar a JOB
+		strcpy(nodoReduceFinal.ip_nodoPpal,nodoRF->ip);
+		nodoReduceFinal.puerto_nodoPpal = nodoRF->puerto_escucha_nodo;
+
+		char* tiempoReduce=string_new();
+		char** arrayTiempoReduce;
+		char* archivoReduceTemp=string_new();
+
+		string_append(&archivoReduceTemp,"/tmp/Job");
+		string_append(&archivoReduceTemp,stringNroJob);
+		arrayTiempoReduce=string_split(temporal_get_string_time(),":"); //creo array con hora minutos segundos y milisegundos separados
+		string_append(&tiempoReduce,arrayTiempoReduce[0]);//Agrego horas
+		string_append(&tiempoReduce,arrayTiempoReduce[1]);//Agrego minutos
+		string_append(&tiempoReduce,arrayTiempoReduce[2]);//Agrego segundos
+		string_append(&tiempoReduce,arrayTiempoReduce[3]);//Agrego milisegundos
+		string_append(&archivoReduceTemp,"_Reduce");
+		string_append(&archivoReduceTemp,string_itoa(i));
+		string_append(&archivoReduceTemp,"_");
+		string_append(&archivoReduceTemp,tiempoReduce);
+		string_append(&archivoReduceTemp,".txt");
+
+		strcpy(nodoReduceFinal.nombreArchivoFinal,archivoReduceTemp);
+
+		// Mando a ejecutar reduce
+		char mensajeReducerFinal[TAM_NOMFINAL];
+		memset(mensajeReducerFinal, '\0', TAM_NOMFINAL);
+		strcpy(mensajeReducerFinal,"ejecuta reduce");
+		if(send(*socketJob, mensajeReducerFinal,sizeof(mensajeReducerFinal),MSG_WAITALL)==-1){
+			perror("send");
+			log_error(logger, "Fallo mandar hacer reducer");
+			//exit(-1);
 		}
 
-		// Avisarle a JOB que tiene que ejecutar Reduce final
-		//Le mando a JOB t_reduce que se va a ejecutar
-		// le mando al job la cantidad de archivos a los que que hay que aplicarle Reduce
-		//Le mando los datos de cada uno de los archivos: IP Nodo, Puerto Nodo, nombreArchivo resultado de map (t_archivosReduce)
+		if(send(*socketJob, &nodoReduceFinal,sizeof(t_reduce),MSG_WAITALL)==-1){
+			perror("send");
+			log_error(logger, "Fallo mandar datos para hacer reducer");
+			//exit(-1);
+		}
+		// Mando cantidad de archivos a hacer reduce
+		int cantArch = list_size(listaMismoNodo);
+		if(send(*socketJob, &cantArch,sizeof(int),MSG_WAITALL)==-1){
+			perror("send");
+			log_error(logger, "Fallo mandar la cantidad de archivos a hacer reduce");
+			//exit(-1);
+		}
+		/*Le mando los datos de cada uno de los archivos de la lista en la que se aplicó reduce parcial(listaReducerParcial):
+		IP Nodo, Puerto Nodo, nombreArchivo resultado de map (t_archivosReduce)*/
+		int posNodoOk;
+		t_replanificarMap *nodoOk;
+		for(posNodoOk = 0; posNodoOk < list_size(listaReducerParcial); posNodoOk ++){
+			t_archivosReduce archivosReduceFinal;
+			memset(archivosReduceFinal.archivoAAplicarReduce,'\0',TAM_NOMFINAL);
+			memset(archivosReduceFinal.ip_nodo,'\0',20);
+
+			nodoOk = list_get(listaReducerParcial,posNodoOk);
+			strcpy(archivosReduceFinal.archivoAAplicarReduce, nodoOk->archivoResultadoMap);
+			strcpy(archivosReduceFinal.ip_nodo, nodoGeneral->ip);
+			archivosReduceFinal.puerto_nodo = nodoGeneral->puerto_escucha_nodo;
+
+			// Mando por cada t_replanificarMap ok, los datos de cada archivo
+			if(send(*socketJob, &archivosReduceFinal,sizeof(t_archivosReduce),MSG_WAITALL)==-1){
+				perror("send");
+				log_error(logger, "Fallo mandar la archivo a hacer reduce");
+				//exit(-1);
+			}
+		}
+		/*Le mando los datos de cada uno de los archivos de la listaReducerDeUnSoloArchivo:
+		 * IP Nodo, Puerto Nodo, nombreArchivo resultado de map (t_archivosReduce) */
+		for(posNodoOk = 0; posNodoOk < list_size(listaReducerDeUnSoloArchivo); posNodoOk ++){
+			t_archivosReduce archivosReduceFinal;
+			memset(archivosReduceFinal.archivoAAplicarReduce,'\0',TAM_NOMFINAL);
+			memset(archivosReduceFinal.ip_nodo,'\0',20);
+
+			nodoOk = list_get(listaReducerDeUnSoloArchivo,posNodoOk);
+			strcpy(archivosReduceFinal.archivoAAplicarReduce, nodoOk->archivoResultadoMap);
+			strcpy(archivosReduceFinal.ip_nodo, nodoGeneral->ip);
+			archivosReduceFinal.puerto_nodo = nodoGeneral->puerto_escucha_nodo;
+
+			// Mando por cada t_replanificarMap ok, los datos de cada archivo
+			if(send(*socketJob, &archivosReduceFinal,sizeof(t_archivosReduce),MSG_WAITALL)==-1){
+				perror("send");
+				log_error(logger, "Fallo mandar la archivo a hacer reduce");
+				//exit(-1);
+			}
+		}
+		sumarCantReducers(nodoGeneral->nodo_id);
+	}
+
 		//Recibo respuesta del reduce final
 		//Si la respuesta es OK le resto 1 a cantReducers de t_nodo
 		//void restarCantReducers(char* idNodoARestar);
 		//Si la respuesta es KO le sumo 1 a cantReducer de t_nodo
-		//void sumarCantReducers(char* idNodoASumar);
 
-	}
 	pthread_exit((void*)0);
 }
 
