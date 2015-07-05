@@ -504,6 +504,9 @@ void *connection_handler_jobs(){
 	char nodoId[6];
 	int bloqueNodo;
 	int bloqueNodoDestino;
+	int cantidadBloquesArchivo=0;
+	int cantCopiasArchivoNovedad=0;
+	int a, b;
 	if ((listener = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
 		perror("socket");
 		log_info(logger,"FALLO la creacion del socket");
@@ -661,8 +664,70 @@ void *connection_handler_jobs(){
 						}
 						if (strcmp(identificacion,"nuevo_arch")==0){
 							printf ("Voy a agregar un nuevo archivo a las estructuras\n");
-							//TODO hacer recv de nuevo archivo
+							//TODO revisar recv de nuevo archivo
+							t_archivo* nuevoArchivo = malloc(sizeof(t_archivo));
+							memset(nombreArchivoNovedad,'\0',200);
+							if ((nbytes = recv(socket_fs, nombreArchivoNovedad, sizeof(nombreArchivoNovedad), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
+								perror("recv");
+								log_error(logger,"FALLO el Recv del nombre del archivo novedad");
+								exit(-1);
+							}
+							printf ("...Nombre Archivo: %s\n",nombreArchivoNovedad);
+							if ((nbytes = recv(socket_fs, &padreArchivoNovedad, sizeof(uint32_t), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
+								perror("recv");
+								log_error(logger,"FALLO el Recv del padre del archivo");
+								exit(-1);
+							}
+							printf ("...Padre del archivo: %d\n",padreArchivoNovedad);
+							nuevoArchivo->nombre=string_new();
+							strcpy(nuevoArchivo->nombre, nombreArchivoNovedad);
+							nuevoArchivo->padre = padreArchivoNovedad;
+							if ((nbytes = recv(socket_fs, &cantidadBloquesArchivo, sizeof(int), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
+								perror("recv");
+								log_error(logger,"FALLO el Recv de cantidad de bloques del archivo");
+								exit(-1);
+							}
+							printf ("...Cantidad de bloques del archivo: %d\n",cantidadBloquesArchivo);
+							nuevoArchivo->bloques = list_create();
+							a=0;
+							while (a < cantidadBloquesArchivo){
+								t_bloque* bloqueArchivoNovedad = malloc(sizeof(t_bloque));
+								bloqueArchivoNovedad->copias = list_create();
+								if ((nbytes = recv(socket_fs, &cantCopiasArchivoNovedad, sizeof(int), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
+									perror("recv");
+									log_error(logger,"FALLO el Recv de cantidad de copias del bloque del archivo");
+									exit(-1);
+								}
+								printf ("... ...Cantidad de copias del bloque:%d\n",cantCopiasArchivoNovedad);
+								b=0;
+								while (b < cantCopiasArchivoNovedad){
+									t_copias* copiaBloqueNovedad = malloc(sizeof(t_copias));
+									memset(nodoId,'\0',6);
+									if ((nbytes = recv(socket_fs, nodoId, sizeof(nodoId), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
+										perror("recv");
+										log_error(logger,"FALLO el Recv del nodo de la copia del archivo");
+										exit(-1);
+									}
+									printf ("... ... ...Nodo ID: %s\n",nodoId);
+									if ((nbytes = recv(socket_fs, &bloqueNodo, sizeof(int), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
+										perror("recv");
+										log_error(logger,"FALLO el Recv del bloque del nodo donde está el archivo");
+										exit(-1);
+									}
+									printf ("... ... ...Bloque Nodo: %d\n",bloqueNodo);
+									copiaBloqueNovedad->nodo=string_new();
+									strcpy(copiaBloqueNovedad->nodo, nodoId);
+									copiaBloqueNovedad->bloqueNodo =bloqueNodo;
+									list_add(bloqueArchivoNovedad->copias, copiaBloqueNovedad);
+									b++;
+								}
+								list_add(nuevoArchivo->bloques,bloqueArchivoNovedad);
+								a++;
+							}
+							list_add(listaArchivos, nuevoArchivo);
 						}
+
+
 						if (strcmp(identificacion,"elim_bloque")==0){
 							printf ("Voy a eliminar una copia de un bloque de un archivo a las estructuras\n");
 							memset(nombreArchivoNovedad, '\0',200);
@@ -744,9 +809,13 @@ void *atenderJob (int *socketJob) {
 	char accion[BUF_SIZE];
 	char mensaje_fs[BUF_SIZE];
 	t_list* listaMappers;
+	t_list* listaReducerDeUnSoloArchivo;
+	t_list* listaReducerParcial;
 	memset(mensaje_fs,'\0',BUF_SIZE);
 	memset(accion,'\0',BUF_SIZE);
 	listaMappers = list_create();
+	listaReducerDeUnSoloArchivo=list_create();
+	listaReducerParcial=list_create();
 	char archivoResultado[TAM_NOMFINAL];
 	int posicionArchivo;
 	int nroRespuesta;
@@ -1295,9 +1364,18 @@ void *atenderJob (int *socketJob) {
 		}
 		int i;
 		t_list *listaMapDelNodo;
-		listaMapDelNodo = list_create();
 		for(i=0;i<list_size(listaNodosDistintos);i++){
+			t_nodo* nodoPrincipal;
+			t_reduce nodoReducerParcial;
+			t_reduce* nodoReducer=malloc(sizeof(t_reduce));
+			memset(nodoReducerParcial.ip_nodoPpal,'\0',20);
+			memset(nodoReducerParcial.nombreArchivoFinal,'\0',TAM_NOMFINAL);
+			memset(nodoReducer->ip_nodoPpal,'\0',20);
+			memset(nodoReducer->nombreArchivoFinal,'\0',TAM_NOMFINAL);
+			listaMapDelNodo = list_create();
 			char* nodoDistinto=list_get(listaNodosDistintos,i);
+			nodoPrincipal=traerNodo(nodoDistinto);
+
 			int j;
 			for(j=0; j<list_size(listaMapOk);j++){
 				t_replanificarMap *nodoMapOk;
@@ -1311,12 +1389,39 @@ void *atenderJob (int *socketJob) {
 				char mensajeReducerParcial[TAM_NOMFINAL];
 				memset(mensajeReducerParcial, '\0', TAM_NOMFINAL);
 				strcpy(mensajeReducerParcial,"ejecuta reduce");
-				if(send(*socketJob, mensajeReducerParcial,sizeof(TAM_NOMFINAL),MSG_WAITALL)==-1){
+				if(send(*socketJob, mensajeReducerParcial,sizeof(mensajeReducerParcial),MSG_WAITALL)==-1){
 					perror("send");
 					log_error(logger, "Fallo mandar hacer reducer");
 					//exit(-1);
 				}
-				t_reduce nodoReducerParcial;
+				//Mando los datos del Nodo Principal y el nombre del archivo resultado//
+
+
+				strcpy(nodoReducerParcial.ip_nodoPpal,nodoPrincipal->ip);
+				nodoReducerParcial.puerto_nodoPpal=nodoPrincipal->puerto_escucha_nodo;
+				strcpy(nodoReducer->ip_nodoPpal,nodoPrincipal->ip);
+				nodoReducer->puerto_nodoPpal=nodoPrincipal->puerto_escucha_nodo;
+
+				char* tiempoReduce=string_new();
+				char** arrayTiempoReduce;
+				char* archivoReduceTemp=string_new();
+
+				string_append(&archivoReduceTemp,"/tmp/Job");
+				string_append(&archivoReduceTemp,stringNroJob);
+				arrayTiempoReduce=string_split(temporal_get_string_time(),":"); //creo array con hora minutos segundos y milisegundos separados
+				string_append(&tiempoReduce,arrayTiempoReduce[0]);//Agrego horas
+				string_append(&tiempoReduce,arrayTiempoReduce[1]);//Agrego minutos
+				string_append(&tiempoReduce,arrayTiempoReduce[2]);//Agrego segundos
+				string_append(&tiempoReduce,arrayTiempoReduce[3]);//Agrego milisegundos
+				string_append(&archivoReduceTemp,"_Reduce");
+				string_append(&archivoReduceTemp,string_itoa(i));
+				string_append(&archivoReduceTemp,"_");
+				string_append(&archivoReduceTemp,tiempoReduce);
+				string_append(&archivoReduceTemp,".txt");
+
+				strcpy(nodoReducerParcial.nombreArchivoFinal,archivoReduceTemp);
+				strcpy(nodoReducer->nombreArchivoFinal,archivoReduceTemp);
+
 				if(send(*socketJob, &nodoReducerParcial,sizeof(t_reduce),MSG_WAITALL)==-1){
 					perror("send");
 					log_error(logger, "Fallo mandar datos para hacer reducer");
@@ -1332,20 +1437,16 @@ void *atenderJob (int *socketJob) {
 				//Le mando los datos de cada uno de los archivos: IP Nodo, Puerto Nodo, nombreArchivo resultado de map (t_archivosReduce)
 				int posNodoOk;
 				t_replanificarMap *nodoOk;
-				t_archivosReduce archReducePorNodo;
-				memset(archReducePorNodo.archivoAAplicarReduce,'\0',TAM_NOMFINAL);
 				for(posNodoOk = 0; posNodoOk < list_size(listaMapDelNodo); posNodoOk ++){
+					t_archivosReduce archReducePorNodo;
+					memset(archReducePorNodo.archivoAAplicarReduce,'\0',TAM_NOMFINAL);
+					memset(archReducePorNodo.ip_nodo,'\0',20);
+
 					nodoOk = list_get(listaMapDelNodo,posNodoOk);
 					strcpy(archReducePorNodo.archivoAAplicarReduce, nodoOk->archivoResultadoMap);
-					int posNodoGlobalRP;
-					t_nodo *nodoGlobalRP;
-					for(posNodoGlobalRP = 0; posNodoGlobalRP < list_size(listaNodos);posNodoGlobalRP ++){
-						nodoGlobalRP = list_get(listaNodos,posNodoGlobalRP);
-						if(strcmp(nodoOk->nodoId, nodoGlobalRP->nodo_id)==0){
-							strcpy(archReducePorNodo.ip_nodo, nodoGlobalRP->ip);
-							archReducePorNodo.puerto_nodo = nodoGlobalRP->puerto_escucha_nodo;
-						}
-					}
+					strcpy(archReducePorNodo.ip_nodo, nodoPrincipal->ip);
+					archReducePorNodo.puerto_nodo = nodoPrincipal->puerto_escucha_nodo;
+
 					// Mando por cada t_replanificarMap ok, los datos de cada archivo
 					if(send(*socketJob, &archReducePorNodo,sizeof(t_archivosReduce),MSG_WAITALL)==-1){
 						perror("send");
@@ -1353,16 +1454,24 @@ void *atenderJob (int *socketJob) {
 						//exit(-1);
 					}
 				}
+				sumarCantReducers(nodoPrincipal->nodo_id);
+				list_add(listaReducerParcial,nodoReducer);
 			}
-			sumarCantReducers(mapOk->nodoId);
+			if(list_size(listaMapDelNodo)==1){
+				t_replanificarMap *nodoMapOkk;
+				nodoMapOkk=list_get(listaMapDelNodo,0);
+				strcpy(nodoReducer->ip_nodoPpal,nodoPrincipal->ip);
+				nodoReducer->puerto_nodoPpal=nodoPrincipal->puerto_escucha_nodo;
+				strcpy(nodoReducer->nombreArchivoFinal,nodoMapOkk->nombreArchivoDelJob);
+				list_add(listaReducerDeUnSoloArchivo,nodoReducer);
+			}
+			list_destroy(listaMapDelNodo);
 		}
-
 	}
 
 	//Recibir la respuesta del JOB confirmando que termino con los reduce de los que están en el mismo nodo
-	//SE ESPERAN EN UN CICLO FOR LA CANTIDAD DE RESPUESTAS IGUAL A CUANTOS REDUCE SE HALLAN ENVIADO (con tamaño de la listaMapPorNodo)
+	//SE ESPERAN EN UN CICLO FOR LA CANTIDAD DE RESPUESTAS IGUAL A CUANTOS REDUCE SE HALLAN ENVIADO
 	int posResp;
-	t_list *listaReducerParcial;
 
 	for(posResp=0;posResp<list_size(listaReducerParcial);posResp++){
 		t_respuestaReduce respuestaReduce;
@@ -1399,7 +1508,7 @@ void *atenderJob (int *socketJob) {
 		//Recibo respuesta del reduce final
 		//Si la respuesta es OK le resto 1 a cantReducers de t_nodo
 		//void restarCantReducers(char* idNodoARestar);
-		//Si la respuesta es KO le sumo 1 a cantReducer de t_nodo y REPLANIFICAR!!!!!!!
+		//Si la respuesta es KO le sumo 1 a cantReducer de t_nodo
 		//void sumarCantReducers(char* idNodoASumar);
 	}
 	pthread_exit((void*)0);
@@ -1511,11 +1620,10 @@ char* obtenerNombreArchivoReduce (){
 	char* tiempoReduce=string_new();
 	char** arrayTiempoReduce;
 	char* archivoReduceTemp=string_new();
-	char* pathArchivoReduceTemp= string_new();
 	//char **arrayNomArchivo=string_split(map->nombreArchivoDelJob,".");
 
-	strcpy(archivoReduceTemp,"/tmp/");
-//	string_append(&archivoReduceTemp,stringNroJob);
+	string_append(&archivoReduceTemp,"/tmp/");
+	string_append(&archivoReduceTemp,stringNroJob);
 //	string_append(&archivoReduceTemp,arrayNomArchivo[0]);
 	arrayTiempoReduce=string_split(temporal_get_string_time(),":"); //creo array con hora minutos segundos y milisegundos separados
 	string_append(&tiempoReduce,arrayTiempoReduce[0]);//Agrego horas
@@ -1527,9 +1635,8 @@ char* obtenerNombreArchivoReduce (){
 	string_append(&archivoReduceTemp,"_");
 	string_append(&archivoReduceTemp,tiempoReduce);
 	string_append(&archivoReduceTemp,"Rep.txt");
-	string_append(&pathArchivoReduceTemp,archivoReduceTemp);
 
-	return pathArchivoReduceTemp;
+	return archivoReduceTemp;
 }
 
 t_archivo* buscarArchivo(char* nombreArchivo, int padre){
@@ -1573,3 +1680,14 @@ bool nodoNoDisponible(t_copias* copia){
 	}
 }
 
+t_nodo* traerNodo(char* nodoId){
+	int indice;
+	t_nodo* nodoAux;
+	for(indice=0;indice<list_size(listaNodos);indice++){
+		nodoAux=list_get(listaNodos,indice);
+		if (strcmp(nodoAux->nodo_id,nodoId)==0){
+			return nodoAux;
+		}
+	}
+	return NULL;
+}

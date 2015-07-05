@@ -100,3 +100,4 @@ char* obtenerNombreArchivoReduce ();
 bool archivoDisponible(t_archivo* archivo);
 bool nodoNoDisponible(t_copias* copia);
 t_archivo* buscarArchivo(char* nombre, int padre);
+t_nodo* traerNodo(char* idNodo);
