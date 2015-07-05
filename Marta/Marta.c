@@ -757,8 +757,39 @@ void *connection_handler_jobs(){
 								a++;
 							}
 							list_add(listaArchivos, nuevoArchivo);
-						}
 
+							//listar para ver si se agregó bien a la lista
+							int ii,jj,kk,cant_archivos,cant_bloques,cant_copias;
+									t_archivo *archi=malloc(sizeof(t_archivo));
+									t_bloque *bloque=malloc(sizeof(t_bloque));
+									t_copias *copia=malloc(sizeof(t_copias));
+									cant_archivos = list_size(listaArchivos);
+									if (cant_archivos==0){
+										printf ("No hay archivos cargados en MDFS\n");
+									}
+									for (ii = 0; ii < cant_archivos; ii++) {
+										archi = list_get(listaArchivos, ii);
+										printf("\n\n");
+										printf("Archivo: %s\nPadre: %d\n",archi->nombre,archi->padre);
+										printf("\n");
+										cant_bloques=list_size(archi->bloques);
+										for (jj = 0; jj < cant_bloques; jj++){
+											bloque=list_get(archi->bloques,jj);
+											printf ("Numero de bloque: %d\n",jj);
+											cant_copias=list_size(bloque->copias);
+											for (kk=0;kk<cant_copias;kk++){
+												copia=list_get(bloque->copias,kk);
+												printf ("Copia %d del bloque %d\n",kk,jj);
+												printf ("----------------------\n");
+												printf ("	Nodo: %s\n	Bloque: %d\n\n",copia->nodo,copia->bloqueNodo);
+											}
+										}
+									}
+
+
+
+						}
+						//fin uodate nuevo_arch
 
 						if (strcmp(identificacion,"elim_bloque")==0){
 							printf ("Voy a eliminar una copia de un bloque de un archivo a las estructuras\n");
