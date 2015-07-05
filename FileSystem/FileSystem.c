@@ -1547,7 +1547,7 @@ void *connection_handler_escucha(void) {
 								archivo_resultado=fopen(ruta_local,"w");
 								while(1){
 									bytes=recv(nodo_con_resultado->socket,buff_archivo_resultado,MENSAJE_SIZE,MSG_WAITALL);
-									if (bytes==0) //Termino el envio y el nodo corto la conexion
+									if (bytes<MENSAJE_SIZE && bytes>=0) //Termino el envio y el nodo corto la conexion
 										break;
 									if (bytes<0){
 										perror ("Recv del recibir archivo de resultado");
@@ -1555,6 +1555,11 @@ void *connection_handler_escucha(void) {
 									}
 									fprintf (archivo_resultado,"%s",buff_archivo_resultado);
 									memset(buff_archivo_resultado,'\0',MENSAJE_SIZE);
+								}
+								if (bytes>0 && bytes<MENSAJE_SIZE){
+									fprintf (archivo_resultado,"%s",buff_archivo_resultado);
+									memset(buff_archivo_resultado,'\0',MENSAJE_SIZE);
+									fclose(archivo_resultado);
 								}
 								if (bytes==0){ //la recepcion del archivo salio bien
 									fclose(archivo_resultado);
