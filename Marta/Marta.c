@@ -1419,8 +1419,8 @@ void *atenderJob (int *socketJob) {
 			}
 			if(list_size(listaMapDelNodo)>1){
 				// Mando a ejecutar reduce
-				char mensajeReducerParcial[TAM_NOMFINAL];
-				memset(mensajeReducerParcial, '\0', TAM_NOMFINAL);
+				char mensajeReducerParcial[BUF_SIZE];
+				memset(mensajeReducerParcial, '\0', BUF_SIZE);
 				strcpy(mensajeReducerParcial,"ejecuta reduce");
 				if(send(*socketJob, mensajeReducerParcial,sizeof(mensajeReducerParcial),MSG_WAITALL)==-1){
 					perror("send");
