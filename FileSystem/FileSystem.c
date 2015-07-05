@@ -1507,6 +1507,66 @@ void *connection_handler_escucha(void) {
 									log_error(logger,"Fallo el envio de un padre a Marta");
 								}
 							}
+							if(strcmp(mensaje,"resultado")==0){
+								//Marta me informa que un reduce termino, me va a indicar en que nodo lo voy a buscar y como se llama el archivo
+								char nombreArchivoResultado[100];
+								memset(nombreArchivoResultado,'\0',100);
+								char nodo_resultado[6];
+								memset(nodo_resultado,'\0',6);
+								t_nodo *nodo_con_resultado;
+								int n_nodo;
+								int bytes;
+								char buff_archivo_resultado[MENSAJE_SIZE];
+								memset(buff_archivo_resultado,'\0',MENSAJE_SIZE);
+								char ruta_local[100];
+								memset(ruta_local,'\0',100);
+								strcpy(ruta_local,"/tmp/");
+								FILE* archivo_resultado;
+								if(recv(marta_sock,nodo_resultado,sizeof(nodo_resultado),MSG_WAITALL)==-1){
+									perror("recv");
+									log_error(logger,"Fallo el envio del nombre del archivo a dar el padre por parte de Marta");
+								}
+								if(recv(marta_sock,nombreArchivoResultado,sizeof(nombreArchivoResultado),MSG_WAITALL)==-1){
+									perror("recv");
+									log_error(logger,"Fallo el envio del nombre del archivo a dar el padre por parte de Marta");
+								}
+								strcat(ruta_local,nombreArchivoResultado);
+								for (n_nodo=0;n_nodo<list_size(nodos);n_nodo++){
+									nodo_con_resultado=list_get(nodos,n_nodo);
+									if (strcmp(nodo_con_resultado->nodo_id,nodo_resultado)==0) break;
+								}
+								if(send(nodo_con_resultado->socket,mensaje,sizeof(mensaje),MSG_WAITALL)==-1){
+									perror("send");
+									log_error(logger,"Fallo el envio de un padre a Marta");
+								}
+								if(send(nodo_con_resultado->socket,nombreArchivoResultado,sizeof(nombreArchivoResultado),MSG_WAITALL)==-1){
+									perror("send");
+									log_error(logger,"Fallo el envio de un padre a Marta");
+								}
+								//Recibir archivo resultado del nodo y guardarlo en /tmp con el nombre del archivo
+								archivo_resultado=fopen(ruta_local,"w");
+								while(1){
+									bytes=recv(nodo_con_resultado->socket,buff_archivo_resultado,MENSAJE_SIZE,MSG_WAITALL);
+									if (bytes<MENSAJE_SIZE && bytes>=0) //Termino el envio y el nodo corto la conexion
+										break;
+									if (bytes<0){
+										perror ("Recv del recibir archivo de resultado");
+										break;
+									}
+									fprintf (archivo_resultado,"%s",buff_archivo_resultado);
+									memset(buff_archivo_resultado,'\0',MENSAJE_SIZE);
+								}
+								if (bytes>0 && bytes<MENSAJE_SIZE){
+									fprintf (archivo_resultado,"%s",buff_archivo_resultado);
+									memset(buff_archivo_resultado,'\0',MENSAJE_SIZE);
+									fclose(archivo_resultado);
+								}
+								if (bytes==0){ //la recepcion del archivo salio bien
+									fclose(archivo_resultado);
+								}else{ //La recepcion fallo
+									//.............
+								}
+							}
 						}
 					}else{
 						//Si no es marta, es un nodo
