@@ -480,6 +480,38 @@ int main(int argc, char**argv){
 
 //================================= FIN DEL ENVIO DE LA LISTA DE ARCHIVOS DEL FS ================================================
 
+
+
+		//TEST PARA NOTIFICAR AL FS QUE BUSQUE UN ARCHIVO RESULTADO DE UN REDUCE
+		/*memset(identificacion,'\0',BUF_SIZE);
+		strcpy(identificacion,"resultado");
+		if((send(socket_fs,identificacion,sizeof(identificacion),MSG_WAITALL))==-1) {
+				perror("send");
+				log_error(logger,"FALLO el envio del saludo al FS");
+				exit(-1);
+			}
+		char test[6];
+		memset(test, '\0', 6);
+		strcpy(test,"nodo2");
+		if((send(socket_fs,test,sizeof(test),MSG_WAITALL))==-1) {
+				perror("send");
+				log_error(logger,"FALLO el envio del saludo al FS");
+				exit(-1);
+			}
+		char test2[100];
+		memset(test2, '\0', 100);
+		strcpy(test2,"alton.txt");
+		if((send(socket_fs,test2,sizeof(test2),MSG_WAITALL))==-1) {
+				perror("send");
+				log_error(logger,"FALLO el envio del saludo al FS");
+				exit(-1);
+			}
+*/
+
+
+
+
+
 	if( pthread_create( &escucha_jobs , NULL , connection_handler_jobs , NULL) < 0){
 	    perror("could not create thread");
 	    return -1;

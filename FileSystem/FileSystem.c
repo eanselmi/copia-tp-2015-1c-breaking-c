@@ -1531,6 +1531,7 @@ void *connection_handler_escucha(void) {
 									log_error(logger,"Fallo el envio del nombre del archivo a dar el padre por parte de Marta");
 								}
 								strcat(ruta_local,nombreArchivoResultado);
+								strcat(ruta_local,"-copia");
 								for (n_nodo=0;n_nodo<list_size(nodos);n_nodo++){
 									nodo_con_resultado=list_get(nodos,n_nodo);
 									if (strcmp(nodo_con_resultado->nodo_id,nodo_resultado)==0) break;
@@ -1546,7 +1547,7 @@ void *connection_handler_escucha(void) {
 								//Recibir archivo resultado del nodo y guardarlo en /tmp con el nombre del archivo
 								archivo_resultado=fopen(ruta_local,"w");
 								while(1){
-									bytes=recv(nodo_con_resultado->socket,buff_archivo_resultado,MENSAJE_SIZE,MSG_WAITALL);
+									bytes=recv(nodo_con_resultado->socket,buff_archivo_resultado,MENSAJE_SIZE,0);
 									if (bytes<MENSAJE_SIZE && bytes>=0) //Termino el envio y el nodo corto la conexion
 										break;
 									if (bytes<0){

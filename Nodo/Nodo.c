@@ -37,11 +37,12 @@ t_list* listaMappersConectados; //Lista con los mappers conectados
 t_list* listaReducersConectados; //lista con los reducers conectados
 t_list* archivosAbiertos; //Archivos ya abiertos que otro nodo me pide que pase renglon
 sem_t semBloques[205]; //Soporta nodos de hasta 4GB 205 *20MB = 4100 MB --> ~4GB  (serían 205 bloques)
-//char bufFalso[BLOCK_SIZE]; //Buffer si voy a crear un bloque falso (para pruebas) 20MB
-//char bufAMediasFalso[BLOCK_SIZE/2]; //Buffer si voy a crear medio bloque falso (para pruebas) 10MB
+int nroMap; //Maps totales
+int nroReduce; //Reduce totales
 pthread_mutex_t mutexMap=PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t mutexSort=PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutexReduce=PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutexNroMap=PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutexNroReduce=PTHREAD_MUTEX_INITIALIZER;
 
 
 
@@ -77,6 +78,8 @@ int main(int argc , char *argv[]){
 	bloquesTotales=malloc(sizeof(int));
 	*bloquesTotales=sizeFileDatos/20971520;
 
+	nroMap=0; //Inicializo maps totales a 0
+	nroReduce=0; //Inicializo reduces totales a 0
 
 	for(semBloque=0;semBloque<*bloquesTotales;semBloque++){
 		sem_init(&semBloques[semBloque],0,1);
@@ -355,6 +358,7 @@ void *manejador_de_escuchas(){
 								log_error(logger, "FALLO el Recv de bloque");
 								exit(-1);
 							}
+							printf ("Me solicitaron el archivo resultado %s\n",nombreArchivoResultado);
 							strcat(ruta_local,nombreArchivoResultado);
 							if((archivo_resultado=open(ruta_local,O_RDONLY)) < 0){
 								perror ("Error al abrir el archivo resultado");
@@ -363,8 +367,9 @@ void *manejador_de_escuchas(){
 									if((bytes = read(archivo_resultado, buff_resultado, 4096)) <= 0){
 										break;
 									}
+
 									else{
-										if (send(conectorFS,buff_resultado,4096,MSG_WAITALL) == -1) {
+										if ((bytes=send(conectorFS,buff_resultado,strlen(buff_resultado),MSG_WAITALL)) == -1) {
 											perror("send");
 											log_error(logger, "FALLO el envio del bloque ");
 											exit(-1);
@@ -374,6 +379,7 @@ void *manejador_de_escuchas(){
 								}
 							}
 							close(archivo_resultado);
+							printf ("Archivo resultado enviado\n");
 						}
 					}
 				}
@@ -832,6 +838,11 @@ void* rutinaMap(int* sckMap){
 	char *pathNuevoMap=string_new();//El path completo del nuevo Map
 	FILE* scriptMap;
 
+	pthread_mutex_lock(&mutexNroMap);
+	char * stringNroMap=string_itoa(nroMap);
+	nroMap++;
+	pthread_mutex_unlock(&mutexNroMap);
+
 	if(recv(*sckMap,&datosParaElMap,sizeof(t_datosMap),MSG_WAITALL)==-1){
 		perror("recv");
 		log_error(logger,"Fallo al recibir los datos para el map");
@@ -846,6 +857,7 @@ void* rutinaMap(int* sckMap){
 
 	//Creo el archivo que guarda la rutina de map enviada por el Job
 	//Generar un nombre para este script Map
+	string_append(&nombreNuevoMap,stringNroMap);
 	string_append(&nombreNuevoMap,"mapJob");
 	arrayTiempo=string_split(temporal_get_string_time(),":"); //creo array con hora minutos segundos y milisegundos separados
 	string_append(&tiempo,arrayTiempo[0]);//Agrego horas
@@ -936,6 +948,12 @@ void* rutinaReduce (int* sckReduce){
 	char *pathNuevoReduce=string_new();//El path completo del nuevo Map
 	memset(respuestaParaJob.ip_nodoFallido,'\0',20);
 
+	pthread_mutex_lock(&mutexNroReduce);
+	char * stringNroReduce=string_itoa(nroReduce);
+	nroReduce++;
+	pthread_mutex_unlock(&mutexNroReduce);
+
+
 	if(recv(*sckReduce,&nombreFinalReduce,TAM_NOMFINAL,MSG_WAITALL)==-1){
 		perror("recv");
 		log_error(logger,"Fallo al recibir el nombre del archivo final del reduce");
@@ -951,6 +969,7 @@ void* rutinaReduce (int* sckReduce){
 	}
 
 	//printf("Se recibio la rutina reduce:%s\n",rutinaReduce);
+	string_append(&nombreNuevoReduce,stringNroReduce);
 	string_append(&nombreNuevoReduce,"reduceJob");
 	arrayTiempo=string_split(temporal_get_string_time(),":"); //creo array con hora minutos segundos y milisegundos separados
 	string_append(&tiempo,arrayTiempo[0]);//Agrego horas
