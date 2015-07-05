@@ -409,7 +409,10 @@ void *manejador_de_escuchas(){
 							int byteLeido;
 							int i;
 							t_archivoAbierto* archivoPedido;
-							recv(socketModificado,archivoAPasar,sizeof(archivoAPasar),MSG_WAITALL);
+							if(recv(socketModificado,archivoAPasar,sizeof(archivoAPasar),MSG_WAITALL)<=0){
+								perror("recv");
+								log_error(logger,"Se desconectó un nodo");
+							}
 							printf("Me pidio renglones del archivo %s\n",archivoAPasar);
 
 							if((archivoPedido=estaEnListaArchivosAbiertos(archivoAPasar))==NULL){ //Si el archivo no está ya abierto, lo abro y leo un renglon
@@ -479,7 +482,10 @@ void *manejador_de_escuchas(){
 								}
 							}
 
-							send(socketModificado,renglones,sizeof(renglones),MSG_WAITALL);
+							if(send(socketModificado,renglones,sizeof(renglones),MSG_WAITALL)==-1){
+								perror("send");
+								log_error(logger,"Se desconecto un nodo");
+							}
 
 						}
 
