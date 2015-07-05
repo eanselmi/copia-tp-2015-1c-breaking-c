@@ -1394,6 +1394,7 @@ void *atenderJob (int *socketJob) {
 	 * ************************************************************************************************************************************************/
 
 	if(strcmp(mensajeCombiner,"SI")==0){
+		int jobAbortado=0;
 		t_replanificarMap *mapOk;
 		t_list *listaMapOk; //Lista de nodo en los que el map salió OK
 		t_list *listaNodosDistintos;
@@ -1546,16 +1547,10 @@ void *atenderJob (int *socketJob) {
 
 			if(respuestaReduce.resultado == 1){
 				//Se aborta la ejecución de Reduce
-				log_info(logger,"Falló el Reduce %s. Se aborta el job",respuestaReduce.archivoResultadoReduce);
-	//			char jobAborta[BUF_SIZE];
-	//			memset(jobAborta,'\0',BUF_SIZE);
-	//			strcpy(jobAborta,"aborta");
-	//			if(send(*socketJob,jobAborta,sizeof(jobAborta),MSG_WAITALL)==-1){
-	//				log_error(logger,"Fallo el envío al Job de que aborte por falla de un reduce");
-	//			}
+				log_info(logger,"Falló el Reduce %s. Se abortará el job",respuestaReduce.archivoResultadoReduce);
 				t_nodo *nodoARestar = buscarNodoPorIPYPuerto(respuestaReduce.ip_nodo,respuestaReduce.puerto_nodo);
 				restarCantReducers(nodoARestar->nodo_id);
-				pthread_exit((void*)0);
+				jobAbortado=1; //Se marca el flag del job abortado. Se esperan las demas respuestas para bajar 1 en cantreducers de los nodos
 			}
 			if(respuestaReduce.resultado == 0){
 				printf("Reduce %s exitoso\n",respuestaReduce.archivoResultadoReduce);
@@ -1563,6 +1558,18 @@ void *atenderJob (int *socketJob) {
 				restarCantReducers(nodoARestar->nodo_id);
 			}
 		}
+
+		if(jobAbortado==1){
+			//Si entra acá significa que salio mal algun reduce
+			char jobAborta[BUF_SIZE];
+			memset(jobAborta,'\0',BUF_SIZE);
+			strcpy(jobAborta,"aborta");
+			if(send(*socketJob,jobAborta,sizeof(jobAborta),MSG_WAITALL)==-1){
+				log_error(logger,"Fallo el envío al Job de que aborte por falla de un reduce");
+			}
+			pthread_exit((void*)0);
+		}
+
 		/****REDUCE FINAL****/
 
 		//Buscar el nodo con menos carga para asignar a hacer reduce final

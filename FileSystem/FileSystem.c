@@ -1256,6 +1256,8 @@ void listar_archivos_subidos(t_list *archivos) {    //VERSION COMPLETA NO APTA P
 void *connection_handler_escucha(void) {
 	int i, newfd, addrlen;
 	char mensaje[BUF_SIZE];
+	char nombreArchivoPadre[60];
+
 	while (1) {
 		read_fds = master;
 		if (select(fdmax + 1, &read_fds, NULL, NULL, NULL) == -1) {
@@ -1480,7 +1482,6 @@ void *connection_handler_escucha(void) {
 						if(read_size>0){
 							if(strcmp(mensaje,"dame padre")==0){
 								//Marta me pide el padre de un archivo (path completo)
-								char nombreArchivoPadre[60];
 								char** directoriosPorSeparado;
 								char* directorioDestino=string_new();
 								int posicionDirectorio=0;
