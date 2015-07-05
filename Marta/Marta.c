@@ -1530,40 +1530,52 @@ void *atenderJob (int *socketJob) {
 			}
 			list_destroy(listaMapDelNodo);
 		}
-	}
+		//Recibir la respuesta del JOB confirmando que termino con los reduce de los que están en el mismo nodo
+		//SE ESPERAN EN UN CICLO FOR LA CANTIDAD DE RESPUESTAS IGUAL A CUANTOS REDUCE SE HALLAN ENVIADO
+		int posResp;
 
-	//Recibir la respuesta del JOB confirmando que termino con los reduce de los que están en el mismo nodo
-	//SE ESPERAN EN UN CICLO FOR LA CANTIDAD DE RESPUESTAS IGUAL A CUANTOS REDUCE SE HALLAN ENVIADO
-	int posResp;
+		for(posResp=0;posResp<list_size(listaReducerParcial);posResp++){
+			t_respuestaReduce respuestaReduce;
+			//Recibo respuesta del Job de cada reduce
+			if(recv(*socketJob,&respuestaReduce, sizeof(t_respuestaReduce),MSG_WAITALL)==-1){
+				perror("recv");
+				log_error(logger,"Fallo al recibir el ok del job");
+				//exit(-1);
+			}
 
-	for(posResp=0;posResp<list_size(listaReducerParcial);posResp++){
-		t_respuestaReduce respuestaReduce;
-		//Recibo respuesta del Job de cada reduce
-		if(recv(*socketJob,&respuestaReduce, sizeof(t_respuestaReduce),MSG_WAITALL)==-1){
-			perror("recv");
-			log_error(logger,"Fallo al recibir el ok del job");
-			//exit(-1);
+			if(respuestaReduce.resultado == 1){
+				//Se aborta la ejecución de Reduce
+				log_info(logger,"Falló el Reduce %s. Se aborta el job",respuestaReduce.archivoResultadoReduce);
+	//			char jobAborta[BUF_SIZE];
+	//			memset(jobAborta,'\0',BUF_SIZE);
+	//			strcpy(jobAborta,"aborta");
+	//			if(send(*socketJob,jobAborta,sizeof(jobAborta),MSG_WAITALL)==-1){
+	//				log_error(logger,"Fallo el envío al Job de que aborte por falla de un reduce");
+	//			}
+				t_nodo *nodoARestar = buscarNodoPorIPYPuerto(respuestaReduce.ip_nodo,respuestaReduce.puerto_nodo);
+				restarCantReducers(nodoARestar->nodo_id);
+				pthread_exit((void*)0);
+			}
+			if(respuestaReduce.resultado == 0){
+				printf("Reduce %s exitoso\n",respuestaReduce.archivoResultadoReduce);
+				t_nodo *nodoARestar = buscarNodoPorIPYPuerto(respuestaReduce.ip_nodo,respuestaReduce.puerto_nodo);
+				restarCantReducers(nodoARestar->nodo_id);
+			}
+		}
+		//Buscar el nodo con menos carga para asignar a hacer reduce final
+		for(i=0;i<list_size(listaNodosDistintos);i++){
+			t_nodo* nodoGeneral;
+			t_list* listaMismoNodos  ; //Lista para buscar el nodo con menos carga
+			t_nodo *nodoReduceFinal; //Nodo que se va a asignar para hacer el reduce final
+			listaMismoNodos = list_create();
+			char* nodoDistinto = list_get(listaNodosDistintos,i);
+			nodoGeneral = traerNodo(nodoDistinto);
+			list_add(listaMismoNodos,nodoGeneral);
+			// Ordenamos la sublista segun la suma de la cantidad de map y reduce
+			list_sort(listaMismoNodos, (void*) ordenarSegunMapYReduce);
+			nodoReduceFinal = list_get(listaMismoNodos,0); // Nos traemos el nodo con menos carga
 		}
 
-		if(respuestaReduce.resultado == 1){
-			//Se aborta la ejecución de Reduce
-			log_info(logger,"Falló el Reduce %s. Se aborta el job",respuestaReduce.archivoResultadoReduce);
-//			char jobAborta[BUF_SIZE];
-//			memset(jobAborta,'\0',BUF_SIZE);
-//			strcpy(jobAborta,"aborta");
-//			if(send(*socketJob,jobAborta,sizeof(jobAborta),MSG_WAITALL)==-1){
-//				log_error(logger,"Fallo el envío al Job de que aborte por falla de un reduce");
-//			}
-			t_nodo *nodoARestar = buscarNodoPorIPYPuerto(respuestaReduce.ip_nodo,respuestaReduce.puerto_nodo);
-			restarCantReducers(nodoARestar->nodo_id);
-			pthread_exit((void*)0);
-		}
-		if(respuestaReduce.resultado == 0){
-			printf("Reduce %s exitoso\n",respuestaReduce.archivoResultadoReduce);
-			t_nodo *nodoARestar = buscarNodoPorIPYPuerto(respuestaReduce.ip_nodo,respuestaReduce.puerto_nodo);
-			restarCantReducers(nodoARestar->nodo_id);
-		}
-	}
 		// Avisarle a JOB que tiene que ejecutar Reduce final
 		//Le mando a JOB t_reduce que se va a ejecutar
 		// le mando al job la cantidad de archivos a los que que hay que aplicarle Reduce
@@ -1574,6 +1586,7 @@ void *atenderJob (int *socketJob) {
 		//Si la respuesta es KO le sumo 1 a cantReducer de t_nodo
 		//void sumarCantReducers(char* idNodoASumar);
 
+	}
 	pthread_exit((void*)0);
 }
 
