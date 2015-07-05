@@ -338,6 +338,43 @@ void *manejador_de_escuchas(){
 							}
 							free(bloqueParaFS);
 						}
+
+						if(strncmp(mensaje,"resultado", 9) == 0){
+							//Recibo un numero de bloque del FS
+							char nombreArchivoResultado[100];
+							memset(nombreArchivoResultado,'\0',100);
+							int archivo_resultado;
+							char ruta_local[100];
+							int bytes;
+							char buff_resultado[4096];
+							memset(buff_resultado,'\0',4096);
+							memset(ruta_local,'\0',100);
+							strcpy(ruta_local,"/tmp/");
+							if ((read_size = recv(conectorFS, nombreArchivoResultado, sizeof(nombreArchivoResultado),0)) <= 0) {
+								perror("recv");
+								log_error(logger, "FALLO el Recv de bloque");
+								exit(-1);
+							}
+							strcat(ruta_local,nombreArchivoResultado);
+							if((archivo_resultado=open(ruta_local,O_RDONLY)) < 0){
+								perror ("Error al abrir el archivo resultado");
+							}else{
+								while (1){
+									if((bytes = read(archivo_resultado, buff_resultado, 4096)) <= 0){
+										break;
+									}
+									else{
+										if (send(conectorFS,buff_resultado,4096,MSG_WAITALL) == -1) {
+											perror("send");
+											log_error(logger, "FALLO el envio del bloque ");
+											exit(-1);
+										}
+										memset(buff_resultado,'\0',4096);
+									}
+								}
+							}
+							close(archivo_resultado);
+						}
 					}
 				}
 
