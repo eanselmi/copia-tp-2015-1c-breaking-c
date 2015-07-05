@@ -1481,27 +1481,19 @@ void *atenderJob (int *socketJob) {
 			log_error(logger,"Fallo al recibir el ok del job");
 			//exit(-1);
 		}
-		t_respuestaReduce *reduceParcial;
-		int posReduce;
-		//Recorro lista de mappers y comparo cada archivoResultadoMap con el que me dio la respuesta del job, cuando coincide corta
-		for(posReduce = 0; posReduce < list_size(listaReducerParcial); posReduce++){
-			reduceParcial = list_get(listaReducerParcial, posReduce);
-			if(strcmp(reduceParcial->archivoResultadoReduce,respuestaReduce.archivoResultadoReduce)==0){
-				break;
-			}
-		}
 
-		// Al resultado del map que coincidio le asigno el resultado de la respuesta del job
-		reduceParcial->resultado= respuestaReduce.resultado;
-
-
-
-		if(reduceParcial->resultado == 1){
+		if(respuestaReduce.resultado == 1){
 			//Se aborta la ejecución de Reduce
+			log_info(logger,"Se aborta el job");
 			pthread_exit((void*)0);
 		}
+		if(respuestaReduce.resultado == 0){
+			t_nodo *nodoARestar = buscarNodoPorIPYPuerto(respuestaReduce.ip_nodo,respuestaReduce.puerto_nodo);
+			restarCantReducers(nodoARestar->nodo_id);
 
-		// Avisarle a JOB que tiene que ejecutar Reduce final (a todos los archivoResultadoReduce de los que están en el mismo nodo)
+		}
+	}
+		// Avisarle a JOB que tiene que ejecutar Reduce final
 		//Le mando a JOB t_reduce que se va a ejecutar
 		// le mando al job la cantidad de archivos a los que que hay que aplicarle Reduce
 		//Le mando los datos de cada uno de los archivos: IP Nodo, Puerto Nodo, nombreArchivo resultado de map (t_archivosReduce)
@@ -1510,7 +1502,7 @@ void *atenderJob (int *socketJob) {
 		//void restarCantReducers(char* idNodoARestar);
 		//Si la respuesta es KO le sumo 1 a cantReducer de t_nodo
 		//void sumarCantReducers(char* idNodoASumar);
-	}
+
 	pthread_exit((void*)0);
 }
 
@@ -1616,28 +1608,7 @@ void restarCantReducers(char* idNodoARestar){
 	}
 }
 
-char* obtenerNombreArchivoReduce (){
-	char* tiempoReduce=string_new();
-	char** arrayTiempoReduce;
-	char* archivoReduceTemp=string_new();
-	//char **arrayNomArchivo=string_split(map->nombreArchivoDelJob,".");
 
-	string_append(&archivoReduceTemp,"/tmp/");
-	string_append(&archivoReduceTemp,stringNroJob);
-//	string_append(&archivoReduceTemp,arrayNomArchivo[0]);
-	arrayTiempoReduce=string_split(temporal_get_string_time(),":"); //creo array con hora minutos segundos y milisegundos separados
-	string_append(&tiempoReduce,arrayTiempoReduce[0]);//Agrego horas
-	string_append(&tiempoReduce,arrayTiempoReduce[1]);//Agrego minutos
-	string_append(&tiempoReduce,arrayTiempoReduce[2]);//Agrego segundos
-	string_append(&tiempoReduce,arrayTiempoReduce[3]);//Agrego milisegundos
-	string_append(&archivoReduceTemp,"_Bloq");
-	//string_append(&archivoReduceTemp,string_itoa(map->bloqueArchivo));
-	string_append(&archivoReduceTemp,"_");
-	string_append(&archivoReduceTemp,tiempoReduce);
-	string_append(&archivoReduceTemp,"Rep.txt");
-
-	return archivoReduceTemp;
-}
 
 t_archivo* buscarArchivo(char* nombreArchivo, int padre){
 	t_archivo *archivoAux;
@@ -1686,6 +1657,18 @@ t_nodo* traerNodo(char* nodoId){
 	for(indice=0;indice<list_size(listaNodos);indice++){
 		nodoAux=list_get(listaNodos,indice);
 		if (strcmp(nodoAux->nodo_id,nodoId)==0){
+			return nodoAux;
+		}
+	}
+	return NULL;
+}
+
+t_nodo* buscarNodoPorIPYPuerto(char* ipNodo,int puertoNodo){
+	int i;
+	t_nodo *nodoAux;
+	for(i=0;i<list_size(listaNodos);i++){
+		nodoAux= list_get(listaNodos,i);
+		if ((strcmp(nodoAux->ip,ipNodo)==0)&&(nodoAux->puerto_escucha_nodo = puertoNodo)){
 			return nodoAux;
 		}
 	}
