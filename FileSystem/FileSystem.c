@@ -2021,7 +2021,7 @@ void RenombrarArchivo() {
 		int idPadre = BuscarPadre(directorio);
 		if (idPadre==-1){
 			printf("El archivo no existe\n");
-			Menu();
+			return;
 		}
 		int posArchivo = BuscarArchivoPorNombre(path, idPadre);
 		archivo = list_get(archivos, posArchivo);
@@ -2112,7 +2112,7 @@ void MoverArchivo() {
 		}
 		archivo->padre = idPadreNuevo;
 		actualizar_persistencia_archivo_movido(archivo->nombre,idPadre,idPadreNuevo);
-
+		printf ("Archivo movido exitosamente\n");
 		if(marta_presente == 1){
 			memset(identificacion,'\0',BUF_SIZE);
 			strcpy(identificacion, "mov_arch");
