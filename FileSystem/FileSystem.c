@@ -958,7 +958,7 @@ void listar_directorios(){
 	int i;
 	if (list_size(directorios)==0){
 		printf ("No hay directorios cargados\n");
-		Menu();
+		return;
 	}
 	for (i=0;i<list_size(directorios);i++){
 		dir=list_get(directorios,i);
@@ -2662,7 +2662,7 @@ int CopiarArchivoAMDFS(int flag, char* archvo_local, char* archivo_mdfs){
 	if((archivoLocal = fopen(path,"r"))==NULL){
     	log_error(logger,"El archivo que quiere copiar no existe en el filesystem local");
     	perror("fopen");
-    	Menu();
+    	return -1;
     }
 
 
@@ -2671,8 +2671,7 @@ int CopiarArchivoAMDFS(int flag, char* archvo_local, char* archivo_mdfs){
 		scanf("%s", pathMDFS);
 	}else strcpy(pathMDFS,archivo_mdfs);
 	int contador=0,indice_path;
-	printf ("%s\n",archivo_mdfs);
-	printf ("%s\n",pathMDFS);
+
 	for (indice_path=0;indice_path<strlen(pathMDFS);indice_path++)	if (pathMDFS[indice_path]=='/') contador++;
 	if (contador>1){
 		directoriosPorSeparado=string_split(pathMDFS,"/");
@@ -2692,13 +2691,13 @@ int CopiarArchivoAMDFS(int flag, char* archvo_local, char* archivo_mdfs){
     uint32_t idPadre = BuscarPadre(directorioDestino);
     if(idPadre == -1){
       	printf("El directorio no existe. Se debe crear el directorio desde el menú. \n");
-       	Menu();
+       	return -1;
     }
     //Buscar Archivo. Si no existe se muestra mensaje de error y se debe volver al menú para crearlo
     uint32_t posArchivo = BuscarArchivoPorNombre (pathMDFS,idPadre);
     if(!(posArchivo == -1)){
      printf("El archivo ya existe. Se debe especificar un archivo nuevo. \n");
-     Menu();
+     return -1;
     }
 
     //Se debe crear un nuevo archivo con el nombre ingresado, cuyo padre sea "idPadre"
@@ -3044,12 +3043,12 @@ int CopiarArchivoDelMDFS(int flag, char*unArchivo) {
 		int idPadre = BuscarPadre(directorio);
 		if (idPadre==-1){
 			printf("El directorio no existe\n");
-			Menu();
+			return -1;
 		}
 		int posArchivo = BuscarArchivoPorNombre(pathArchivo, idPadre);
 		if (posArchivo==-1){
 			printf ("El archivo no existe\n");
-			Menu();
+			return -1;
 		}
 		archivo = list_get(archivos, posArchivo);
 		copiaLocal = fopen(ruta_local, "w");
@@ -3139,7 +3138,7 @@ void MD5DeArchivo() {
 
 		if(CopiarArchivoDelMDFS(99,path)==-1){
 			printf ("El archivo seleccionado no esta disponible\n");
-			Menu();
+			return;
 		}
 
 		strcpy(ruta,path);
@@ -3565,7 +3564,7 @@ int VerBloque() {
 			if (socket_nodo == -1){
 				log_error(logger, "El nodo ingresado no es valido o no esta disponible\n");
 				printf("El nodo ingresado no es valido o no esta disponible\n");
-				Menu();
+				return -1;
 			}
 			enviarNumeroDeBloqueANodo(socket_nodo, nroBloque);
 			bloqueParaVer = recibirBloque(socket_nodo);
