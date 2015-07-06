@@ -1543,8 +1543,8 @@ void *connection_handler_escucha(void) {
 							}
 							if(strcmp(mensaje,"resultado")==0){
 								//Marta me informa que un reduce termino, me va a indicar en que nodo lo voy a buscar y como se llama el archivo
-								char nombreArchivoResultado[100];
-								memset(nombreArchivoResultado,'\0',100);
+								char nombreArchivoResultado[60];
+								memset(nombreArchivoResultado,'\0',60);
 								char nodo_resultado[6];
 								memset(nodo_resultado,'\0',6);
 								t_nodo *nodo_con_resultado;
