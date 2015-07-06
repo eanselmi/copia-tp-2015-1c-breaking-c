@@ -486,27 +486,34 @@ int main(int argc, char**argv){
 		/*memset(identificacion,'\0',BUF_SIZE);
 		strcpy(identificacion,"resultado");
 		if((send(socket_fs,identificacion,sizeof(identificacion),MSG_WAITALL))==-1) {
-				perror("send");
-				log_error(logger,"FALLO el envio del saludo al FS");
-				exit(-1);
-			}
+			perror("send");
+			log_error(logger,"FALLO el envio del saludo al FS");
+			exit(-1);
+		}
 		char test[6];
 		memset(test, '\0', 6);
 		strcpy(test,"nodo2");
 		if((send(socket_fs,test,sizeof(test),MSG_WAITALL))==-1) {
-				perror("send");
-				log_error(logger,"FALLO el envio del saludo al FS");
-				exit(-1);
-			}
+			perror("send");
+			log_error(logger,"FALLO el envio del saludo al FS");
+			exit(-1);
+		}
 		char test2[100];
 		memset(test2, '\0', 100);
 		strcpy(test2,"alton.txt");
 		if((send(socket_fs,test2,sizeof(test2),MSG_WAITALL))==-1) {
-				perror("send");
-				log_error(logger,"FALLO el envio del saludo al FS");
-				exit(-1);
-			}
-*/
+			perror("send");
+			log_error(logger,"FALLO el envio del saludo al FS");
+			exit(-1);
+		}
+		char path_mdfs[200];
+		memset(path_mdfs, '\0', 200);
+		strcpy(path_mdfs,"/resultado");
+		if((send(socket_fs,path_mdfs,sizeof(path_mdfs),MSG_WAITALL))==-1) {
+			perror("send");
+			log_error(logger,"FALLO el envio del saludo al FS");
+			exit(-1);
+		}*/
 
 
 
@@ -669,10 +676,11 @@ void *connection_handler_jobs(){
 								exit(-1);
 							}
 							printf("...Nombre nuevo de archivo a renombrado: %s\n", nuevoNombreArchivoNovedad);
-							int posArchivo = buscarArchivo(nombreArchivoNovedad, padreArchivoNovedad);
 							t_archivo* archivoAux;
-							archivoAux = list_get(listaArchivos, posArchivo);
+							archivoAux = buscarArchivo(nombreArchivoNovedad, padreArchivoNovedad);
 							strcpy(archivoAux->nombre, nuevoNombreArchivoNovedad);
+							printf("archivo renombrado a: %s\n", archivoAux->nombre);
+							printf("padre de archivo renombrado: %d\n", archivoAux->padre);
 						}
 						if (strcmp(identificacion,"mov_arch")==0){
 							printf ("Voy a mover un archivo de las estructuras\n");
@@ -695,7 +703,11 @@ void *connection_handler_jobs(){
 								exit(-1);
 							}
 							printf("...Nuevo padre del archivo: %d\n", nuevoPadreArchivoNovedad);
-							//TODO modificar el padre del archivo
+							t_archivo* archivoAux;
+							archivoAux = buscarArchivo(nombreArchivoNovedad, padreArchivoNovedad);
+							archivoAux->padre= nuevoPadreArchivoNovedad;
+							printf("archivo movido a: %s\n", archivoAux->nombre);
+							printf("padre nuevo: %d\n", archivoAux->padre);
 						}
 						if (strcmp(identificacion,"nuevo_arch")==0){
 							printf ("Voy a agregar un nuevo archivo a las estructuras\n");
@@ -1280,9 +1292,10 @@ void *atenderJob (int *socketJob) {
 
 	//Si es sin combiner manda a hacer reduce al nodo que tenga mas archivos resultados MAP
 	if(strcmp(mensajeCombiner, "NO")==0){
-		int posicionMapper;
+		int posicionMapper,cantNodosMapOk;
 		t_replanificarMap *mapperOk;
 		t_list* listaNodosMapperOk;
+		t_list* listaNodosDistintos=list_create();
 		listaNodosMapperOk = list_create();
 		//Recorro lista de mappers y por cada mapperOk con resultado 0 que es map ok, me lo guardo  en una lista
 		for (posicionMapper =0; posicionMapper < list_size(listaMappers); posicionMapper++){
@@ -1292,26 +1305,57 @@ void *atenderJob (int *socketJob) {
 			}
 
 		}
-		int posicionNodo;
-		int cantNodosMapOk;
-		cantNodosMapOk = list_size(listaNodosMapperOk);
-		int mayorRepetido = 0;
-		int cantNodoRepetido;
-		t_replanificarMap *nodoMasRepetido;
+		int posMapOK;
 		t_replanificarMap *mapOk;
+		cantNodosMapOk = list_size(listaNodosMapperOk);
+
 		//recorro la lista de mappers ok y por cada uno saco la cantidad de veces que esta repetido, es decir donde se hicieron mas Maps locales
 		//y la asigno como mayor
-		for(posicionNodo = 0; posicionNodo < cantNodosMapOk; posicionNodo++){
-			mapOk = list_get(listaNodosMapperOk, posicionNodo);
-			cantNodoRepetido = list_count_satisfying(listaNodosMapperOk,(void*) nodoIdMasRepetido);
-			if(cantNodoRepetido > mayorRepetido){
-				mayorRepetido = cantNodoRepetido;
-				//Del que se hicieron mas MAPS locales me lo guardo
-				nodoMasRepetido = mapOk;
+		//Genero una lista con todos los nodos
+		for(posMapOK=0;posMapOK<cantNodosMapOk;posMapOK++){
+			char *nodoId=string_new();
+			int indice;
+			int agregar=1;
+			mapOk = list_get(listaNodosMapperOk,posMapOK);
+			strcpy(nodoId,mapOk->nodoId);
+			//Busco si el nodoId está en la listaNodosDistintos, si no está lo agrego en esa lista
+			for(indice=0;indice<list_size(listaNodosDistintos);indice++){
+				char* nodoDeLaLista=list_get(listaNodosDistintos,indice);
+				if(strcmp(nodoDeLaLista,nodoId)==0){
+					agregar=0;
+				}
+			}
+			if(agregar==1){
+				list_add(listaNodosDistintos,nodoId);
 			}
 		}
 
-		t_nodo * nodoG =traerNodo(nodoMasRepetido->nodoId);
+		int posicionNodo,posNodos;
+		int mayorRepetido;
+		int cantNodoRepetido=0;
+		char* nodoAEvaluar;
+
+		//Considero el primer nodo como el más repetido;
+		char* nodoMasRep=list_get(listaNodosDistintos,0);
+		mayorRepetido = 0;
+
+		//Busco por cada nodo que hay, todos los repetidos, si es mayor asigno ese nodo
+		for(posNodos=0;posNodos<list_size(listaNodosDistintos);posNodos++){
+			nodoAEvaluar=list_get(listaNodosDistintos,posNodos);
+			for(posicionNodo = 0; posicionNodo < cantNodosMapOk; posicionNodo++){
+				mapOk = list_get(listaNodosMapperOk, posicionNodo);
+				if(strcmp(mapOk->nodoId,nodoAEvaluar)==0){
+					cantNodoRepetido++;
+				}
+			}
+			if(cantNodoRepetido>mayorRepetido){
+				mayorRepetido=cantNodoRepetido;
+				nodoMasRep=nodoAEvaluar;
+			}
+			cantNodoRepetido=0;
+		}
+
+		t_nodo * nodoG =traerNodo(nodoMasRep);
 		t_reduce nodoReducer;
 
 		//Inicializo estructura del nodo que le voy a mandar a JOB
