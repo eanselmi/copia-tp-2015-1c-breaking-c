@@ -1565,7 +1565,6 @@ void *connection_handler_escucha(void) {
 									log_error(logger,"Fallo el envio del nombre del archivo a dar el padre por parte de Marta");
 								}
 								strcat(ruta_local,nombreArchivoResultado);
-								strcat(ruta_local,"-copia");
 								char path_mdfs[200];
 								memset(path_mdfs, '\0', 200);
 								if(recv(marta_sock,path_mdfs,sizeof(path_mdfs),MSG_WAITALL)==-1){
@@ -1609,8 +1608,8 @@ void *connection_handler_escucha(void) {
 								}
 								printf ("Termino de recibir el archivo\n");
 								//Ahora envio el archivo al mdfs
-								strcat(path_mdfs,"/");
-								strcat(path_mdfs,nombreArchivoResultado);
+								//strcat(path_mdfs,"/");
+								//strcat(path_mdfs,nombreArchivoResultado);
 								CopiarArchivoAMDFS(99,ruta_local,path_mdfs);
 								printf ("Archivo resultado copiado exitosamente\n");
 							}
