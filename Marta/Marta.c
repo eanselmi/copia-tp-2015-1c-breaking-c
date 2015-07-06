@@ -676,10 +676,11 @@ void *connection_handler_jobs(){
 								exit(-1);
 							}
 							printf("...Nombre nuevo de archivo a renombrado: %s\n", nuevoNombreArchivoNovedad);
-							int posArchivo = buscarArchivo(nombreArchivoNovedad, padreArchivoNovedad);
 							t_archivo* archivoAux;
-							archivoAux = list_get(listaArchivos, posArchivo);
+							archivoAux = buscarArchivo(nombreArchivoNovedad, padreArchivoNovedad);
 							strcpy(archivoAux->nombre, nuevoNombreArchivoNovedad);
+							printf("archivo renombrado a: %s\n", archivoAux->nombre);
+							printf("padre de archivo renombrado: %d\n", archivoAux->padre);
 						}
 						if (strcmp(identificacion,"mov_arch")==0){
 							printf ("Voy a mover un archivo de las estructuras\n");
