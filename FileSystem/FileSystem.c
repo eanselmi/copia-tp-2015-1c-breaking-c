@@ -60,32 +60,12 @@ int main(int argc, char *argv[]) {
 	directorios = list_create(); //crea la lista de directorios
 //============= REVISO LA PERSISTENCIA Y EL ESTADO DE LA ULTIMA EJECUCUION DEL FILESYSTEM ===================
 
-
-	/*FILE* archivo_persistencia;
-	if((archivo_persistencia=fopen("persistencia","r+"))==NULL){
-		log_error(logger,"El archivo de persistencia no existe en el filesystem local");
-		perror("fopen");
-	}
-	valor_persistencia=string_new();
-	if((fgets(valor_persistencia,sizeof(valor_persistencia),archivo_persistencia))==NULL){
-		perror ("fgets del archivo de persistencia");
-		exit(-1);
-	}
-	rewind(archivo_persistencia);
-	fprintf (archivo_persistencia,"%s","1");
-	fclose(archivo_persistencia);
-	if (atoi(valor_persistencia)==1){
-		recuperar_persistencia(); //Hay que restaurar la persistencia
-	}else {
-		//como no hay persistencia inicializo los indices para los directorios, 0 si está libre, 1 ocupado.
-
-	}*/
 	int estado_recupero = recuperar_persistencia();
 	if (estado_recupero==0){
 		printf ("EL Filesystem inicia en estado nuevo - no existe persistencia que recuperar \n");
 	}
 	if (estado_recupero==1){
-		printf ("El Filesystem inicia recuperando solo directorios \n");
+		printf ("El Filesysten inicia recuperando directorios y archivos \n");
 	}
 	if (estado_recupero==2){
 		printf ("El Filesysten inicia recuperando directorios y archivos \n");
@@ -1586,34 +1566,26 @@ void *connection_handler_escucha(void) {
 								}
 								//Recibir archivo resultado del nodo y guardarlo en /tmp con el nombre del archivo
 								archivo_resultado=fopen(ruta_local,"w");
-								while(1){
-									bytes=recv(nodo_con_resultado->socket,buff_archivo_resultado,1024,0);
-									if (bytes<MENSAJE_SIZE) //Termino el envio y el nodo corto la conexion
-										break;
-									if (bytes<0){
-										perror ("Recv del recibir archivo de resultado");
+								bzero(buff_archivo_resultado,4096);
+								while((bytes = recv(nodo_con_resultado->socket, buff_archivo_resultado, 4096, 0)) > 0){
+									int para_escribir = fwrite(buff_archivo_resultado, sizeof(char), bytes, archivo_resultado);
+									if(para_escribir < bytes){
+										perror("Error en fwrite  del archivo resultado\n");
+									}
+									bzero(buff_archivo_resultado, 4096);
+									if (bytes == 0 || bytes != 4096){
 										break;
 									}
-									fprintf (archivo_resultado,"%s",buff_archivo_resultado);
-									bytes=0;
-									memset(buff_archivo_resultado,'\0',MENSAJE_SIZE);
 								}
-								if (bytes>0){
-									fprintf (archivo_resultado,"%s",buff_archivo_resultado);
-									memset(buff_archivo_resultado,'\0',MENSAJE_SIZE);
-									fclose(archivo_resultado);
+								if(bytes < 0){
+									perror ("error recv resultado");
 								}
-								if (bytes==0){ //la recepcion del archivo salio bien
-									fclose(archivo_resultado);
-								}else{ //La recepcion fallo
-									//.............
-								}
+								fclose(archivo_resultado);
+
 								printf ("Termino de recibir el archivo\n");
 								//Ahora envio el archivo al mdfs
-								//strcat(path_mdfs,"/");
-								//strcat(path_mdfs,nombreArchivoResultado);
-								//CopiarArchivoAMDFS(99,ruta_local,path_mdfs);
-								//printf ("Archivo resultado copiado exitosamente\n");
+								CopiarArchivoAMDFS(99,ruta_local,path_mdfs);
+								printf ("Archivo resultado copiado exitosamente\n");
 							}
 						}
 					}else{
