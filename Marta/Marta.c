@@ -1467,6 +1467,20 @@ void *atenderJob (int *socketJob) {
 		//Le digo al FS que se copie el resultado
 		printf("El job sin combiner termino OK\nMandar a FS que busque el resultado %s en el nodo con IP %s puerto %d\n",nodoReducer.nombreArchivoFinal,nodoReducer.ip_nodoPpal,nodoReducer.puerto_nodoPpal);
 
+		//Le aviso a FS que le voy a mandar el archivo resultado
+		memset(mensaje_fs,'\0',BUF_SIZE);
+		strcpy(mensaje_fs, "Archivo resultado de reduce sin combiner");
+		if(send(socket_fs,mensaje_fs, sizeof(mensaje_fs), MSG_WAITALL )==-1){
+			perror("send");
+			log_error(logger,"Fallo el envío del mensaje");
+			//exit(-1);
+		}
+
+		if(send(socket_fs,&nodoReducer,sizeof(t_reduce),MSG_WAITALL) == -1) {
+			perror("send");
+			log_error(logger,"Fallo el envio del archivo resultado del reduce sin combiner al FS");
+			//exit(-1);
+		}
 
 	}
 
@@ -1803,6 +1817,22 @@ void *atenderJob (int *socketJob) {
 
 		//Le digo al FS que se copie el resultado
 		printf("El job con combiner termino OK\nMandar a FS que busque el resultado %s en el nodo con IP %s puerto %d\n",nodoReduceFinal.nombreArchivoFinal,nodoReduceFinal.ip_nodoPpal,nodoReduceFinal.puerto_nodoPpal);
+
+		//Le aviso a FS que le voy a mandar el archivo resultado
+		memset(mensaje_fs,'\0',BUF_SIZE);
+		strcpy(mensaje_fs, "Archivo resultado de reduce con combiner");
+		if(send(socket_fs,mensaje_fs, sizeof(mensaje_fs), MSG_WAITALL )==-1){
+			perror("send");
+			log_error(logger,"Fallo el envío del mensaje");
+			//exit(-1);
+		}
+
+		if(send(socket_fs,&nodoReduceFinal,sizeof(t_reduce),MSG_WAITALL) == -1) {
+			perror("send");
+			log_error(logger,"Fallo el envio del archivo resultado del reduce con combiner al FS");
+			//exit(-1);
+		}
+
 
 	}
 
