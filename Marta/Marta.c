@@ -689,13 +689,13 @@ void *connection_handler_jobs(){
 							//TODO terminar de probar borrado de archivo
 							t_archivo* archivoAux;
 							t_bloque* bloqueAux;
-							t_copias* copiaAux;
 							int posArchivoAux;
 							int g, h;
 							posArchivoAux = BuscarArchivoPos(nombreArchivoNovedad, padreArchivoNovedad);
 							archivoAux = list_get(listaArchivos, posArchivoAux);
 							for (g=0;g<list_size(archivoAux->bloques);g++){
 								bloqueAux=list_get(archivoAux->bloques,g);
+								t_copias* copiaAux;
 								for (h=0;h<list_size(bloqueAux->copias);h++){
 									copiaAux=list_get(bloqueAux->copias,h);
 									list_remove_and_destroy_element(bloqueAux->copias,h,(void*)eliminarListaCopias);
@@ -2009,8 +2009,8 @@ void *atenderJob (int *socketJob) {
 			log_error(logger,"Fallo el envio del archivo resultado del reduce con combiner al FS");
 			//exit(-1);
 		}
-	pthread_exit((void*)0);
 	}
+	pthread_exit((void*)0);
 }
 
 bool nodoIdMasRepetido (char* antNodoId, char* posNodoId){
@@ -2119,13 +2119,15 @@ void restarCantReducers(char* idNodoARestar){
 
 t_archivo* buscarArchivo(char* nombreArchivo, int padre){
 	t_archivo *archivoAux;
+	t_archivo *archivoEncontrado;
 	int i;
 	for(i=0; i < list_size(listaArchivos); i++){ //recorre la lista global de archivos
 		archivoAux = list_get(listaArchivos,i);
 		if (strcmp(archivoAux->nombre,nombreArchivo) ==0 && archivoAux->padre==padre){ //compara el nomnre y padre del archivo del job con cada nombre y padre de archivo de la lista global
-			return archivoAux;
+			archivoEncontrado = archivoAux;
 		}
 	}
+	return archivoEncontrado;
 }
 
 
@@ -2145,6 +2147,7 @@ bool archivoDisponible(t_archivo* archivo){
 bool nodoNoDisponible(t_copias* copia){
 	t_nodo* nodoDeListaGeneral;
 	int indice;
+	bool resultado;
 	for(indice=0;indice<list_size(listaNodos);indice++){
 		nodoDeListaGeneral=list_get(listaNodos,indice);
 		if(strcmp(nodoDeListaGeneral->nodo_id,copia->nodo)==0){
@@ -2152,10 +2155,11 @@ bool nodoNoDisponible(t_copias* copia){
 				return true;
 			}
 			if(nodoDeListaGeneral->estado==1){
-				return false;
+				 resultado = false;
 			}
 		}
 	}
+	return resultado;
 }
 
 t_nodo* traerNodo(char* nodoId){
