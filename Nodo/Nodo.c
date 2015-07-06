@@ -358,7 +358,6 @@ void *manejador_de_escuchas(){
 								log_error(logger, "FALLO el Recv de bloque");
 								exit(-1);
 							}
-							printf ("Me solicitaron el archivo resultado %s\n",nombreArchivoResultado);
 							strcat(ruta_local,nombreArchivoResultado);
 							if((archivo_resultado=open(ruta_local,O_RDONLY)) < 0){
 								perror ("Error al abrir el archivo resultado");
@@ -379,7 +378,6 @@ void *manejador_de_escuchas(){
 								}
 							}
 							close(archivo_resultado);
-							printf ("Archivo resultado enviado\n");
 						}
 					}
 				}
@@ -409,7 +407,10 @@ void *manejador_de_escuchas(){
 							int byteLeido;
 							int i;
 							t_archivoAbierto* archivoPedido;
-							recv(socketModificado,archivoAPasar,sizeof(archivoAPasar),MSG_WAITALL);
+							if(recv(socketModificado,archivoAPasar,sizeof(archivoAPasar),MSG_WAITALL)<=0){
+								perror("recv");
+								log_error(logger,"Se desconectó un nodo");
+							}
 							printf("Me pidio renglones del archivo %s\n",archivoAPasar);
 
 							if((archivoPedido=estaEnListaArchivosAbiertos(archivoAPasar))==NULL){ //Si el archivo no está ya abierto, lo abro y leo un renglon
@@ -479,7 +480,10 @@ void *manejador_de_escuchas(){
 								}
 							}
 
-							send(socketModificado,renglones,sizeof(renglones),MSG_WAITALL);
+							if(send(socketModificado,renglones,sizeof(renglones),MSG_WAITALL)==-1){
+								perror("send");
+								log_error(logger,"Se desconecto un nodo");
+							}
 
 						}
 

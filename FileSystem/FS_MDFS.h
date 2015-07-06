@@ -49,22 +49,22 @@ typedef struct estructura_directorio{
 //----------------------------------------------------------------------------------------
 //------------------------------ FUNCIONES PRINCIPALES DE CONSOLA ------------------------
 //----------------------------------------------------------------------------------------
-void FormatearFilesystem ();							//DESARROLLADA                          mandar formatear  OK
-void EliminarArchivo();									//DESARROLLADA					        1. mandar elim_arch 2. nombre 3. padre
-void RenombrarArchivo();								//DESARROLLADA					        1. mandar renom_arch 2. nombre 3. padre 4. nuevo nombre
-void MoverArchivo();									//DESARROLLADA					        1. mov_arch 2. nom 3. padre_viejo  4. padre_nuevo
-void CrearDirectorio();									//DESARROLLADA
-void EliminarDirectorio();								//DESARROLLADA
-void RenombrarDirectorio();								//DESARROLLADA
-void MoverDirectorio();									//DESARROLLADA
-int CopiarArchivoAMDFS();								//DESARROLLADA					        1. mandar nuevo_arch --- mandar casi igual que al principio
-int CopiarArchivoDelMDFS(int flag, char*unArchivo);		//DESARROLLADA
-void MD5DeArchivo();									//DESARROLLADA
-int VerBloque();										//DESARROLLADA
-void BorrarBloque();									//DESARROLLADA					        1. mandar elim_bloque 2. archivo 3. padre 4. n_bloque 5.nodo_id  6.bloque
-void CopiarBloque();									//DESARROLLADA					        1. mandar nuevo_bloque 2. archivo 3. padre 4. n_bloque 5.nodo_id_nuevo 6. bloque_nuevo
-void AgregarNodo();										//DESARROLLADA
-void EliminarNodo();  									//DESARROLLADA
+void FormatearFilesystem ();														//DESARROLLADA                          mandar formatear  OK
+void EliminarArchivo();																//DESARROLLADA					        1. mandar elim_arch 2. nombre 3. padre
+void RenombrarArchivo();															//DESARROLLADA					        1. mandar renom_arch 2. nombre 3. padre 4. nuevo nombre
+void MoverArchivo();																//DESARROLLADA					        1. mov_arch 2. nom 3. padre_viejo  4. padre_nuevo
+void CrearDirectorio();																//DESARROLLADA
+void EliminarDirectorio();															//DESARROLLADA
+void RenombrarDirectorio();															//DESARROLLADA
+void MoverDirectorio();																//DESARROLLADA
+int CopiarArchivoAMDFS(int flag, char* archvo_local, char* archivo_mdfs);			//DESARROLLADA					        1. mandar nuevo_arch --- mandar casi igual que al principio
+int CopiarArchivoDelMDFS(int flag, char*unArchivo);									//DESARROLLADA
+void MD5DeArchivo();																//DESARROLLADA
+int VerBloque();																	//DESARROLLADA
+void BorrarBloque();																//DESARROLLADA					        1. mandar elim_bloque 2. archivo 3. padre 4. n_bloque 5.nodo_id  6.bloque
+void CopiarBloque();																//DESARROLLADA					        1. mandar nuevo_bloque 2. archivo 3. padre 4. n_bloque 5.nodo_id_nuevo 6. bloque_nuevo
+void AgregarNodo();																	//DESARROLLADA
+void EliminarNodo();  																//DESARROLLADA
 void eliminar_listas(t_list *archivos_l, t_list *directorios_d, t_list *nodos_n);	//DESARROLLADA
 
 //----------------------------------------------------------------------------------------

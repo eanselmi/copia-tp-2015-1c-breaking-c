@@ -173,7 +173,7 @@ int main(int argc, char *argv[]) {
 						fdmax = newfd;
 					}
 					list_add(nodos,agregar_nodo_a_lista(nodo_id, newfd, 0, 1,inet_ntoa(remote_client.sin_addr),remote_client.sin_port,*puerto_escucha_nodo, *bloquesTotales,*bloquesTotales));
-					printf("Se conectó un nuevo nodo: %s con %d bloques totales\n",inet_ntoa(remote_client.sin_addr), *bloquesTotales);
+					printf("\nSe conectó un nuevo nodo: %s con %d bloques totales\n",inet_ntoa(remote_client.sin_addr), *bloquesTotales);
 					log_info(logger,"Se conectó un nuevo nodo: %s con %d bloques totales",inet_ntoa(remote_client.sin_addr), *bloquesTotales);
 				} else {
 					printf("Ya existe un nodo con el mismo id o direccion ip\n");
@@ -182,7 +182,7 @@ int main(int argc, char *argv[]) {
 			}
 		} else {
 			close(newfd);
-			printf("Se conecto algo pero no se que fue, lo rechazo\n");
+			printf("\nSe conecto algo pero no se que fue, lo rechazo\n");
 		}
 	}
 	//Cuando sale de este ciclo el proceso FileSystem ya se encuentra en condiciones de iniciar sus tareas
@@ -265,7 +265,7 @@ int Menu(void) {
 		case 8:
 			MoverDirectorio();	break;
 		case 9:
-			CopiarArchivoAMDFS();	break;
+			CopiarArchivoAMDFS(1,NULL,NULL);	break;
 		case 10:
 			CopiarArchivoDelMDFS(1,NULL);	break;
 		case 11:
@@ -1256,6 +1256,8 @@ void listar_archivos_subidos(t_list *archivos) {    //VERSION COMPLETA NO APTA P
 void *connection_handler_escucha(void) {
 	int i, newfd, addrlen;
 	char mensaje[BUF_SIZE];
+	char nombreArchivoPadre[60];
+
 	while (1) {
 		read_fds = master;
 		if (select(fdmax + 1, &read_fds, NULL, NULL, NULL) == -1) {
@@ -1298,7 +1300,7 @@ void *connection_handler_escucha(void) {
 										log_error(logger, "FALLO el envio del ok a Marta");
 										exit(-1);
 									}
-									printf("Se conectó el proceso Marta desde la ip %s\n",inet_ntoa(remote_client.sin_addr));
+									printf("\nSe conectó el proceso Marta desde la ip %s\n",inet_ntoa(remote_client.sin_addr));
 									log_info(logger,"Se conectó el proceso Marta desde la ip %s",inet_ntoa(remote_client.sin_addr));
 
 
@@ -1427,7 +1429,7 @@ void *connection_handler_escucha(void) {
 											fdmax = newfd;
 										}
 										list_add(nodos,agregar_nodo_a_lista(nodo_id,newfd, 0, 1,inet_ntoa(remote_client.sin_addr),remote_client.sin_port,*puerto_escucha_nodo,*bloquesTotales,*bloquesTotales));
-										printf("Se conectó un nuevo nodo: %s con %d bloques totales\n",inet_ntoa(remote_client.sin_addr),*bloquesTotales);
+										printf("\nSe conectó un nuevo nodo: %s con %d bloques totales\n",inet_ntoa(remote_client.sin_addr),*bloquesTotales);
 										log_info(logger,"Se conectó un nuevo nodo: %s con %d bloques totales",inet_ntoa(remote_client.sin_addr),*bloquesTotales);
 									} else {
 										printf("Ya existe un nodo con el mismo id o direccion ip\n");
@@ -1480,7 +1482,6 @@ void *connection_handler_escucha(void) {
 						if(read_size>0){
 							if(strcmp(mensaje,"dame padre")==0){
 								//Marta me pide el padre de un archivo (path completo)
-								char nombreArchivoPadre[60];
 								char** directoriosPorSeparado;
 								char* directorioDestino=string_new();
 								int posicionDirectorio=0;
@@ -1532,6 +1533,12 @@ void *connection_handler_escucha(void) {
 								}
 								strcat(ruta_local,nombreArchivoResultado);
 								strcat(ruta_local,"-copia");
+								char path_mdfs[200];
+								memset(path_mdfs, '\0', 200);
+								if(recv(marta_sock,path_mdfs,sizeof(path_mdfs),MSG_WAITALL)==-1){
+									perror("recv");
+									log_error(logger,"Fallo el envio del nombre del archivo a dar el padre por parte de Marta");
+								}
 								for (n_nodo=0;n_nodo<list_size(nodos);n_nodo++){
 									nodo_con_resultado=list_get(nodos,n_nodo);
 									if (strcmp(nodo_con_resultado->nodo_id,nodo_resultado)==0) break;
@@ -1567,6 +1574,12 @@ void *connection_handler_escucha(void) {
 								}else{ //La recepcion fallo
 									//.............
 								}
+								printf ("Termino de recibir el archivo\n");
+								//Ahora envio el archivo al mdfs
+								strcat(path_mdfs,"/");
+								strcat(path_mdfs,nombreArchivoResultado);
+								CopiarArchivoAMDFS(99,ruta_local,path_mdfs);
+								printf ("Archivo resultado copiado exitosamente\n");
 							}
 						}
 					}else{
@@ -2537,9 +2550,8 @@ int copiar_lista_de_nodos(t_list* destino, t_list* origen){
 	return 0;
 }
 
-int CopiarArchivoAMDFS(){
+int CopiarArchivoAMDFS(int flag, char* archvo_local, char* archivo_mdfs){
 
-	printf("Eligió Copiar un archivo local al MDFS\n");
 	FILE * archivoLocal;
     char* directorioDestino=string_new();
     char ** directoriosPorSeparado;
@@ -2570,24 +2582,34 @@ int CopiarArchivoAMDFS(){
 	int pos=0;
 	int total_enviado;
 	int corte=0;
-	//char car;
-    int j;
-	printf("Ingrese el path del archivo local desde raíz, por ejemplo /home/tp/nombreArchivo \n");
-	scanf("%s", path);
+	int j;
+
+
+	if (flag!=99){
+		printf("Eligió Copiar un archivo local al MDFS\n");
+		printf("Ingrese el path del archivo local desde raíz, por ejemplo /home/tp/nombreArchivo \n");
+		scanf("%s", path);
+	}else strcpy(path,archvo_local);
+
 	//Validacion de si existe el archivo en el filesystem local
-    if((archivoLocal = fopen(path,"r"))==NULL){
+	if((archivoLocal = fopen(path,"r"))==NULL){
     	log_error(logger,"El archivo que quiere copiar no existe en el filesystem local");
     	perror("fopen");
     	Menu();
     }
-    printf("Ingrese el path del archivo destino desde raíz, por ejemplo /tmp/nombreArchivo \n");
-    scanf("%s", pathMDFS);
-    directoriosPorSeparado=string_split(pathMDFS,"/");
-    while(directoriosPorSeparado[posicionDirectorio+1]!=NULL){
-    	string_append(&directorioDestino,"/");
-    	string_append(&directorioDestino,directoriosPorSeparado[posicionDirectorio]);
-    	posicionDirectorio++;
-    }
+
+
+	if (flag!=99){
+		printf("Ingrese el path del archivo destino desde raíz, por ejemplo /tmp/nombreArchivo \n");
+		scanf("%s", pathMDFS);
+	}else strcpy(pathMDFS,archivo_mdfs);
+	directoriosPorSeparado=string_split(pathMDFS,"/");
+	while(directoriosPorSeparado[posicionDirectorio+1]!=NULL){
+		string_append(&directorioDestino,"/");
+		string_append(&directorioDestino,directoriosPorSeparado[posicionDirectorio]);
+		posicionDirectorio++;
+	}
+
     //Buscar Directorio. Si existe se muestra mensaje de error
     uint32_t idPadre = BuscarPadre(directorioDestino);
     if(idPadre == -1){
@@ -2600,10 +2622,10 @@ int CopiarArchivoAMDFS(){
      printf("El archivo ya existe. Se debe especificar un archivo nuevo. \n");
      Menu();
     }
+
     //Se debe crear un nuevo archivo con el nombre ingresado, cuyo padre sea "idPadre"
     int n_copia=0;
     int bandera;
-    //memset(combo.buf_20mb,0,sizeof(combo.buf_20mb));
     memset(combo.buf_20mb,'\0',BLOCK_SIZE);
     archivo_temporal=malloc(sizeof(t_archivo));
     archivo_temporal->bloques=list_create();
