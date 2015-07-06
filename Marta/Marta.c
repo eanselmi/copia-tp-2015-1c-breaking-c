@@ -703,7 +703,11 @@ void *connection_handler_jobs(){
 								exit(-1);
 							}
 							printf("...Nuevo padre del archivo: %d\n", nuevoPadreArchivoNovedad);
-							//TODO modificar el padre del archivo
+							t_archivo* archivoAux;
+							archivoAux = buscarArchivo(nombreArchivoNovedad, padreArchivoNovedad);
+							archivoAux->padre= nuevoPadreArchivoNovedad;
+							printf("archivo movido a: %s\n", archivoAux->nombre);
+							printf("padre nuevo: %d\n", archivoAux->padre);
 						}
 						if (strcmp(identificacion,"nuevo_arch")==0){
 							printf ("Voy a agregar un nuevo archivo a las estructuras\n");
