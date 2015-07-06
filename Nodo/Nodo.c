@@ -205,9 +205,9 @@ void *manejador_de_escuchas(){
 	pthread_t reducerThread;
 	char mensaje[BUF_SIZE]; //Mensaje que recivirá de los clientes
 	char archivoAPasar[TAM_NOMFINAL]; //Nombre del archivo que me pide otro nodo
-	char renglones[2048]; //Renglones que entran en 2048 bytes para otro nodo
+	char renglones[TAM_RENGLONES]; //Renglones que entran en 2048 bytes para otro nodo
 	char renglonTemporal[512];
-	char bufferRenglones[2048];
+	char bufferRenglones[TAM_RENGLONES];
 	int socketModificado,nbytes,newfd,addrlen,read_size;
 	struct sockaddr_in remote_client; //Direccion del cliente que se conectará
 	int* socketNodo; //para identificar los que son nodos conectados
@@ -399,8 +399,8 @@ void *manejador_de_escuchas(){
 
 						if(strncmp(mensaje,"Dame renglones",14)==0){ //Me pidio un renglon, espero el nombre de que archivo
 
-							memset(renglones,'\0',2048);
-							memset(bufferRenglones,'\0',2048);
+							memset(renglones,'\0',TAM_RENGLONES);
+							memset(bufferRenglones,'\0',TAM_RENGLONES);
 							memset(archivoAPasar,'\0',TAM_NOMFINAL);
 							memset(renglonTemporal,'\0',512);
 							int posicionInicial;
@@ -426,11 +426,11 @@ void *manejador_de_escuchas(){
 								archAbiertoNuevo->posicionBuffer=0;
 								//Lee 2048 bytes desde la posicion del archivo para pasar
 								fseek(archParaPasar,archAbiertoNuevo->posicionBuffer,SEEK_SET);
-								fread(bufferRenglones,sizeof(char),2048,archParaPasar);
+								fread(bufferRenglones,sizeof(char),TAM_RENGLONES,archParaPasar);
 								//va agregando los renglones al "renglon"
 								posicionInicial=archAbiertoNuevo->posicionBuffer;
 								i=0;
-								for(byteLeido=0;byteLeido<2048;byteLeido++){
+								for(byteLeido=0;byteLeido<TAM_RENGLONES;byteLeido++){
 									renglonTemporal[i]=bufferRenglones[byteLeido];
 									if(bufferRenglones[byteLeido]=='\n'){
 										archAbiertoNuevo->posicionBuffer=posicionInicial+byteLeido+1;
@@ -456,12 +456,12 @@ void *manejador_de_escuchas(){
 								if(!feof(archivoPedido->archivoAbierto)){
 									//si no quedo en eof, voy a la posicion que tenia y leo 2048, voy concatenando los renglones
 									fseek(archivoPedido->archivoAbierto,archivoPedido->posicionBuffer,SEEK_SET);
-									fread(bufferRenglones,sizeof(char),2048,archivoPedido->archivoAbierto);
+									fread(bufferRenglones,sizeof(char),TAM_RENGLONES,archivoPedido->archivoAbierto);
 									//va agregando los renglones al "renglon"
 									posicionInicial=archivoPedido->posicionBuffer;
 
 									i=0;
-									for(byteLeido=0;byteLeido<2048;byteLeido++){
+									for(byteLeido=0;byteLeido<TAM_RENGLONES;byteLeido++){
 										renglonTemporal[i]=bufferRenglones[byteLeido];
 										if(bufferRenglones[byteLeido]=='\n'){
 											archivoPedido->posicionBuffer=posicionInicial+byteLeido+1;
@@ -1080,7 +1080,7 @@ void* rutinaReduce (int* sckReduce){
 			strcpy(nuevoArchivoEnApareo->nombreArchivo,unArchivoReduce->archivoAAplicarReduce);
 			nuevoArchivoEnApareo->endOfFile=0;
 			nuevoArchivoEnApareo->posicionRenglon=0;
-			memset(nuevoArchivoEnApareo->renglones,'\0',2048);
+			memset(nuevoArchivoEnApareo->renglones,'\0',TAM_RENGLONES);
 			memset(nuevoArchivoEnApareo->ip_nodo,'\0',20);
 			strcpy(nuevoArchivoEnApareo->ip_nodo,config_get_string_value(configurador,"IP_NODO"));
 			nuevoArchivoEnApareo->puerto_nodo=config_get_int_value(configurador,"PUERTO_NODO");
@@ -1156,7 +1156,7 @@ void* rutinaReduce (int* sckReduce){
 			strcpy(nuevoArchivoEnApareo->nombreArchivo,unArchivoReduce->archivoAAplicarReduce);
 			nuevoArchivoEnApareo->endOfFile=0;
 			nuevoArchivoEnApareo->posicionRenglon=0;
-			memset(nuevoArchivoEnApareo->renglones,'\0',2048);
+			memset(nuevoArchivoEnApareo->renglones,'\0',TAM_RENGLONES);
 			memset(nuevoArchivoEnApareo->ip_nodo,'\0',20);
 			strcpy(nuevoArchivoEnApareo->ip_nodo,unArchivoReduce->ip_nodo);
 			nuevoArchivoEnApareo->puerto_nodo=unArchivoReduce->puerto_nodo;
@@ -1282,12 +1282,12 @@ void ejecutarReduce(t_list* archivosApareando,char* script,char* resultado, int*
 					posicionActual=unArchivo->posicionRenglon;
 					memset(unArchivo->buffer,'\0',512);
 					memset(renglonTemporal,'\0',512);
-					for(byteActual=posicionActual;byteActual!=2500;byteActual++){ //1000 sera condicion de corte
+					for(byteActual=posicionActual;byteActual!=TAM_RENGLONES+100;byteActual++){ //1000 sera condicion de corte
 						renglonTemporal[i]=unArchivo->renglones[byteActual];
 						if(unArchivo->renglones[byteActual]=='\n'){
 							strcpy(unArchivo->buffer,renglonTemporal);
 							unArchivo->posicionRenglon=byteActual+1;
-							byteActual=2499;
+							byteActual=TAM_RENGLONES+99;
 						}
 						i++;
 //						if(unArchivo->renglones[byteActual]=='\0'){
@@ -1340,7 +1340,7 @@ void ejecutarReduce(t_list* archivosApareando,char* script,char* resultado, int*
 			if(unArchivo->archivo==NULL){ //Si es un archivo Remoto
 
 				if(unArchivo->renglones[unArchivo->posicionRenglon]=='\0'){ //Leyo todos los renglones, hay que pedir mas
-					memset(unArchivo->renglones,'\0',2048);
+					memset(unArchivo->renglones,'\0',TAM_RENGLONES);
 					unArchivo->posicionRenglon=0;
 					if(send(unArchivo->socket,dameRenglones,sizeof(dameRenglones),MSG_WAITALL)==-1){
 						perror("send");
@@ -1388,12 +1388,12 @@ void ejecutarReduce(t_list* archivosApareando,char* script,char* resultado, int*
 				posicionActual=unArchivo->posicionRenglon;
 				memset(unArchivo->buffer,'\0',512);
 				memset(renglonTemporal,'\0',512);
-				for(byteActual=posicionActual;byteActual!=2500;byteActual++){ //1000 sera condicion de corte
+				for(byteActual=posicionActual;byteActual!=TAM_RENGLONES+100;byteActual++){ //1000 sera condicion de corte
 					renglonTemporal[i]=unArchivo->renglones[byteActual];
 					if(unArchivo->renglones[byteActual]=='\n'){
 						strcpy(unArchivo->buffer,renglonTemporal);
 						unArchivo->posicionRenglon=byteActual+1;
-						byteActual=2499;
+						byteActual=TAM_RENGLONES+99;
 					}
 					i++;
 				}

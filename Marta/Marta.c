@@ -1978,7 +1978,7 @@ void *atenderJob (int *socketJob) {
 		nodoResultadoCC = buscarNodoPorIPYPuerto(nodoReduceFinal.ip_nodoPpal,nodoReduceFinal.puerto_nodoPpal);
 
 		//Le digo al FS que se copie el resultado
-		printf("El job sin combiner termino OK\nMandar a FS que busque el resultado %s en el nodo %s",nodoReduceFinal.nombreArchivoFinal,nodoResultadoCC->nodo_id);
+		printf("El job con combiner termino OK\nMandar a FS que busque el resultado %s en el nodo %s",nodoReduceFinal.nombreArchivoFinal,nodoResultadoCC->nodo_id);
 
 		//Le aviso a FS que le voy a mandar el Nodo ID
 		memset(mensaje_fs,'\0',BUF_SIZE);
