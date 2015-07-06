@@ -3,6 +3,7 @@
 #define MAPPER_SIZE 1024
 #define REDUCE_SIZE 4096
 #define TAM_NOMFINAL 60
+#define TAM_RENGLONES 10240
 
 
 typedef struct datos_y_bloque{
@@ -28,7 +29,7 @@ typedef struct estructura_archivosapareando{
 	char buffer[512];
 	char nombreArchivo[TAM_NOMFINAL];
 	int endOfFile; //0 si no llego, 1 si llego
-	char renglones[2048]; //El proximo renglon del buffer
+	char renglones[TAM_RENGLONES]; //El proximo renglon del buffer
 	int posicionRenglon; //Posicion en el buffer de donde termina el renglon
 	char ip_nodo[20];
 	int puerto_nodo;
