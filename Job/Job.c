@@ -273,13 +273,25 @@ int main(void){
 							log_info(logger_archivo,"Marta me dijo %s",accion);
 							finalizoJob=1;
 						}
+
+						//ABORTAR//
+
+						if(strncmp(accion,"aborta",6)==0){
+							log_error(logger,"Marta pidió abortar el Job porque fallo un reduce");
+							close(marta_sock);
+							log_info(logger,"El job se desconectó de Marta. IP Marta: %s, Puerto Marta: %d",config_get_string_value(configurador,"IP_MARTA"),config_get_int_value(configurador,"PUERTO_MARTA"));
+							log_destroy(logger); //se elimina la instancia de log
+							log_destroy(logger_archivo);
+							config_destroy(configurador);
+							return 0;
+						}
 					}
 				}
 			}
 		}
 	}
 
-	printf("El job finalizó\n");
+	log_info(logger,"El job finalizó exitosamente\n");
 	close(marta_sock);
 	log_info(logger,"El job se desconectó de Marta. IP Marta: %s, Puerto Marta: %d",config_get_string_value(configurador,"IP_MARTA"),config_get_int_value(configurador,"PUERTO_MARTA"));
 	log_destroy(logger); //se elimina la instancia de log
