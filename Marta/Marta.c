@@ -529,6 +529,40 @@ int main(int argc, char**argv){
 
 }//================================== FIN DEL MAIN =====================================================
 
+//Buscar la posición del archivo por nombre y padre
+int BuscarArchivoPos(char* nombreArch, uint32_t idPadre){
+	t_archivo* archAux;
+	int posicionArchivo=-1;
+	int p;
+	int tam = list_size(listaArchivos);
+	if(tam!=0){
+		for (p = 0; p < tam; p++) {
+			archAux = list_get(listaArchivos, p);
+			if ((strcmp(archAux->nombre, nombreArch) == 0) && (archAux->padre == idPadre)) {
+				posicionArchivo = p;
+				return posicionArchivo;
+			}
+		}
+	}
+	return posicionArchivo;
+}
+
+static void eliminarListaCopias (t_copias* self){
+	free(self->nodo);
+	free(self);
+}
+
+static void eliminarListaBloques(t_bloque* self){
+	list_destroy(self->copias);
+	free(self);
+}
+
+static void eliminarListaArchivos (t_archivo* self){
+	list_destroy(self->bloques);
+	free(self);
+}
+
+
 
 void *connection_handler_jobs(){
 	pthread_t hilojob;
@@ -652,7 +686,26 @@ void *connection_handler_jobs(){
 								exit(-1);
 							}
 							printf ("...Padre del archivo a eliminar: %d\n",padreArchivoNovedad);
-							//TODO limpiar estructuras del archivo
+							//TODO terminar de probar borrado de archivo
+							t_archivo* archivoAux;
+							t_bloque* bloqueAux;
+							t_copias* copiaAux;
+							int posArchivoAux;
+							int g, h;
+							posArchivoAux = BuscarArchivoPos(nombreArchivoNovedad, padreArchivoNovedad);
+							archivoAux = list_get(listaArchivos, posArchivoAux);
+							for (g=0;g<list_size(archivoAux->bloques);g++){
+								bloqueAux=list_get(archivoAux->bloques,g);
+								for (h=0;h<list_size(bloqueAux->copias);h++){
+									copiaAux=list_get(bloqueAux->copias,h);
+									list_remove_and_destroy_element(bloqueAux->copias,h,(void*)eliminarListaCopias);
+								}
+							}
+							for (g=0;g<list_size(archivoAux->bloques);g++){
+								list_remove_and_destroy_element(archivoAux->bloques,g,(void*)eliminarListaBloques);
+							}
+							list_remove_and_destroy_element(listaArchivos,posArchivoAux,(void*)eliminarListaArchivos);
+
 						}
 						if (strcmp(identificacion,"renom_arch")==0){
 							printf ("Voy a renombrar un archivo de las estructuras\n");
@@ -1957,6 +2010,7 @@ void *atenderJob (int *socketJob) {
 			//exit(-1);
 		}
 	pthread_exit((void*)0);
+	}
 }
 
 bool nodoIdMasRepetido (char* antNodoId, char* posNodoId){

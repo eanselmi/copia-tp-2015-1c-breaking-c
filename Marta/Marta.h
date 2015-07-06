@@ -101,3 +101,8 @@ bool nodoNoDisponible(t_copias* copia);
 t_archivo* buscarArchivo(char* nombre, int padre);
 t_nodo* traerNodo(char* idNodo);
 t_nodo* buscarNodoPorIPYPuerto(char* ipNodo,int puertoNodo);
+int BuscarArchivoPos(char* nombreArch, uint32_t idPadre);
+static void eliminarListaCopias (t_copias* self);
+static void eliminarListaBloques(t_bloque* self);
+static void eliminarListaArchivos (t_archivo* self);
+
