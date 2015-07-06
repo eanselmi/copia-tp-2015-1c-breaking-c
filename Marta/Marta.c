@@ -703,7 +703,11 @@ void *connection_handler_jobs(){
 								exit(-1);
 							}
 							printf("...Nuevo padre del archivo: %d\n", nuevoPadreArchivoNovedad);
-							//TODO modificar el padre del archivo
+							t_archivo* archivoAux;
+							archivoAux = buscarArchivo(nombreArchivoNovedad, padreArchivoNovedad);
+							archivoAux->padre= nuevoPadreArchivoNovedad;
+							printf("archivo movido a: %s\n", archivoAux->nombre);
+							printf("padre nuevo: %d\n", archivoAux->padre);
 						}
 						if (strcmp(identificacion,"nuevo_arch")==0){
 							printf ("Voy a agregar un nuevo archivo a las estructuras\n");
@@ -866,6 +870,94 @@ void *connection_handler_jobs(){
 							printf ("...Bloque del borrar bloque: %d\n",bloqueNodoDestino);
 							//TODO agregar bloque a la estructura de archivo
 
+						}
+
+
+						if (strcmp(identificacion,"nodo_desc")==0){
+							printf ("Voy a actualizar el estado de un nodo desconectado\n");
+							memset(nodoId,'\0',6);
+							if ((nbytes = recv(socket_fs, nodoId, sizeof(nodoId), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
+								perror("recv");
+								log_error(logger,"FALLO el Recv del nodo del copiar bloque");
+								exit(-1);
+							}
+							t_nodo *unNodoParaActualizar;
+							int pos_nodo;
+							for (pos_nodo=0;pos_nodo<list_size(listaNodos);pos_nodo++){
+								unNodoParaActualizar=list_get(listaNodos,pos_nodo);
+								if (strcmp(unNodoParaActualizar->nodo_id,nodoId)==0){
+									unNodoParaActualizar->estado=0;
+									break;
+								}
+							}
+						}
+						if (strcmp(identificacion,"nodo_elim")==0){
+							printf ("Voy a actualizar el estado de un nodo eliminado\n");
+							memset(nodoId,'\0',6);
+							if ((nbytes = recv(socket_fs, nodoId, sizeof(nodoId), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
+								perror("recv");
+								log_error(logger,"FALLO el Recv del nodo del copiar bloque");
+								exit(-1);
+							}
+							t_nodo *unNodoParaActualizar;
+							int pos_nodo;
+							for (pos_nodo=0;pos_nodo<list_size(listaNodos);pos_nodo++){
+								unNodoParaActualizar=list_get(listaNodos,pos_nodo);
+								if (strcmp(unNodoParaActualizar->nodo_id,nodoId)==0){
+									unNodoParaActualizar->estado=0;
+									break;
+								}
+							}
+						}
+						if (strcmp(identificacion,"nodo_agre")==0){
+							printf ("Voy a actualizar el estado de un nodo agregado\n");
+							memset(nodoId,'\0',6);
+							if ((nbytes = recv(socket_fs, nodoId, sizeof(nodoId), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
+								perror("recv");
+								log_error(logger,"FALLO el Recv del nodo del copiar bloque");
+								exit(-1);
+							}
+							t_nodo *unNodoParaActualizar;
+							int pos_nodo;
+							for (pos_nodo=0;pos_nodo<list_size(listaNodos);pos_nodo++){
+								unNodoParaActualizar=list_get(listaNodos,pos_nodo);
+								if (strcmp(unNodoParaActualizar->nodo_id,nodoId)==0){
+									unNodoParaActualizar->estado=1;
+									break;
+								}
+							}
+						}
+						if (strcmp(identificacion,"nodo_nuevo")==0){
+							printf ("Voy a actualizar la lista de nodos agregando un nodo nuevo\n");
+							memset(nodoId,'\0',6);
+							if ((nbytes = recv(socket_fs, nodoId, sizeof(nodoId), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
+								perror("recv");
+								log_error(logger,"FALLO el Recv de nodoId");
+								exit(-1);
+							}
+							char ipNodo[17];
+							memset(ipNodo, '\0',17);
+							if ((nbytes = recv(socket_fs, ipNodo, sizeof(ipNodo), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
+								perror("recv");
+								log_error(logger,"FALLO el Recv de la ip del nodo");
+								exit(-1);
+							}
+							int puertoEscuchaNodo;
+							if ((nbytes = recv(socket_fs, &puertoEscuchaNodo, sizeof(int), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
+								perror("recv");
+								log_error(logger,"FALLO el Recv del puerto escucha del nodo");
+								exit(-1);
+							}
+							t_nodo *nodoTemporal=malloc(sizeof(t_nodo));
+							memset(nodoTemporal->nodo_id,'\0', 6);
+							strcpy(nodoTemporal->nodo_id, nodoId);
+							nodoTemporal->estado =0;
+							nodoTemporal->ip = strdup(ipNodo);
+							nodoTemporal->puerto_escucha_nodo = puertoEscuchaNodo;
+							nodoTemporal->cantMappers=0;
+							nodoTemporal->cantReducers=0;
+							list_add(listaNodos, nodoTemporal);
+							i++;
 						}
 					}
 //					else{
@@ -1288,9 +1380,10 @@ void *atenderJob (int *socketJob) {
 
 	//Si es sin combiner manda a hacer reduce al nodo que tenga mas archivos resultados MAP
 	if(strcmp(mensajeCombiner, "NO")==0){
-		int posicionMapper;
+		int posicionMapper,cantNodosMapOk;
 		t_replanificarMap *mapperOk;
 		t_list* listaNodosMapperOk;
+		t_list* listaNodosDistintos=list_create();
 		listaNodosMapperOk = list_create();
 		//Recorro lista de mappers y por cada mapperOk con resultado 0 que es map ok, me lo guardo  en una lista
 		for (posicionMapper =0; posicionMapper < list_size(listaMappers); posicionMapper++){
@@ -1300,26 +1393,57 @@ void *atenderJob (int *socketJob) {
 			}
 
 		}
-		int posicionNodo;
-		int cantNodosMapOk;
-		cantNodosMapOk = list_size(listaNodosMapperOk);
-		int mayorRepetido = 0;
-		int cantNodoRepetido;
-		t_replanificarMap *nodoMasRepetido;
+		int posMapOK;
 		t_replanificarMap *mapOk;
+		cantNodosMapOk = list_size(listaNodosMapperOk);
+
 		//recorro la lista de mappers ok y por cada uno saco la cantidad de veces que esta repetido, es decir donde se hicieron mas Maps locales
 		//y la asigno como mayor
-		for(posicionNodo = 0; posicionNodo < cantNodosMapOk; posicionNodo++){
-			mapOk = list_get(listaNodosMapperOk, posicionNodo);
-			cantNodoRepetido = list_count_satisfying(listaNodosMapperOk,(void*) nodoIdMasRepetido);
-			if(cantNodoRepetido > mayorRepetido){
-				mayorRepetido = cantNodoRepetido;
-				//Del que se hicieron mas MAPS locales me lo guardo
-				nodoMasRepetido = mapOk;
+		//Genero una lista con todos los nodos
+		for(posMapOK=0;posMapOK<cantNodosMapOk;posMapOK++){
+			char *nodoId=string_new();
+			int indice;
+			int agregar=1;
+			mapOk = list_get(listaNodosMapperOk,posMapOK);
+			strcpy(nodoId,mapOk->nodoId);
+			//Busco si el nodoId está en la listaNodosDistintos, si no está lo agrego en esa lista
+			for(indice=0;indice<list_size(listaNodosDistintos);indice++){
+				char* nodoDeLaLista=list_get(listaNodosDistintos,indice);
+				if(strcmp(nodoDeLaLista,nodoId)==0){
+					agregar=0;
+				}
+			}
+			if(agregar==1){
+				list_add(listaNodosDistintos,nodoId);
 			}
 		}
 
-		t_nodo * nodoG =traerNodo(nodoMasRepetido->nodoId);
+		int posicionNodo,posNodos;
+		int mayorRepetido;
+		int cantNodoRepetido=0;
+		char* nodoAEvaluar;
+
+		//Considero el primer nodo como el más repetido;
+		char* nodoMasRep=list_get(listaNodosDistintos,0);
+		mayorRepetido = 0;
+
+		//Busco por cada nodo que hay, todos los repetidos, si es mayor asigno ese nodo
+		for(posNodos=0;posNodos<list_size(listaNodosDistintos);posNodos++){
+			nodoAEvaluar=list_get(listaNodosDistintos,posNodos);
+			for(posicionNodo = 0; posicionNodo < cantNodosMapOk; posicionNodo++){
+				mapOk = list_get(listaNodosMapperOk, posicionNodo);
+				if(strcmp(mapOk->nodoId,nodoAEvaluar)==0){
+					cantNodoRepetido++;
+				}
+			}
+			if(cantNodoRepetido>mayorRepetido){
+				mayorRepetido=cantNodoRepetido;
+				nodoMasRep=nodoAEvaluar;
+			}
+			cantNodoRepetido=0;
+		}
+
+		t_nodo * nodoG =traerNodo(nodoMasRep);
 		t_reduce nodoReducer;
 
 		//Inicializo estructura del nodo que le voy a mandar a JOB
@@ -1431,6 +1555,20 @@ void *atenderJob (int *socketJob) {
 		//Le digo al FS que se copie el resultado
 		printf("El job sin combiner termino OK\nMandar a FS que busque el resultado %s en el nodo con IP %s puerto %d\n",nodoReducer.nombreArchivoFinal,nodoReducer.ip_nodoPpal,nodoReducer.puerto_nodoPpal);
 
+		//Le aviso a FS que le voy a mandar el archivo resultado
+		memset(mensaje_fs,'\0',BUF_SIZE);
+		strcpy(mensaje_fs, "Archivo resultado de reduce sin combiner");
+		if(send(socket_fs,mensaje_fs, sizeof(mensaje_fs), MSG_WAITALL )==-1){
+			perror("send");
+			log_error(logger,"Fallo el envío del mensaje");
+			//exit(-1);
+		}
+
+		if(send(socket_fs,&nodoReducer,sizeof(t_reduce),MSG_WAITALL) == -1) {
+			perror("send");
+			log_error(logger,"Fallo el envio del archivo resultado del reduce sin combiner al FS");
+			//exit(-1);
+		}
 
 	}
 
@@ -1767,6 +1905,22 @@ void *atenderJob (int *socketJob) {
 
 		//Le digo al FS que se copie el resultado
 		printf("El job con combiner termino OK\nMandar a FS que busque el resultado %s en el nodo con IP %s puerto %d\n",nodoReduceFinal.nombreArchivoFinal,nodoReduceFinal.ip_nodoPpal,nodoReduceFinal.puerto_nodoPpal);
+
+		//Le aviso a FS que le voy a mandar el archivo resultado
+		memset(mensaje_fs,'\0',BUF_SIZE);
+		strcpy(mensaje_fs, "Archivo resultado de reduce con combiner");
+		if(send(socket_fs,mensaje_fs, sizeof(mensaje_fs), MSG_WAITALL )==-1){
+			perror("send");
+			log_error(logger,"Fallo el envío del mensaje");
+			//exit(-1);
+		}
+
+		if(send(socket_fs,&nodoReduceFinal,sizeof(t_reduce),MSG_WAITALL) == -1) {
+			perror("send");
+			log_error(logger,"Fallo el envio del archivo resultado del reduce con combiner al FS");
+			//exit(-1);
+		}
+
 
 	}
 

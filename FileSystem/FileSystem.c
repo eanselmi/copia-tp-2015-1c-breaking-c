@@ -2010,7 +2010,7 @@ void RenombrarArchivo() {
 			printf(".....Archivo: %s Padre: %d Bloques: %d Path: %s\n",archivo->nombre,archivo->padre,list_size(archivo->bloques),obtenerPath(archivo->nombre, archivo->padre));
 			//printf(".....Archivo: %s Padre: %d Bloques: %d\n",archivo->nombre,archivo->padre,list_size(archivo->bloques));
 		}
-		printf("\nIngrese el path del archivo a renombrar\n");
+		printf("\nIngrese el path del archivo a renombrar, por ejemplo /home/tp/nombreArchivo \n");
 		scanf("%s", path);
 		directoriosPorSeparado=string_split(path,"/");
 		while(directoriosPorSeparado[posicionDirectorio+1]!=NULL){
@@ -2079,7 +2079,7 @@ void MoverArchivo() {
 		char **directoriosPorSeparado;
 		int posicionDirectorio=0;
 		char *directorioDestino=string_new();
-		printf("\nIngrese el path del archivo que quiere mover\n");
+		printf("\nIngrese el path del archivo que quiere mover, por ejemplo /home/tp/nombreArchivo \n");
 		memset(path,'\0',200);
 		scanf("%s", path);
 
@@ -2093,12 +2093,12 @@ void MoverArchivo() {
 		printf ("Padre: %d\n",idPadre);
 		if (idPadre==-1){
 			printf ("El path no existe\n");
-			Menu();
+			return;
 		}
 		int posArchivo = BuscarArchivoPorNombre(path, idPadre);
 		if (posArchivo==-1){
 			printf ("El archivo no existe\n");
-			Menu();
+			return;
 		}
 		archivo = list_get(archivos, posArchivo);
 
@@ -2108,9 +2108,8 @@ void MoverArchivo() {
 		int idPadreNuevo = BuscarPadre(nuevoPath);
 		if (idPadreNuevo==-1){
 			printf ("El path destino no existe\n");
-			Menu();
+			return;
 		}
-		printf("andre was here\n");
 		archivo->padre = idPadreNuevo;
 		actualizar_persistencia_archivo_movido(archivo->nombre,idPadre,idPadreNuevo);
 
