@@ -1933,12 +1933,12 @@ void EliminarArchivo() {
 		int idPadre = BuscarPadre(directorio);
 		if (idPadre==-1){
 			printf("El directorio no existe\n");
-			Menu();
+			return;
 		}
 		int posArchivo = BuscarArchivoPorNombre(path, idPadre);
 		if (posArchivo==-1){
 			printf("El archivo no existe\n");
-			Menu();
+			return;
 		}
 		archivo = list_get(archivos, posArchivo);
 		strcpy(nombreArchivo,archivo->nombre);
