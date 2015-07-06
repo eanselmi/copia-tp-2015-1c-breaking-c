@@ -46,7 +46,7 @@ int main(void){
 	char** archivosDelJob;
 	char handshake[BUF_SIZE];
 	char accion[BUF_SIZE];
-	char archivoResultado[TAM_NOMFINAL];
+	char archivoResultado[200];
 	int contMensajeArch; //contador para recorrer el array de archivos a los que se aplica el Job
 	char mensajeArchivos[MENSAJE_SIZE]; //cadena de caracteres que enviara a MaRTA los archivos a donde se aplica el Job. Formato: ",archivo1,archivo2,archivo3,...,archivo_n"
 	t_mapper datosMapper; // Datos para lanzar un hilo Map
@@ -57,7 +57,7 @@ int main(void){
 	sem_init(&obtenerRutinaMap,0,1);
 	memset(handshake,'\0', BUF_SIZE);
 	FD_ZERO(&read_fds);
-	memset(archivoResultado,'\0',TAM_NOMFINAL);
+	memset(archivoResultado,'\0',200);
 
 	/* Se conecta a MaRTA */
 	if((marta_sock=socket(AF_INET,SOCK_STREAM,0))==-1){ //si función socket devuelve -1 es error
@@ -102,7 +102,9 @@ int main(void){
 
 	//Envio el nombre del archivo resultado
 
-	if(send(marta_sock,config_get_string_value(configurador,"RESULTADO"),TAM_NOMFINAL,MSG_WAITALL)==-1){
+	strcpy(archivoResultado,config_get_string_value(configurador,"RESULTADO"));
+
+	if(send(marta_sock,archivoResultado,200,MSG_WAITALL)==-1){
 		perror("send");
 		log_error(logger,"Falló el envío del atributo COMBINER");
 		exit(1);
