@@ -1431,6 +1431,39 @@ void *connection_handler_escucha(void) {
 										list_add(nodos,agregar_nodo_a_lista(nodo_id,newfd, 0, 1,inet_ntoa(remote_client.sin_addr),remote_client.sin_port,*puerto_escucha_nodo,*bloquesTotales,*bloquesTotales));
 										printf("\nSe conectó un nuevo nodo: %s con %d bloques totales\n",inet_ntoa(remote_client.sin_addr),*bloquesTotales);
 										log_info(logger,"Se conectó un nuevo nodo: %s con %d bloques totales",inet_ntoa(remote_client.sin_addr),*bloquesTotales);
+
+										if(marta_presente == 1){
+											char identificacion_marta[BUF_SIZE];
+											memset(identificacion_marta,'\0',BUF_SIZE);
+											strcpy(identificacion_marta, "nodo_nuevo");
+											if ((send(marta_sock, identificacion_marta,sizeof(identificacion_marta), MSG_WAITALL)) == -1) {
+												perror("send");
+												log_error(logger, "FALLO el envio del ok a Marta");
+												exit(-1);
+											}
+											if ((send(marta_sock, nodo_id,sizeof(nodo_id), MSG_WAITALL)) == -1) {
+												perror("send");
+												log_error(logger, "FALLO el envio del ok a Marta");
+												exit(-1);
+											}
+											char ip_para_enviar[17];
+											memset(ip_para_enviar,'\0',17);
+											strcpy(ip_para_enviar,inet_ntoa(remote_client.sin_addr));
+											if ((send(marta_sock, ip_para_enviar,sizeof(ip_para_enviar), MSG_WAITALL)) == -1) {
+												perror("send");
+												log_error(logger, "FALLO el envio del ok a Marta");
+												exit(-1);
+											}
+											int puerto_nodo_para_marta;
+											puerto_nodo_para_marta=*puerto_escucha_nodo;
+
+											if ((send(marta_sock, &puerto_nodo_para_marta,sizeof(int), MSG_WAITALL)) == -1) {
+												perror("send");
+												log_error(logger, "FALLO el envio del ok a Marta");
+												exit(-1);
+											}
+										}
+
 									} else {
 										printf("Ya existe un nodo con el mismo id o direccion ip\n");
 										close(newfd);
@@ -1601,6 +1634,25 @@ void *connection_handler_escucha(void) {
 									printf("Se desconecto el nodo %s, %d\n",inet_ntoa(remote_client.sin_addr),remote_client.sin_port);
 									close(i); // ¡Hasta luego!
 									FD_CLR(i, &master); // eliminar del conjunto maestro
+
+									if(marta_presente == 1){
+										char identificacion_marta[BUF_SIZE];
+										memset(identificacion_marta,'\0',BUF_SIZE);
+										strcpy(identificacion_marta, "nodo_desc");
+										if ((send(marta_sock, identificacion_marta,sizeof(identificacion_marta), MSG_WAITALL)) == -1) {
+											perror("send");
+											log_error(logger, "FALLO el envio del ok a Marta");
+											exit(-1);
+										}
+										if ((send(marta_sock, nodo_id,sizeof(nodo_id), MSG_WAITALL)) == -1) {
+											perror("send");
+											log_error(logger, "FALLO el envio del ok a Marta");
+											exit(-1);
+										}
+									}
+
+
+
 								} else {
 									printf("ALGO SALIO MUY MAL\n");
 									exit(-1);
@@ -3365,6 +3417,21 @@ void AgregarNodo(){
 	if (nodoEncontrado == 1){
 		modificar_estado_nodo(nodoAEvaluar->nodo_id, nodoAEvaluar->socket, nodoAEvaluar->puerto, 1, 99); //cambio su estado de la lista a 1 que es activo, invoco con 99 para solo cambiar estado
 		printf("Se ha agregado el nodo %s correctamente\n",nodoID);
+		if(marta_presente == 1){
+			char identificacion_marta[BUF_SIZE];
+			memset(identificacion_marta,'\0',BUF_SIZE);
+			strcpy(identificacion_marta, "nodo_agre");
+			if ((send(marta_sock, identificacion_marta,sizeof(identificacion_marta), MSG_WAITALL)) == -1) {
+				perror("send");
+				log_error(logger, "FALLO el envio del ok a Marta");
+				exit(-1);
+			}
+			if ((send(marta_sock, nodoAEvaluar->nodo_id,sizeof(nodoAEvaluar->nodo_id), MSG_WAITALL)) == -1) {
+				perror("send");
+				log_error(logger, "FALLO el envio del ok a Marta");
+				exit(-1);
+			}
+		}
 	}
 	else{
 		printf("El nodo ingresado no se puede agregar\n");
@@ -3399,6 +3466,24 @@ void EliminarNodo(){
 	if (nodoEncontrado == 1){
 		modificar_estado_nodo(nodoAEvaluar->nodo_id, nodoAEvaluar->socket, nodoAEvaluar->puerto, 0, 99); //cambio su estado de la lista a 0 que es inactivo, invoco con 99 para solo cambiar estado
 		printf("Se ha eliminado el nodo %s correctamente\n",nodoID);
+
+		if(marta_presente == 1){
+			char identificacion_marta[BUF_SIZE];
+			memset(identificacion_marta,'\0',BUF_SIZE);
+			strcpy(identificacion_marta, "nodo_elim");
+			if ((send(marta_sock, identificacion_marta,sizeof(identificacion_marta), MSG_WAITALL)) == -1) {
+				perror("send");
+				log_error(logger, "FALLO el envio del ok a Marta");
+				exit(-1);
+			}
+			if ((send(marta_sock, nodoAEvaluar->nodo_id,sizeof(nodoAEvaluar->nodo_id), MSG_WAITALL)) == -1) {
+				perror("send");
+				log_error(logger, "FALLO el envio del ok a Marta");
+				exit(-1);
+			}
+		}
+
+
 	}
 	else{
 		printf("El nodo ingresado no se puede eliminar\n");
