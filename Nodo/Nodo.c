@@ -349,6 +349,7 @@ void *manejador_de_escuchas(){
 							int archivo_resultado;
 							char ruta_local[100];
 							int bytes;
+							int send_bytes;
 							char buff_resultado[4096];
 							memset(buff_resultado,'\0',4096);
 							memset(ruta_local,'\0',100);
@@ -363,18 +364,15 @@ void *manejador_de_escuchas(){
 								perror ("Error al abrir el archivo resultado");
 							}else{
 								while (1){
-									if((bytes = read(archivo_resultado, buff_resultado, 4096)) <= 0){
+									if((bytes = read(archivo_resultado, buff_resultado, 1024)) <= 0)
 										break;
+									if ((send_bytes=send(conectorFS,buff_resultado,1024,0)) == -1) {
+										perror("send");
+										log_error(logger, "FALLO el envio del bloque ");
+										exit(-1);
 									}
-
-									else{
-										if ((bytes=send(conectorFS,buff_resultado,strlen(buff_resultado),MSG_WAITALL)) == -1) {
-											perror("send");
-											log_error(logger, "FALLO el envio del bloque ");
-											exit(-1);
-										}
-										memset(buff_resultado,'\0',4096);
-									}
+									send_bytes=0;
+									memset(buff_resultado,'\0',4096);
 								}
 							}
 							close(archivo_resultado);

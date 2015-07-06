@@ -483,7 +483,7 @@ int main(int argc, char**argv){
 
 
 		//TEST PARA NOTIFICAR AL FS QUE BUSQUE UN ARCHIVO RESULTADO DE UN REDUCE
-		/*memset(identificacion,'\0',BUF_SIZE);
+		memset(identificacion,'\0',BUF_SIZE);
 		strcpy(identificacion,"resultado");
 		if((send(socket_fs,identificacion,sizeof(identificacion),MSG_WAITALL))==-1) {
 			perror("send");
@@ -498,8 +498,8 @@ int main(int argc, char**argv){
 			log_error(logger,"FALLO el envio del saludo al FS");
 			exit(-1);
 		}
-		char test2[100];
-		memset(test2, '\0', 100);
+		char test2[60];
+		memset(test2, '\0', 60);
 		strcpy(test2,"alton.txt");
 		if((send(socket_fs,test2,sizeof(test2),MSG_WAITALL))==-1) {
 			perror("send");
@@ -507,13 +507,14 @@ int main(int argc, char**argv){
 			exit(-1);
 		}
 		char path_mdfs[200];
-		memset(path_mdfs, '\0', 200);
-		strcpy(path_mdfs,"/resultado");
+		memset(path_mdfs,'\0',200);
+		strcpy(path_mdfs,"/resultado/alton");
+		printf ("%s\n",path_mdfs);
 		if((send(socket_fs,path_mdfs,sizeof(path_mdfs),MSG_WAITALL))==-1) {
 			perror("send");
 			log_error(logger,"FALLO el envio del saludo al FS");
 			exit(-1);
-		}*/
+		}
 
 
 

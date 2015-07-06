@@ -1565,8 +1565,9 @@ void *connection_handler_escucha(void) {
 									log_error(logger,"Fallo el envio del nombre del archivo a dar el padre por parte de Marta");
 								}
 								strcat(ruta_local,nombreArchivoResultado);
+								strcat(ruta_local,"-copia");
 								char path_mdfs[200];
-								memset(path_mdfs, '\0', 200);
+								memset(path_mdfs,'\0', 200);
 								if(recv(marta_sock,path_mdfs,sizeof(path_mdfs),MSG_WAITALL)==-1){
 									perror("recv");
 									log_error(logger,"Fallo el envio del nombre del archivo a dar el padre por parte de Marta");
@@ -1586,17 +1587,18 @@ void *connection_handler_escucha(void) {
 								//Recibir archivo resultado del nodo y guardarlo en /tmp con el nombre del archivo
 								archivo_resultado=fopen(ruta_local,"w");
 								while(1){
-									bytes=recv(nodo_con_resultado->socket,buff_archivo_resultado,MENSAJE_SIZE,0);
-									if (bytes<MENSAJE_SIZE && bytes>=0) //Termino el envio y el nodo corto la conexion
+									bytes=recv(nodo_con_resultado->socket,buff_archivo_resultado,1024,0);
+									if (bytes<MENSAJE_SIZE) //Termino el envio y el nodo corto la conexion
 										break;
 									if (bytes<0){
 										perror ("Recv del recibir archivo de resultado");
 										break;
 									}
 									fprintf (archivo_resultado,"%s",buff_archivo_resultado);
+									bytes=0;
 									memset(buff_archivo_resultado,'\0',MENSAJE_SIZE);
 								}
-								if (bytes>0 && bytes<MENSAJE_SIZE){
+								if (bytes>0){
 									fprintf (archivo_resultado,"%s",buff_archivo_resultado);
 									memset(buff_archivo_resultado,'\0',MENSAJE_SIZE);
 									fclose(archivo_resultado);
@@ -1610,8 +1612,8 @@ void *connection_handler_escucha(void) {
 								//Ahora envio el archivo al mdfs
 								//strcat(path_mdfs,"/");
 								//strcat(path_mdfs,nombreArchivoResultado);
-								CopiarArchivoAMDFS(99,ruta_local,path_mdfs);
-								printf ("Archivo resultado copiado exitosamente\n");
+								//CopiarArchivoAMDFS(99,ruta_local,path_mdfs);
+								//printf ("Archivo resultado copiado exitosamente\n");
 							}
 						}
 					}else{
@@ -2697,6 +2699,8 @@ int CopiarArchivoAMDFS(int flag, char* archvo_local, char* archivo_mdfs){
 		scanf("%s", pathMDFS);
 	}else strcpy(pathMDFS,archivo_mdfs);
 	int contador=0,indice_path;
+	printf ("%s\n",archivo_mdfs);
+	printf ("%s\n",pathMDFS);
 	for (indice_path=0;indice_path<strlen(pathMDFS);indice_path++)	if (pathMDFS[indice_path]=='/') contador++;
 	if (contador>1){
 		directoriosPorSeparado=string_split(pathMDFS,"/");
