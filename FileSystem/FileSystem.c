@@ -1672,10 +1672,12 @@ void *connection_handler_escucha(void) {
 uint32_t BuscarPadre(char* path) {
 	t_dir* dir;
 	int directorioPadre = 0,tamanio; //seteo a raíz
-	int j,count=0;
-	for (j=0;j<strlen(path);j++) if (path[j]=='/') count ++;
-	if (count==1) return 0;
-	//if (( tamanio = list_size(directorios))==0 || string_is_empty(path) || strcmp(path,"/")==0){ //No hay directorios
+//	int j,count=0;
+//	for (j=0;j<strlen(path);j++) if (path[j]=='/') count ++;
+//	if (count==1) return 0;
+	if(strcmp(path,"/")==0){
+		return directorioPadre;
+	}
 	if (( tamanio = list_size(directorios))==0 || string_is_empty(path)){ //No hay directorios
 		//printf("No se encontró el directorio\n");
 		directorioPadre = -1;
