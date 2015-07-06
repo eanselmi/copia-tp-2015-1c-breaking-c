@@ -1608,7 +1608,12 @@ void *atenderJob (int *socketJob) {
 		nodoResultado = buscarNodoPorIPYPuerto(nodoReducer.ip_nodoPpal,nodoReducer.puerto_nodoPpal);
 
 		//Le digo al FS que se copie el resultado
-		printf("El job sin combiner termino OK\nMandar a FS que busque el resultado %s en el nodo %s",nodoReducer.nombreArchivoFinal,nodoResultado->nodo_id);
+		printf("El job sin combiner termino OK\nMandar a FS que busque el resultado %s en el nodo %s\n",nodoReducer.nombreArchivoFinal,nodoResultado->nodo_id);
+
+		char** nombreResSpliteado=string_split(nodoReducer.nombreArchivoFinal,"/");
+		char nombreRes[TAM_NOMFINAL];
+		memset(nombreRes,'\0',TAM_NOMFINAL);
+		strcpy(nombreRes,nombreResSpliteado[1]);
 
 		//Le aviso a FS que le voy a mandar el Nodo ID
 		memset(mensaje_fs,'\0',BUF_SIZE);
@@ -1619,23 +1624,22 @@ void *atenderJob (int *socketJob) {
 			//exit(-1);
 		}
 		//Le mando a FS el Nodo ID
-		if(send(socket_fs,&nodoResultado->nodo_id,sizeof(nodoResultado->nodo_id),MSG_WAITALL) == -1) {
+		if(send(socket_fs,nodoResultado->nodo_id,sizeof(nodoResultado->nodo_id),MSG_WAITALL) == -1) {
 			perror("send");
-			log_error(logger,"Fallo el envio del archivo resultado del reduce sin combiner al FS");
+			log_error(logger,"Fallo el envio del archivo resultado del reduce con combiner al FS");
 			//exit(-1);
 		}
-		//Le aviso a FS que le voy a mandar el archivo resultado
-		memset(mensaje_fs,'\0',BUF_SIZE);
-		strcpy(mensaje_fs, "resultado");
-		if(send(socket_fs,mensaje_fs, sizeof(mensaje_fs), MSG_WAITALL )==-1){
-			perror("send");
-			log_error(logger,"Fallo el envío del mensaje");
-			//exit(-1);
-		}
+
 		//Le mando el archivo Resultado de reduce
-		if(send(socket_fs,&nodoReducer.nombreArchivoFinal,sizeof(nodoReducer.nombreArchivoFinal),MSG_WAITALL) == -1) {
+		if(send(socket_fs,nombreRes,sizeof(nombreRes),MSG_WAITALL) == -1) {
 			perror("send");
-			log_error(logger,"Fallo el envio del archivo resultado del reduce sin combiner al FS");
+			log_error(logger,"Fallo el envio del archivo resultado del reduce con combiner al FS");
+			//exit(-1);
+		}
+		//Le mando al FS donde debe guardar el resultado
+		if(send(socket_fs,archivoResultado,sizeof(archivoResultado),MSG_WAITALL) == -1) {
+			perror("send");
+			log_error(logger,"Fallo el envio del archivo resultado del reduce con combiner al FS");
 			//exit(-1);
 		}
 
