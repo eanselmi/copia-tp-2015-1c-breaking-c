@@ -1673,7 +1673,11 @@ void *connection_handler_escucha(void) {
 uint32_t BuscarPadre(char* path) {
 	t_dir* dir;
 	int directorioPadre = 0,tamanio; //seteo a raíz
-	if (( tamanio = list_size(directorios))==0 || string_is_empty(path) || strcmp(path,"/")==0){ //No hay directorios
+	int j,count=0;
+	for (j=0;j<strlen(path);j++) if (path[j]=='/') count ++;
+	if (count==1) return 0;
+	//if (( tamanio = list_size(directorios))==0 || string_is_empty(path) || strcmp(path,"/")==0){ //No hay directorios
+	if (( tamanio = list_size(directorios))==0 || string_is_empty(path)){ //No hay directorios
 		//printf("No se encontró el directorio\n");
 		directorioPadre = -1;
 		return directorioPadre;
@@ -1862,6 +1866,13 @@ char *obtenerPath(char *nombre, int dir_id){
 	char *path=string_new();
 	//memset(path,'\0',200);
 	memset(cad,'\0',200);
+
+	if (dir_id==0){
+		string_append(&path,"/");
+		string_append(&path,nombre);
+		return path;
+	}
+
 	t_dir *dir;
 	uint32_t id_buscado=dir_id;
 	int terminado=0;
@@ -1924,11 +1935,20 @@ void EliminarArchivo() {
 		//Si hay archivos luego de listarlos, el usuario procede
 		printf("\nIngrese el path del archivo a eliminar:\n");
 		scanf("%s", path);
-		directoriosPorSeparado=string_split(path,"/");
-		while(directoriosPorSeparado[posicionDirectorio+1]!=NULL){
-			string_append(&directorio,"/");
-			string_append(&directorio,directoriosPorSeparado[posicionDirectorio]);
-			posicionDirectorio++;
+		int contador=0,indice_path;
+		for (indice_path=0;indice_path<strlen(path);indice_path++)	if (path[indice_path]=='/') contador++;
+		if (contador>1){
+			directoriosPorSeparado=string_split(path,"/");
+			while(directoriosPorSeparado[posicionDirectorio+1]!=NULL){
+				string_append(&directorio,"/");
+				string_append(&directorio,directoriosPorSeparado[posicionDirectorio]);
+				posicionDirectorio++;
+			}
+		}else if (contador == 1){
+			directorio=strdup("/");
+		}else if (contador==0){
+			printf ("Directorio destino mal ingresado\n");
+			return;
 		}
 		int idPadre = BuscarPadre(directorio);
 		if (idPadre==-1){
@@ -2012,12 +2032,23 @@ void RenombrarArchivo() {
 		}
 		printf("\nIngrese el path del archivo a renombrar, por ejemplo /home/tp/nombreArchivo \n");
 		scanf("%s", path);
-		directoriosPorSeparado=string_split(path,"/");
-		while(directoriosPorSeparado[posicionDirectorio+1]!=NULL){
-			string_append(&directorio,"/");
-			string_append(&directorio,directoriosPorSeparado[posicionDirectorio]);
-			posicionDirectorio++;
+
+		int contador=0,indice_path;
+		for (indice_path=0;indice_path<strlen(path);indice_path++)	if (path[indice_path]=='/') contador++;
+		if (contador>1){
+			directoriosPorSeparado=string_split(path,"/");
+			while(directoriosPorSeparado[posicionDirectorio+1]!=NULL){
+				string_append(&directorio,"/");
+				string_append(&directorio,directoriosPorSeparado[posicionDirectorio]);
+				posicionDirectorio++;
+			}
+		}else if (contador == 1){
+			directorio=strdup("/");
+		}else if (contador==0){
+			printf ("Directorio destino mal ingresado\n");
+			return;
 		}
+
 		int idPadre = BuscarPadre(directorio);
 		if (idPadre==-1){
 			printf("El archivo no existe\n");
@@ -2083,12 +2114,22 @@ void MoverArchivo() {
 		memset(path,'\0',200);
 		scanf("%s", path);
 
-		directoriosPorSeparado=string_split(path,"/");
-		while(directoriosPorSeparado[posicionDirectorio+1]!=NULL){
-			string_append(&directorioDestino,"/");
-			string_append(&directorioDestino,directoriosPorSeparado[posicionDirectorio]);
-			posicionDirectorio++;
+		int contador=0,indice_path;
+		for (indice_path=0;indice_path<strlen(path);indice_path++)	if (path[indice_path]=='/') contador++;
+		if (contador>1){
+			directoriosPorSeparado=string_split(path,"/");
+			while(directoriosPorSeparado[posicionDirectorio+1]!=NULL){
+				string_append(&directorioDestino,"/");
+				string_append(&directorioDestino,directoriosPorSeparado[posicionDirectorio]);
+				posicionDirectorio++;
+			}
+		}else if (contador == 1){
+			directorioDestino=strdup("/");
+		}else if (contador==0){
+			printf ("Directorio destino mal ingresado\n");
+			return;
 		}
+
 		int idPadre = BuscarPadre(directorioDestino);
 		printf ("Padre: %d\n",idPadre);
 		if (idPadre==-1){
@@ -2654,14 +2695,23 @@ int CopiarArchivoAMDFS(int flag, char* archvo_local, char* archivo_mdfs){
 		printf("Ingrese el path del archivo destino desde raíz, por ejemplo /tmp/nombreArchivo \n");
 		scanf("%s", pathMDFS);
 	}else strcpy(pathMDFS,archivo_mdfs);
-	directoriosPorSeparado=string_split(pathMDFS,"/");
-	while(directoriosPorSeparado[posicionDirectorio+1]!=NULL){
-		string_append(&directorioDestino,"/");
-		string_append(&directorioDestino,directoriosPorSeparado[posicionDirectorio]);
-		posicionDirectorio++;
+	int contador=0,indice_path;
+	for (indice_path=0;indice_path<strlen(pathMDFS);indice_path++)	if (pathMDFS[indice_path]=='/') contador++;
+	if (contador>1){
+		directoriosPorSeparado=string_split(pathMDFS,"/");
+		while(directoriosPorSeparado[posicionDirectorio+1]!=NULL){
+			string_append(&directorioDestino,"/");
+			string_append(&directorioDestino,directoriosPorSeparado[posicionDirectorio]);
+			posicionDirectorio++;
+		}
+	}else if (contador == 1){
+		directorioDestino=strdup("/");
+	}else if (contador==0){
+		printf ("Directorio destino mal ingresado\n");
+		return -1;
 	}
 
-    //Buscar Directorio. Si existe se muestra mensaje de error
+	//Buscar Directorio. Si existe se muestra mensaje de error
     uint32_t idPadre = BuscarPadre(directorioDestino);
     if(idPadre == -1){
       	printf("El directorio no existe. Se debe crear el directorio desde el menú. \n");
@@ -2996,12 +3046,24 @@ int CopiarArchivoDelMDFS(int flag, char*unArchivo) {
 		for (aux1=0;aux1<aux2-1;aux1++) nombre_del_archivo = strtok_r(NULL,"/",&saveptr);
 		strcpy(ruta_local,"/tmp/");
 		strcat(ruta_local,nombre_del_archivo);
-		directoriosPorSeparado=string_split(pathArchivo,"/");
-		while(directoriosPorSeparado[posicionDirectorio+1]!=NULL){
-			string_append(&directorio,"/");
-			string_append(&directorio,directoriosPorSeparado[posicionDirectorio]);
-			posicionDirectorio++;
+
+
+		int contador=0,indice_path;
+		for (indice_path=0;indice_path<strlen(pathArchivo);indice_path++)	if (pathArchivo[indice_path]=='/') contador++;
+		if (contador>1){
+			directoriosPorSeparado=string_split(pathArchivo,"/");
+			while(directoriosPorSeparado[posicionDirectorio+1]!=NULL){
+				string_append(&directorio,"/");
+				string_append(&directorio,directoriosPorSeparado[posicionDirectorio]);
+				posicionDirectorio++;
+			}
+		}else if (contador == 1){
+			directorio=strdup("/");
+		}else if (contador==0){
+			printf ("Directorio destino mal ingresado\n");
+			return -1;
 		}
+
 		int idPadre = BuscarPadre(directorio);
 		if (idPadre==-1){
 			printf("El directorio no existe\n");
