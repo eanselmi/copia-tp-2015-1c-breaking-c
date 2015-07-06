@@ -1552,19 +1552,37 @@ void *atenderJob (int *socketJob) {
 		}
 		close(*socketJob);
 
-		//Le digo al FS que se copie el resultado
-		printf("El job sin combiner termino OK\nMandar a FS que busque el resultado %s en el nodo con IP %s puerto %d\n",nodoReducer.nombreArchivoFinal,nodoReducer.ip_nodoPpal,nodoReducer.puerto_nodoPpal);
+		//Buscar el nodo donde está el archivo resultado del reduce para mandarle al FS el nodoID
+		t_nodo* nodoResultado;
+		nodoResultado = buscarNodoPorIPYPuerto(nodoReducer.ip_nodoPpal,nodoReducer.puerto_nodoPpal);
 
-		//Le aviso a FS que le voy a mandar el archivo resultado
+		//Le digo al FS que se copie el resultado
+		printf("El job sin combiner termino OK\nMandar a FS que busque el resultado %s en el nodo %s",nodoReducer.nombreArchivoFinal,nodoResultado->nodo_id);
+
+		//Le aviso a FS que le voy a mandar el Nodo ID
 		memset(mensaje_fs,'\0',BUF_SIZE);
-		strcpy(mensaje_fs, "Archivo resultado de reduce sin combiner");
+		strcpy(mensaje_fs, "resultado");
 		if(send(socket_fs,mensaje_fs, sizeof(mensaje_fs), MSG_WAITALL )==-1){
 			perror("send");
 			log_error(logger,"Fallo el envío del mensaje");
 			//exit(-1);
 		}
-
-		if(send(socket_fs,&nodoReducer,sizeof(t_reduce),MSG_WAITALL) == -1) {
+		//Le mando a FS el Nodo ID
+		if(send(socket_fs,&nodoResultado->nodo_id,sizeof(nodoResultado->nodo_id),MSG_WAITALL) == -1) {
+			perror("send");
+			log_error(logger,"Fallo el envio del archivo resultado del reduce sin combiner al FS");
+			//exit(-1);
+		}
+		//Le aviso a FS que le voy a mandar el archivo resultado
+		memset(mensaje_fs,'\0',BUF_SIZE);
+		strcpy(mensaje_fs, "resultado");
+		if(send(socket_fs,mensaje_fs, sizeof(mensaje_fs), MSG_WAITALL )==-1){
+			perror("send");
+			log_error(logger,"Fallo el envío del mensaje");
+			//exit(-1);
+		}
+		//Le mando el archivo Resultado de reduce
+		if(send(socket_fs,&nodoReducer.nombreArchivoFinal,sizeof(nodoReducer.nombreArchivoFinal),MSG_WAITALL) == -1) {
 			perror("send");
 			log_error(logger,"Fallo el envio del archivo resultado del reduce sin combiner al FS");
 			//exit(-1);
@@ -1903,27 +1921,41 @@ void *atenderJob (int *socketJob) {
 		}
 		close(*socketJob);
 
-		//Le digo al FS que se copie el resultado
-		printf("El job con combiner termino OK\nMandar a FS que busque el resultado %s en el nodo con IP %s puerto %d\n",nodoReduceFinal.nombreArchivoFinal,nodoReduceFinal.ip_nodoPpal,nodoReduceFinal.puerto_nodoPpal);
+		//Buscar el nodo donde está el archivo resultado del reduce para mandarle al FS el nodoID
+		t_nodo* nodoResultadoCC;
+		nodoResultadoCC = buscarNodoPorIPYPuerto(nodoReduceFinal.ip_nodoPpal,nodoReduceFinal.puerto_nodoPpal);
 
-		//Le aviso a FS que le voy a mandar el archivo resultado
+		//Le digo al FS que se copie el resultado
+		printf("El job sin combiner termino OK\nMandar a FS que busque el resultado %s en el nodo %s",nodoReduceFinal.nombreArchivoFinal,nodoResultadoCC->nodo_id);
+
+		//Le aviso a FS que le voy a mandar el Nodo ID
 		memset(mensaje_fs,'\0',BUF_SIZE);
-		strcpy(mensaje_fs, "Archivo resultado de reduce con combiner");
+		strcpy(mensaje_fs, "resultado");
 		if(send(socket_fs,mensaje_fs, sizeof(mensaje_fs), MSG_WAITALL )==-1){
 			perror("send");
 			log_error(logger,"Fallo el envío del mensaje");
 			//exit(-1);
 		}
-
-		if(send(socket_fs,&nodoReduceFinal,sizeof(t_reduce),MSG_WAITALL) == -1) {
+		//Le mando a FS el Nodo ID
+		if(send(socket_fs,&nodoResultadoCC->nodo_id,sizeof(nodoResultadoCC->nodo_id),MSG_WAITALL) == -1) {
 			perror("send");
 			log_error(logger,"Fallo el envio del archivo resultado del reduce con combiner al FS");
 			//exit(-1);
 		}
-
-
-	}
-
+		//Le aviso a FS que le voy a mandar el archivo resultado
+		memset(mensaje_fs,'\0',BUF_SIZE);
+		strcpy(mensaje_fs, "resultado");
+		if(send(socket_fs,mensaje_fs, sizeof(mensaje_fs), MSG_WAITALL )==-1){
+			perror("send");
+			log_error(logger,"Fallo el envío del mensaje");
+			//exit(-1);
+		}
+		//Le mando el archivo Resultado de reduce
+		if(send(socket_fs,&nodoReduceFinal.nombreArchivoFinal,sizeof(nodoReduceFinal.nombreArchivoFinal),MSG_WAITALL) == -1) {
+			perror("send");
+			log_error(logger,"Fallo el envio del archivo resultado del reduce con combiner al FS");
+			//exit(-1);
+		}
 	pthread_exit((void*)0);
 }
 
