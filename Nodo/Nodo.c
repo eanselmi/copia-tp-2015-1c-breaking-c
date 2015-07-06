@@ -358,7 +358,6 @@ void *manejador_de_escuchas(){
 								log_error(logger, "FALLO el Recv de bloque");
 								exit(-1);
 							}
-							printf ("Me solicitaron el archivo resultado %s\n",nombreArchivoResultado);
 							strcat(ruta_local,nombreArchivoResultado);
 							if((archivo_resultado=open(ruta_local,O_RDONLY)) < 0){
 								perror ("Error al abrir el archivo resultado");
@@ -379,7 +378,6 @@ void *manejador_de_escuchas(){
 								}
 							}
 							close(archivo_resultado);
-							printf ("Archivo resultado enviado\n");
 						}
 					}
 				}
