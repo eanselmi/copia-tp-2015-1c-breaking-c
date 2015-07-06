@@ -695,9 +695,7 @@ void *connection_handler_jobs(){
 							archivoAux = list_get(listaArchivos, posArchivoAux);
 							for (g=0;g<list_size(archivoAux->bloques);g++){
 								bloqueAux=list_get(archivoAux->bloques,g);
-								t_copias* copiaAux;
 								for (h=0;h<list_size(bloqueAux->copias);h++){
-									copiaAux=list_get(bloqueAux->copias,h);
 									list_remove_and_destroy_element(bloqueAux->copias,h,(void*)eliminarListaCopias);
 								}
 							}
