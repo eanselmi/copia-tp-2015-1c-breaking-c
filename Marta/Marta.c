@@ -1428,7 +1428,7 @@ void *atenderJob (int *socketJob) {
 /************************************************************************************************************************************************
 * SIN COMBINER
 * ************************************************************************************************************************************************/
-
+	sleep(3);
 	//Si es sin combiner manda a hacer reduce al nodo que tenga mas archivos resultados MAP
 	if(strcmp(mensajeCombiner, "NO")==0){
 		int posicionMapper,cantNodosMapOk;
@@ -1828,6 +1828,7 @@ void *atenderJob (int *socketJob) {
 
 		/****REDUCE FINAL****/
 
+		sleep(1);
 		//Buscar el nodo con menos carga para asignar a hacer reduce final
 		int posDistintos;
 		t_list* listaMismoNodo = list_create(); //Lista para buscar el nodo con menos carga
