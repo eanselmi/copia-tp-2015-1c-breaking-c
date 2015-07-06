@@ -3242,11 +3242,11 @@ void CopiarBloque() {
 
 	if(!obtenerEstadoDelNodo(nodo_origen)){
 		printf ("El nodo seleccionado como origen no esta disponible o no existe\n");
-		Menu();
+		return;
 	}
 	if(!obtenerEstadoDelNodo(nodo_destino)){
 		printf ("El nodo seleccionado como destino no esta disponible o no existe\n");
-		Menu();
+		return;
 	}
 	for (i=0;i<list_size(nodos);i++){
 		origen=list_get(nodos,i);
@@ -3254,7 +3254,7 @@ void CopiarBloque() {
 			if (origen->estado==1 && origen->estado_red==1) origen_encontrado=1;
 			if (!bitarray_test_bit(origen->bloques_del_nodo,bloque_origen)){
 				printf ("El bloque %d del nodo %s esta vacio, no hay nada que copiar\n",bloque_origen,nodo_origen);
-				Menu();
+				return;
 			}
 			break;
 		}
@@ -3266,25 +3266,25 @@ void CopiarBloque() {
 			if (destino->estado==1 && destino->estado_red==1) destino_encontrado=1;
 			if (bitarray_test_bit(destino->bloques_del_nodo,bloque_destino)){
 				printf ("El bloque %d del nodo %s esta ocupado, no se puede copiar\n",bloque_destino,nodo_destino);
-				Menu();
+				return;
 			}
 			break;
 		}
 	}
 	if (origen_encontrado==0){
 		printf ("El nodo origen no existe o no esta disponible\n");
-		Menu();
+		return;
 	}
 	if (destino_encontrado==0){
 		printf ("El nodo destino no existe o no esta disponible\n");
-		Menu();
+		return;
 	}
 	//obtener primero el bloque del nodo original
 	socket_nodo = obtener_socket_de_nodo_con_id(nodo_origen);
 	if (socket_nodo == -1){
 		log_error(logger, "El nodo ingresado no es valido o no esta disponible\n");
 		printf("El nodo ingresado no es valido o no esta disponible\n");
-		Menu();
+		return;
 	}
 	enviarNumeroDeBloqueANodo(socket_nodo, bloque_origen);
 	bloqueParaVer = recibirBloque(socket_nodo);
