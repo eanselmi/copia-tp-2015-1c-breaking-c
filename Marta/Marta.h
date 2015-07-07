@@ -4,7 +4,7 @@
 
 //estructura con la información de FileSystem
 typedef struct estructura_filesystem {
-	char* nombre;
+	char nombre[200];
 	uint32_t padre;
 	t_list *bloques; //Se debe crear una lista de tipo "t_bloque" y agregarla acá
 } t_archivo;

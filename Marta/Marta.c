@@ -397,7 +397,6 @@ int main(int argc, char**argv){
 			exit(-1);
 		}
 		printf ("...Padre del archivo: %d\n",padreArchivo);
-		archivoTemporal->nombre=string_new();
 		strcpy(archivoTemporal->nombre, nombreArchivo);
 		//strcpy(archivoTemporal->path, pathArchivo);
 		archivoTemporal->padre = padreArchivo;
@@ -689,7 +688,6 @@ void *connection_handler_jobs(){
 								exit(-1);
 							}
 							printf ("...Padre del archivo a eliminar: %d\n",padreArchivoNovedad);
-							//TODO terminar de probar borrado de archivo
 							t_archivo* archivoAux;
 							t_bloque* bloqueAux;
 							int posArchivoAux;
@@ -706,8 +704,8 @@ void *connection_handler_jobs(){
 								list_remove_and_destroy_element(archivoAux->bloques,g,(void*)eliminarListaBloques);
 							}
 							list_remove_and_destroy_element(listaArchivos,posArchivoAux,(void*)eliminarListaArchivos);
-
 						}
+						//fin update de EliminarArchivo
 						if (strcmp(identificacion,"renom_arch")==0){
 							printf ("Voy a renombrar un archivo de las estructuras\n");
 							memset(nombreArchivoNovedad, '\0',200);
@@ -736,6 +734,7 @@ void *connection_handler_jobs(){
 							printf("archivo renombrado a: %s\n", archivoAux->nombre);
 							printf("padre de archivo renombrado: %d\n", archivoAux->padre);
 						}
+						//fin update de RenombrarArchivo
 						if (strcmp(identificacion,"mov_arch")==0){
 							printf ("Voy a mover un archivo de las estructuras\n");
 							memset(nombreArchivoNovedad, '\0',200);
@@ -763,6 +762,7 @@ void *connection_handler_jobs(){
 							printf("archivo movido a: %s\n", archivoAux->nombre);
 							printf("padre nuevo: %d\n", archivoAux->padre);
 						}
+						//fin update de RenombrarArchivo
 						if (strcmp(identificacion,"nuevo_arch")==0){
 							printf ("Voy a agregar un nuevo archivo a las estructuras\n");
 							t_archivo* nuevoArchivo = malloc(sizeof(t_archivo));
@@ -779,7 +779,6 @@ void *connection_handler_jobs(){
 								exit(-1);
 							}
 							printf ("...Padre del archivo: %d\n",padreArchivoNovedad);
-							nuevoArchivo->nombre=string_new();
 							strcpy(nuevoArchivo->nombre, nombreArchivoNovedad);
 							nuevoArchivo->padre = padreArchivoNovedad;
 							if ((nbytes = recv(socket_fs, &cantidadBloquesArchivo, sizeof(int), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
@@ -857,7 +856,7 @@ void *connection_handler_jobs(){
 
 
 						}
-						//fin update nuevo_arch
+						//fin update de CopiarArchivoAMDFS
 
 						if (strcmp(identificacion,"elim_bloque")==0){
 							printf ("Voy a eliminar una copia de un bloque de un archivo a las estructuras\n");
