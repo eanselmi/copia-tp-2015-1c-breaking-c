@@ -1766,6 +1766,16 @@ static void eliminar_lista_de_nodos (t_nodo *self){
 	free(self->ip);
 	free(self);
 }
+static void eliminar_lista_de_bloques2(t_bloque *self){
+	list_destroy_and_destroy_elements(self->copias, (void*) eliminar_lista_de_copias);
+	free(self);
+}
+
+static void eliminar_lista_de_archivos2 (t_archivo *self){
+	list_destroy_and_destroy_elements(self->bloques, (void*) eliminar_lista_de_bloques2);
+	free(self);
+}
+
 static void eliminar_lista_de_bloques(t_bloque *self){
 	list_destroy(self->copias);
 	free(self);
@@ -1781,30 +1791,15 @@ static void eliminar_lista_de_directorio(t_dir *self){
 }
 
 void FormatearFilesystem() {
-	int i,j,k;
+	int i,k;
 	printf("Eligió  Formatear el MDFS\n");
 	//=====================================================================
 	//======================= FORMATEO PARTE 1 ============================
 	//==================ELIMINO LA LISTA DE ARCHIVOS=======================
 	//=====================================================================
-	t_archivo *archi;
-	t_bloque *bloq;
-	int cantidad_archivos,cantidad_bloques,cantidad_copias;
-	cantidad_archivos=list_size(archivos);
-	for (i=0;i<cantidad_archivos;i++){
-		archi=list_get(archivos,i);
-		cantidad_bloques=list_size(archi->bloques);
-		for (j=0;j<cantidad_bloques;j++){
-			bloq=list_get(archi->bloques,j);
-			cantidad_copias=list_size(bloq->copias);
-			for (k=0;k<cantidad_copias;k++){
-				list_remove_and_destroy_element(bloq->copias,k,(void*)eliminar_lista_de_copias);
-			}
-			list_remove_and_destroy_element(archi->bloques,j,(void*)eliminar_lista_de_bloques);
-		}
-		list_remove_and_destroy_element(archivos,i,(void*)eliminar_lista_de_archivos);
-	}
-
+	list_destroy_and_destroy_elements(archivos, (void*) eliminar_lista_de_archivos2);
+	archivos=list_create(); //queda la lista vacía
+	printf("Cantidad de archivos en MDFS: %d\n", list_size(archivos));
 	//=====================================================================
 	//======================= FORMATEO PARTE 2 ============================
 	//================= VACIO LOS NODOS PARA QUEDE 0KM ====================
