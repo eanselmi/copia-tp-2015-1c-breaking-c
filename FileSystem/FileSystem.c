@@ -1761,8 +1761,8 @@ static void eliminar_lista_de_copias (t_copias *self){
 	free(self);
 }
 static void eliminar_lista_de_nodos (t_nodo *self){
-	//bitarray_destroy(self->bloques_del_nodo);
-	//free(self->bloques_bitarray);
+	bitarray_destroy(self->bloques_del_nodo);
+	free(self->bloques_bitarray);
 	free(self->ip);
 	free(self);
 }
@@ -2588,6 +2588,7 @@ int copiar_lista_de_nodos(t_list* destino, t_list* origen){
 		t_nodo *original;
 		t_nodo *copia=malloc(sizeof(t_nodo));
 		original=list_get(origen,i);
+
 		memset(copia->nodo_id, '\0', 6);
 		strcpy(copia->nodo_id, original->nodo_id);
 		copia->socket = original->socket;
@@ -2600,10 +2601,9 @@ int copiar_lista_de_nodos(t_list* destino, t_list* origen){
 		copia->puerto_escucha_nodo = original->puerto_escucha_nodo;
 
 		//Creo e inicializo el bitarray del nodo, 0 es bloque libre, 1 es blloque ocupado
-		//Como recien se esta conectadno el nodo, todos sus bloques son libres
 		for (k = 8; k < original->bloques_totales; k += 8);
-		copia->bloques_bitarray = malloc(i / 8);
-		copia->bloques_del_nodo = bitarray_create(copia->bloques_bitarray, i / 8);
+		copia->bloques_bitarray = malloc(k / 8);
+		copia->bloques_del_nodo = bitarray_create(copia->bloques_bitarray, k / 8);
 		for (k = 0; k < copia->bloques_totales; k++)
 			if (!bitarray_test_bit(original->bloques_del_nodo, k))
 				bitarray_clean_bit(copia->bloques_del_nodo, k);
