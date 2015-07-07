@@ -38,7 +38,7 @@ t_list* listaNodosConectados; //Lista con los nodos conectados
 t_list* listaMappersConectados; //Lista con los mappers conectados
 t_list* listaReducersConectados; //lista con los reducers conectados
 t_list* archivosAbiertos; //Archivos ya abiertos que otro nodo me pide que pase renglon
-sem_t semBloques[205]; //Soporta nodos de hasta 4GB 205 *20MB = 4100 MB --> ~4GB  (serían 205 bloques)
+//sem_t semBloques[205]; //Soporta nodos de hasta 4GB 205 *20MB = 4100 MB --> ~4GB  (serían 205 bloques)
 int nroMap; //Maps totales
 int nroReduce; //Reduce totales
 pthread_mutex_t mutexMap=PTHREAD_MUTEX_INITIALIZER;
@@ -53,7 +53,7 @@ int main(int argc , char *argv[]){
 	//-------------------------- Cuerpo ppal del programa ---------------------------------------
 	//------------ Variables locales a la funcion main --------------------
 
-	int semBloque;
+//	int semBloque;
 	pthread_t escucha; // Hilo que va a escuchar nuevas conexiones
 	configurador= config_create("resources/nodoConfig.conf"); //se asigna el archivo de configuración especificado en la ruta
 	logger = log_create("./nodoLog.log", "Nodo", true, LOG_LEVEL_INFO);
@@ -83,9 +83,9 @@ int main(int argc , char *argv[]){
 	nroMap=0; //Inicializo maps totales a 0
 	nroReduce=0; //Inicializo reduces totales a 0
 
-	for(semBloque=0;semBloque<*bloquesTotales;semBloque++){
-		sem_init(&semBloques[semBloque],0,1);
-	}
+//	for(semBloque=0;semBloque<*bloquesTotales;semBloque++){
+//		sem_init(&semBloques[semBloque],0,1);
+//	}
 
 	//Estructura para conexion con FS
 	filesystem.sin_family = AF_INET;
@@ -651,12 +651,13 @@ void ordenarMapper(char* pathMapperTemporal, char* nombreMapperOrdenado){
 
 void ejecutarMapper(char *script,int bloque,char *resultado){
 	int outfd[2];
-	int bak,pid,archivo_resultado,tamanioAMapear;
+	int bak,pid,archivo_resultado;
+//	int tamanioAMapear;
 	bak=0;
 	char *path;
 	char *bloqueAMapear;
-	sem_t terminoElMap;
-	sem_init(&terminoElMap,0,1);
+//	sem_t terminoElMap;
+//	sem_init(&terminoElMap,0,1);
 	pipe(outfd); /* Donde escribe el padre */
 	if((pid=fork())==-1){
 		perror("fork mapper");
@@ -682,24 +683,24 @@ void ejecutarMapper(char *script,int bloque,char *resultado){
 		perror("Ejecucion map:");
 		log_error(logger,"Error en la ejecucion de un map");
 	}
-	sem_post(&terminoElMap);
+//	sem_post(&terminoElMap);
 	}
 	else
 	{
 
 	bloqueAMapear=getBloque(bloque);
 
-	for(tamanioAMapear=BLOCK_SIZE;tamanioAMapear>=0;tamanioAMapear--){
-		if(bloqueAMapear[tamanioAMapear]=='\n'){
-			break;
-		}
-	}
+//	for(tamanioAMapear=BLOCK_SIZE;tamanioAMapear>=0;tamanioAMapear--){
+//		if(bloqueAMapear[tamanioAMapear]=='\n'){
+//			break;
+//		}
+//	}
 
-	write(outfd[1],bloqueAMapear,tamanioAMapear);/* Escribe en el stdin del hijo el contenido del bloque*/
+	write(outfd[1],bloqueAMapear,strlen(bloqueAMapear));/* Escribe en el stdin del hijo el contenido del bloque*/
 
 	close(outfd[0]); /* Estan siendo usados por el hijo */
 	close(outfd[1]);
-	sem_wait(&terminoElMap);
+//	sem_wait(&terminoElMap);
 	dup2(bak,STDOUT_FILENO);
 	}
 
@@ -751,14 +752,14 @@ void setBloque(uint32_t numBloque,char* datosAEscribir){
 	* datosAEscribir, recibido por parametro, tiene los datos que quiero escribir
 	* Con el memcpy a ubicacionEnElFile, escribo en ese bloque
 	*/
-	sem_wait(&semBloques[numBloque]);
+	//sem_wait(&semBloques[numBloque]);
 
 	char *ubicacionEnElFile;
 	//ubicacionEnElFile=malloc(BLOCK_SIZE);
 	ubicacionEnElFile=fileDeDatos+(BLOCK_SIZE*(numBloque));
 	memcpy(ubicacionEnElFile,datosAEscribir,BLOCK_SIZE); //Copia el valor de BLOCK_SIZE bytes desde la direccion de memoria apuntada por datos a la direccion de memoria apuntada por fileDeDatos
 	log_info(logger_archivo,"Se escribió el bloque %d",numBloque);
-	sem_post(&semBloques[numBloque]);
+	//sem_post(&semBloques[numBloque]);
 
 	return;
 }
@@ -770,7 +771,7 @@ char* getBloque(int numBloque){
 	* Con el memcpy a datosLeidos, copio ese bloque
 	*/
 
-	sem_wait(&semBloques[numBloque]);
+	//sem_wait(&semBloques[numBloque]);
 	//char* datosLeidos;
 	char *ubicacionEnElFile;
 	//datosLeidos=malloc(BLOCK_SIZE);
@@ -778,7 +779,7 @@ char* getBloque(int numBloque){
 	ubicacionEnElFile=fileDeDatos+(BLOCK_SIZE*(numBloque));
 	//memcpy(datosLeidos,ubicacionEnElFile,BLOCK_SIZE); //Copia el valor de BLOCK_SIZE bytes desde la direccion de memoria apuntada por fileDeDatos a la direccion de memoria apuntada por datosLeidos
 	log_info(logger_archivo,"Se leyó el bloque %d",numBloque);
-	sem_post(&semBloques[numBloque]);
+	//sem_post(&semBloques[numBloque]);
 	return ubicacionEnElFile;
 }
 
