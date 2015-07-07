@@ -369,7 +369,7 @@ void *manejador_de_escuchas(){
 
 							bzero(buff_resultado, 4096);
 							while((bytes = fread(buff_resultado, sizeof(char),4096,archivo_resultado))>0){
-								if(send(conectorFS, buff_resultado, bytes, MSG_WAITALL) < 0){
+								if(send(conectorFS, buff_resultado, bytes, 0) < 0){
 									perror ("Send resultado");
 									exit(1);
 								}
