@@ -3261,8 +3261,12 @@ void BorrarBloque() {
 
 
 void CopiarBloque() {
-	char *nodo_origen=string_new();
-	char *nodo_destino=string_new();
+	//char *nodo_origen=string_new();
+	char nodo_origen[6];
+	memset(nodo_origen,'\0',6);
+	//char *nodo_destino=string_new();
+	char nodo_destino[6];
+	memset(nodo_destino,'\0',6);
 	int bloque_origen, bloque_destino;
 	char handshake[15]="copiar_archivo";
 	int i,j,k;
@@ -3436,7 +3440,8 @@ void AgregarNodo(){
 	int i,cantNodos, nodoEncontrado;
 	nodoEncontrado =0; //0 no lo encontró, 1 lo encontró
 	t_nodo* nodoAEvaluar;
-	char* nodoID = string_new();
+	char nodoID[6];
+	memset(nodoID,'\0',6);
 	cantNodos= list_size(nodos);
 	for (i=0;i<cantNodos;i++){
 		nodoAEvaluar = list_get(nodos,i);
@@ -3485,7 +3490,9 @@ void EliminarNodo(){
 	int i,cantNodos, nodoEncontrado;
 	nodoEncontrado =0; //0 no lo encontró, 1 lo encontró
 	t_nodo* nodoAEvaluar;
-	char* nodoID = string_new();
+	char nodoID[6];
+	memset(nodoID,'\0',6);
+
 	cantNodos= list_size(nodos);
 	for (i=0;i<cantNodos;i++){
 		nodoAEvaluar = list_get(nodos,i);
