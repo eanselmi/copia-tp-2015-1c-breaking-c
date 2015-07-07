@@ -160,6 +160,8 @@ int main(int argc, char *argv[]) {
 					close(newfd);
 				}
 			}
+			free(bloquesTotales);
+			free(puerto_escucha_nodo);
 		} else {
 			close(newfd);
 			printf("\nSe conecto algo pero no se que fue, lo rechazo\n");
@@ -954,7 +956,7 @@ void actualizar_persistencia_copiar_bloque(char* nodoId,int bloque,char* nodoId_
 
 
 void listar_directorios(){
-	t_dir *dir=malloc(sizeof(t_dir));
+	t_dir *dir;
 	int i;
 	if (list_size(directorios)==0){
 		printf ("No hay directorios cargados\n");
@@ -1084,7 +1086,7 @@ void actualizar_nodo_persistencia(t_nodo *nodo){
 
 int validar_nodo_nuevo(char nodo_id[6]) {
 	int i;
-	t_nodo *tmp=malloc(sizeof(t_nodo));
+	t_nodo *tmp;
 	for (i = 0; i < list_size(nodos); i++) {
 		tmp = list_get(nodos, i);
 		if (strcmp(tmp->nodo_id, nodo_id) == 0)
@@ -1094,7 +1096,7 @@ int validar_nodo_nuevo(char nodo_id[6]) {
 }
 int validar_nodo_reconectado(char nodo_id[6]) {
 	int i;
-	t_nodo *tmp=malloc(sizeof(t_nodo));
+	t_nodo *tmp;
 	for (i = 0; i < list_size(nodos); i++) {
 		tmp = list_get(nodos, i);
 		if ((strcmp(tmp->nodo_id, nodo_id) == 0) && (tmp->estado_red==0))
@@ -1113,6 +1115,7 @@ char *buscar_nodo_id(char *ip, int port) {
 			return id_temporal;
 		}
 	}
+	free(id_temporal);
 	return NULL;
 }
 
@@ -1153,13 +1156,14 @@ char *obtener_md5(char *bloque) {
 			return resultado_md5;
 		}else{
 			printf ("ERROR READ RESULT\n");
-			exit(-1);
+			free(resultado_md5);
+			return NULL;
 		}
 }
 
 void listar_nodos_conectados(t_list *nodos) {
 	int i, j, cantidad_nodos;
-	t_nodo *elemento=malloc(sizeof(t_nodo));
+	t_nodo *elemento;
 	cantidad_nodos = list_size(nodos);
 	for (i = 0; i < cantidad_nodos; i++) {
 		elemento = list_get(nodos, i);
@@ -1293,7 +1297,7 @@ void *connection_handler_escucha(void) {
 										exit(-1);
 									}
 									for (cant_nodos=0;cant_nodos<list_size(nodos);cant_nodos++){
-										t_nodo *nodo_para_marta=malloc(sizeof(t_nodo));
+										t_nodo *nodo_para_marta;
 										nodo_para_marta=list_get(nodos,cant_nodos);
 										if ((send(marta_sock, nodo_para_marta->nodo_id,sizeof(nodo_para_marta->nodo_id), MSG_WAITALL)) == -1) {
 											perror("send");
@@ -1327,7 +1331,7 @@ void *connection_handler_escucha(void) {
 										exit(-1);
 									}
 									for (cantidad_archivos=0;cantidad_archivos<list_size(archivos);cantidad_archivos++){
-										t_archivo *unArchivo=malloc(sizeof(t_archivo));
+										t_archivo *unArchivo;
 										unArchivo=list_get(archivos,cantidad_archivos);
 										if ((send(marta_sock, unArchivo->nombre,sizeof(unArchivo->nombre), MSG_WAITALL)) == -1) {
 											perror("send");
@@ -1347,7 +1351,7 @@ void *connection_handler_escucha(void) {
 										}
 
 										for (cantidad_bloques=0;cantidad_bloques<list_size(unArchivo->bloques);cantidad_bloques++){
-											t_bloque *unBloque=malloc(sizeof(t_bloque));
+											t_bloque *unBloque;
 											unBloque=list_get(unArchivo->bloques,cantidad_bloques);
 											int cantidad_copias=list_size(unBloque->copias);
 											if ((send(marta_sock, &cantidad_copias,sizeof(int), MSG_WAITALL)) == -1) {
@@ -1356,7 +1360,7 @@ void *connection_handler_escucha(void) {
 												exit(-1);
 											}
 											for (cantidad_copias=0;cantidad_copias<list_size(unBloque->copias);cantidad_copias++){
-												t_copias *unaCopia=malloc(sizeof(t_copias));
+												t_copias *unaCopia;
 												unaCopia=list_get(unBloque->copias,cantidad_copias);
 												char nodo_id_para_enviar[6];
 												memset(nodo_id_para_enviar,'\0',6);
@@ -1684,7 +1688,6 @@ uint32_t BuscarPadre(char* path) {
 //Buscar la posición del nodo de un archivo de la lista t_archivo por el nombre del archivo y el id del padre
 int BuscarArchivoPorNombre(const char *path, uint32_t idPadre) {
 	t_archivo* archivo;
-	archivo = malloc(sizeof(t_archivo));
 	int i, posicionArchivo;
 	char* nombreArchivo;
 	int posArchivo = 0;
@@ -1734,7 +1737,7 @@ int BuscarMenorIndiceLibre(char indiceDirectorios[]) {
 
 void modificar_estado_nodo(char nodo_id[6], int socket, int port, int estado, int estado_red) {
 	int i;
-	t_nodo *tmp=malloc(sizeof(t_nodo));
+	t_nodo *tmp;
 	for (i = 0; i < list_size(nodos); i++) {
 		tmp = list_get(nodos, i);
 
@@ -1784,14 +1787,17 @@ void FormatearFilesystem() {
 	//======================= FORMATEO PARTE 1 ============================
 	//==================ELIMINO LA LISTA DE ARCHIVOS=======================
 	//=====================================================================
-	t_archivo *archi=malloc(sizeof(t_archivo));
-	t_bloque *bloq=malloc(sizeof(t_bloque));
-
-	for (i=0;i<list_size(archivos);i++){
+	t_archivo *archi;
+	t_bloque *bloq;
+	int cantidad_archivos,cantidad_bloques,cantidad_copias;
+	cantidad_archivos=list_size(archivos);
+	for (i=0;i<cantidad_archivos;i++){
 		archi=list_get(archivos,i);
-		for (j=0;j<list_size(archi->bloques);j++){
+		cantidad_bloques=list_size(archi->bloques);
+		for (j=0;j<cantidad_bloques;j++){
 			bloq=list_get(archi->bloques,j);
-			for (k=0;k<list_size(bloq->copias);k++){
+			cantidad_copias=list_size(bloq->copias);
+			for (k=0;k<cantidad_copias;k++){
 				list_remove_and_destroy_element(bloq->copias,k,(void*)eliminar_lista_de_copias);
 			}
 			list_remove_and_destroy_element(archi->bloques,j,(void*)eliminar_lista_de_bloques);
@@ -2158,7 +2164,6 @@ void MoverArchivo() {
 
 long ExisteEnLaLista(t_list* listaDirectorios, char* nombreDirectorioABuscar,uint32_t idPadre) {
 	t_dir* elementoDeMiLista;
-	elementoDeMiLista = malloc(sizeof(t_dir));
 	long encontrado = -1; //trae -1 si no lo encuentra, sino trae el id del elemento
 	//uso long para encontrado para cubrir el universo de uint32_t y además el -1 que necesito si no encuentro
 	int tamanioLista = list_size(listaDirectorios);
@@ -2256,8 +2261,8 @@ void eliminar_listas(t_list *archivos_l, t_list *directorios_l, t_list *nodos_l)
 	//==================ELIMINO LA LISTA DE ARCHIVOS=======================
 	//=====================================================================
 	if (archivos_l!=NULL){
-		t_archivo *archi=malloc(sizeof(t_archivo));
-		t_bloque *bloq=malloc(sizeof(t_bloque));
+		t_archivo *archi;
+		t_bloque *bloq;
 
 		for (i=0;i<list_size(archivos_l);i++){
 			archi=list_get(archivos_l,i);
@@ -2474,7 +2479,6 @@ void MoverDirectorio() {
 		char nombreDirAMover[200];
 		memset(nombreDirAMover, '\0', 200);
 		t_dir* elementoDeMiLista;
-		elementoDeMiLista = malloc(sizeof(t_dir));
 		int i = 0;
 		uint32_t idDirAMover;
 		uint32_t idNuevoPadre;
@@ -2558,7 +2562,7 @@ bool nodos_mas_libres(t_nodo *vacio, t_nodo *mas_vacio) {
 int copiar_lista_de_archivos(t_list* destino, t_list* origen){
 	int i,j,k;
 	for (i=0;i<list_size(origen);i++){
-		t_archivo *original=malloc(sizeof(t_archivo));
+		t_archivo *original;
 		t_archivo *copia=malloc(sizeof(t_archivo));
 		original=list_get(origen,i);
 		copia->bloques=original->bloques;
@@ -2566,12 +2570,12 @@ int copiar_lista_de_archivos(t_list* destino, t_list* origen){
 		copia->padre=original->padre;
 		copia->bloques=list_create();
 		for (j=0;j<list_size(original->bloques);j++){
-			t_bloque *bloque_original=malloc(sizeof(t_bloque));
+			t_bloque *bloque_original;
 			t_bloque *bloque_copia=malloc(sizeof(t_bloque));
 			bloque_original=list_get(original->bloques,j);
 			bloque_copia->copias=list_create();
 			for(k=0;k<list_size(bloque_original->copias);k++){
-				t_copias *copia_original=malloc(sizeof(t_copias));
+				t_copias *copia_original;
 				t_copias *copia_copia=malloc(sizeof(t_copias));
 				copia_original=list_get(bloque_original->copias,k);
 				copia_copia->bloqueNodo=copia_original->bloqueNodo;
@@ -2968,7 +2972,7 @@ int CopiarArchivoAMDFS(int flag, char* archvo_local, char* archivo_mdfs){
     		return -1;
     	}
     	printf ("Copia lista de nodos\n");
-    	//eliminar_listas(NULL,NULL,nodos_temporales);
+    	eliminar_listas(NULL,NULL,nodos_temporales);
     	printf ("Pasa eliminar lista nodos\n");
     	//Si llego aca es porque tod0 salio bien y actualizo la lista de archivos
     	list_add(archivos_temporales,archivo_temporal);
@@ -3100,7 +3104,7 @@ int obtenerEstadoDelBloque(char *nodo,int bloqueNodo){
 }
 
 int obtenerEstadoDelNodo(char* nodo){
-	t_nodo *unNodo=malloc(sizeof(t_nodo));
+	t_nodo *unNodo;
 	int i;
 	for (i=0;i<list_size(nodos);i++){
 		unNodo=list_get(nodos,i);
@@ -3277,8 +3281,8 @@ void CopiarBloque() {
 	printf ("Ingrese bloque de destino:\n");
 	scanf ("%d",&bloque_destino);
 
-	t_nodo *origen = malloc(sizeof(t_nodo));
-	t_nodo *destino = malloc(sizeof(t_nodo));
+	t_nodo *origen;
+	t_nodo *destino;
 
 	if(!obtenerEstadoDelNodo(nodo_origen)){
 		printf ("El nodo seleccionado como origen no esta disponible o no existe\n");
@@ -3358,12 +3362,13 @@ void CopiarBloque() {
 	strcpy(cadena_para_md5,combo.buf_20mb);
 	strcpy(copia_temporal->md5,obtener_md5(cadena_para_md5));
 	copia_temporal->nodo=strdup(nodo_destino);
+	free(cadena_para_md5);
 
 
 	//Busco el bloque en el destino para agregar la nueva copia del bloque
-	t_archivo *unArchivo=malloc(sizeof(t_archivo));
-	t_bloque *unBloque=malloc(sizeof(t_bloque));
-	t_copias *unaCopia=malloc(sizeof(t_copias));
+	t_archivo *unArchivo;
+	t_bloque *unBloque;
+	t_copias *unaCopia;
 	int bloque_encontrado=0;
 	for (i=0;i<list_size(archivos);i++){
 		unArchivo=list_get(archivos,i);
@@ -3575,6 +3580,7 @@ int VerBloque() {
 			printf ("El md5 del bloque que traje es: %s\n",obtener_md5(bloqueParaVer));
 			printf("El bloque se copio en el archivo: ./archBloqueParaVer.txt\n");
 			fclose(archivoParaVerPath);
+			free(bloqueParaVer);
 			break;
 		}
 	}
