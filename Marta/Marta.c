@@ -35,6 +35,7 @@ t_list* listaArchivos; //lista de archivos del FS
 char identificacion[BUF_SIZE]; //para el mensaje que envie al conectarse para identificarse, puede cambiar
 int nroJob; //Variable global utilizada por cada hilo Job para diferenciar el nombre de un resultado Map/Reduce
 pthread_mutex_t mutexNroJob=PTHREAD_MUTEX_INITIALIZER; //Para que cada Job tenga su numero diferente utilizaran este mutex
+pthread_mutex_t mutexModNodo=PTHREAD_MUTEX_INITIALIZER;
 
 int main(int argc, char**argv){
 
@@ -1287,7 +1288,9 @@ void *atenderJob (int *socketJob) {
 			list_add(listaMappers,mapper);
 
 			//Buscar nodoAux en la lista general comparando por nodo_id y sumarle cantMapper
+			pthread_mutex_lock(&mutexModNodo);
 			sumarCantMapper(nodoAux->nodo_id);
+			pthread_mutex_unlock(&mutexModNodo);
 
 			free(nombreArchivoTemp);
 			free(pathArchivoTemp);
@@ -1468,10 +1471,13 @@ void *atenderJob (int *socketJob) {
 			nuevoMap->resultado=2;
 			nuevoMap->padreArchivoJob=map->padreArchivoJob;
 			list_add(listaMappers,nuevoMap);
+
+			pthread_mutex_lock(&mutexModNodo);
 			// le resto cantMappers al nodo que le salio mal el MAP
 			restarCantMapper(map->nodoId);
 			// le sumo cantMappers al nodo que acabo de mandar a hacer MAP
 			sumarCantMapper(nuevoMap->nodoId);
+			pthread_mutex_unlock(&mutexModNodo);
 
 		}
 		if(map->resultado==0){
@@ -1479,7 +1485,10 @@ void *atenderJob (int *socketJob) {
 			printf("El map %s salio ok\n",map->archivoResultadoMap);
 //			printf("El estado del nodo %s es habilitado\n", nodoAux->nodo_id);
 			// buscar en la lista del struct el nodo_id y luego buscarlo en la lista gral de nodos y restarle 1 a su catMappers
+			pthread_mutex_lock(&mutexModNodo);
 			restarCantMapper(map->nodoId);
+			pthread_mutex_unlock(&mutexModNodo);
+
 		}
 	}
 
@@ -1491,7 +1500,8 @@ void *atenderJob (int *socketJob) {
 * ************************************************************************************************************************************************/
 	unJob.reducePendientes = 1;
 	printf("Si es con combiner la cantidad de reduce pendientes es %d\n",unJob.reducePendientes);
-	sleep(3);
+	sleep(5);
+
 	//Si es sin combiner manda a hacer reduce al nodo que tenga mas archivos resultados MAP
 	if(strcmp(mensajeCombiner, "NO")==0){
 		int posicionMapper,cantNodosMapOk;
@@ -1631,7 +1641,10 @@ void *atenderJob (int *socketJob) {
 		}
 
 		t_nodo* nodoASumarReduce=buscarNodoPorIPYPuerto(nodoReducer.ip_nodoPpal,nodoReducer.puerto_nodoPpal);
+
+		pthread_mutex_lock(&mutexModNodo);
 		sumarCantReducers(nodoASumarReduce->nodo_id);
+		pthread_mutex_unlock(&mutexModNodo);
 
 		printf("Se envio un reduce sin combiner\n");
 		estadoNodos();
@@ -1656,7 +1669,10 @@ void *atenderJob (int *socketJob) {
 				log_error(logger,"Fallo el envío al Job de que aborte por falla de un reduce");
 			}
 			t_nodo *nodoARestar = buscarNodoPorIPYPuerto(respuestaReduceFinal.ip_nodo,respuestaReduceFinal.puerto_nodo);
+			pthread_mutex_lock(&mutexModNodo);
 			restarCantReducers(nodoARestar->nodo_id);
+			pthread_mutex_unlock(&mutexModNodo);
+
 			close(*socketJob);
 			pthread_exit((void*)0);
 		}
@@ -1666,7 +1682,11 @@ void *atenderJob (int *socketJob) {
 //			printf("El estado del nodo %s es habilitado\n", nodoMasRep );
 			printf("Reduce %s exitoso\n",respuestaReduceFinal.archivoResultadoReduce);
 			t_nodo *nodoARestar = buscarNodoPorIPYPuerto(respuestaReduceFinal.ip_nodo,respuestaReduceFinal.puerto_nodo);
+
+			pthread_mutex_lock(&mutexModNodo);
 			restarCantReducers(nodoARestar->nodo_id);
+			pthread_mutex_unlock(&mutexModNodo);
+
 		}
 
 		printf("Termino el reduce sin combiner\n");
@@ -1864,7 +1884,11 @@ void *atenderJob (int *socketJob) {
 						//exit(-1);
 					}
 				}
+
+				pthread_mutex_lock(&mutexModNodo);
 				sumarCantReducers(nodoPrincipal->nodo_id);
+				pthread_mutex_unlock(&mutexModNodo);
+
 				list_add(listaReducerParcial,nodoReducer);
 			}
 			if(list_size(listaMapDelNodo)==1){
@@ -1899,7 +1923,11 @@ void *atenderJob (int *socketJob) {
 				printf("El estado del nodo %s es deshabilitado\n", nodoARestar->nodo_id);
 				//Se aborta la ejecución de Reduce
 				log_info(logger,"Falló el Reduce %s. Se abortará el job",respuestaReduce.archivoResultadoReduce);
+
+				pthread_mutex_lock(&mutexModNodo);
 				restarCantReducers(nodoARestar->nodo_id);
+				pthread_mutex_unlock(&mutexModNodo);
+
 				jobAbortado=1; //Se marca el flag del job abortado. Se esperan las demas respuestas para bajar 1 en cantreducers de los nodos
 			}
 			if(respuestaReduce.resultado == 0){
@@ -1909,7 +1937,10 @@ void *atenderJob (int *socketJob) {
 				t_nodo *nodoARestar = buscarNodoPorIPYPuerto(respuestaReduce.ip_nodo,respuestaReduce.puerto_nodo);
 			//	printf("En el nodo %s se ejecutó reduce con combiner\n", nodoARestar->nodo_id);
 			//	printf("El estado del nodo %s es habilitado\n", nodoARestar->nodo_id);
+				pthread_mutex_lock(&mutexModNodo);
 				restarCantReducers(nodoARestar->nodo_id);
+				pthread_mutex_unlock(&mutexModNodo);
+
 			}
 		}
 
@@ -1932,7 +1963,7 @@ void *atenderJob (int *socketJob) {
 
 		/*************************** R E D U C E   F I N A L **********************************************/
 
-		sleep(1);
+		sleep(2);
 		//Buscar el nodo con menos carga para asignar a hacer reduce final
 		int posDistintos;
 		t_list* listaMismoNodo = list_create(); //Lista para buscar el nodo con menos carga
@@ -2040,7 +2071,9 @@ void *atenderJob (int *socketJob) {
 			}
 		}
 
+		pthread_mutex_lock(&mutexModNodo);
 		sumarCantReducers(nodoRF->nodo_id);
+		pthread_mutex_unlock(&mutexModNodo);
 
 		printf("Se envio reduce final --> Se espera la respuesta\n");
 		estadoNodos();
@@ -2066,7 +2099,10 @@ void *atenderJob (int *socketJob) {
 			if(send(*socketJob,jobAborta,sizeof(jobAborta),MSG_WAITALL)==-1){
 				log_error(logger,"Fallo el envío al Job de que aborte por falla de un reduce");
 			}
+			pthread_mutex_lock(&mutexModNodo);
 			restarCantReducers(nodoARestar->nodo_id);
+			pthread_mutex_unlock(&mutexModNodo);
+
 			close(*socketJob);
 			pthread_exit((void*)0);
 		}
@@ -2076,7 +2112,10 @@ void *atenderJob (int *socketJob) {
 			printf("En el nodo %s se ejecutó reduce con combiner\n", nodoARestar->nodo_id);
 			printf("El estado del nodo %s es habilitado\n", nodoARestar->nodo_id);
 			printf("Reduce %s exitoso\n",respuestaReduceFinal.archivoResultadoReduce);
+			pthread_mutex_lock(&mutexModNodo);
 			restarCantReducers(nodoARestar->nodo_id);
+			pthread_mutex_unlock(&mutexModNodo);
+
 		}
 
 		printf("Termino el reduce con combiner\n");
