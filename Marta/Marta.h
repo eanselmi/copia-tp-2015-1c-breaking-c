@@ -111,3 +111,4 @@ int cantidadTotalDeBloques(char* archivosJob);
 t_list * buscarBloquesTotales(char* nombreArchivo);
 void estadoNodos();
 
+
