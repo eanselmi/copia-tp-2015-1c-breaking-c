@@ -1490,10 +1490,10 @@ void *connection_handler_escucha(void) {
 								char nodo_resultado[6];
 								memset(nodo_resultado,'\0',6);
 								t_nodo *nodo_con_resultado;
-								int n_nodo;
+								int n_nodo,corta=0;
 								int bytes;
-								char buff_archivo_resultado[MENSAJE_SIZE];
-								memset(buff_archivo_resultado,'\0',MENSAJE_SIZE);
+								char buff_archivo_resultado[4096];
+								memset(buff_archivo_resultado,'\0',4096);
 								char ruta_local[100];
 								memset(ruta_local,'\0',100);
 								strcpy(ruta_local,"/tmp/");
@@ -1528,20 +1528,25 @@ void *connection_handler_escucha(void) {
 								}
 								//Recibir archivo resultado del nodo y guardarlo en /tmp con el nombre del archivo
 								archivo_resultado=fopen(ruta_local,"w");
-								bzero(buff_archivo_resultado,4096);
-								while((bytes = recv(nodo_con_resultado->socket, buff_archivo_resultado, 4096, 0)) > 0){
-									int para_escribir = fwrite(buff_archivo_resultado, sizeof(char), bytes, archivo_resultado);
-									if(para_escribir < bytes){
-										perror("Error en fwrite  del archivo resultado\n");
+								memset(buff_archivo_resultado,'\0',4096);
+								int byteLeido;
+								while(corta!=1){
+									if((bytes=recv(nodo_con_resultado->socket,buff_archivo_resultado,4096,MSG_WAITALL))<=0){
+										perror("recv");
+										log_error(logger,"Fallo al recibir el resultado del nodo");
 									}
-									bzero(buff_archivo_resultado, 4096);
-									if (bytes == 0 || bytes != 4096){
+
+									for(byteLeido=4096;byteLeido>=0;byteLeido--){
+										if (buff_archivo_resultado[byteLeido-1]=='\n') break;
+									}
+									if(strcmp(buff_archivo_resultado,"corta")==0){
+										corta=1;
 										break;
 									}
+									fwrite(buff_archivo_resultado,sizeof(char),byteLeido,archivo_resultado);
+									memset(buff_archivo_resultado,'\0',4096);
 								}
-								if(bytes < 0){
-									perror ("error recv resultado");
-								}
+
 								fclose(archivo_resultado);
 
 								printf ("Termino de recibir el archivo\n");
