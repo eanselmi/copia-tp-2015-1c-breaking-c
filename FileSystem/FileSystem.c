@@ -1005,8 +1005,7 @@ static t_nodo *agregar_nodo_a_lista(char nodo_id[6], int socket, int est, int es
 	memset(nodo_temporal->nodo_id, '\0', 6);
 	strcpy(nodo_temporal->nodo_id, nodo_id);
 	nodo_temporal->socket = socket;
-	//nodo_temporal->estado = est; por ahora lo comento para forzar el estado a 1
-	nodo_temporal->estado = 0;
+	nodo_temporal->estado = est;
 	nodo_temporal->estado_red = est_red;
 	nodo_temporal->ip = strdup(ip);
 	nodo_temporal->puerto = port;
