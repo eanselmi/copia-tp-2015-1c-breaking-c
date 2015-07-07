@@ -946,6 +946,8 @@ void *connection_handler_jobs(){
 								}
 								if(copiaEncontrada == 1) break;
 							}
+
+
 						}
 
 						// fin de update eliminar bloque
@@ -982,11 +984,20 @@ void *connection_handler_jobs(){
 								exit(-1);
 							}
 							printf ("...Bloque del borrar bloque: %d\n",bloqueNodoDestino);
-							//TODO agregar bloque a la estructura de archivo
+
+							t_list* B1;
+							t_bloque* B;
+							B1 = buscarBloques(nombreArchivoNovedad, padreArchivoNovedad);
+							B = list_get(B1, bloqueNodoDestino);
+							t_copias *D = malloc(sizeof(t_copias));
+							memset(D->nodo,'\0',6);
+							strcpy(D->nodo,nodoId);
+							D->bloqueNodo = bloqueNodo;
+							list_add(B->copias, D);
 
 						}
 
-
+						//Fin de update copiar bloque
 						if (strcmp(identificacion,"nodo_desc")==0){
 							printf ("Voy a actualizar el estado de un nodo desconectado\n");
 							memset(nodoId,'\0',6);
