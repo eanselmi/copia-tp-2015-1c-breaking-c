@@ -1079,9 +1079,8 @@ void *atenderJob (int *socketJob) {
 	/*Sumamos la cantidad total de bloques del todos los archivo de un JOB.
 	 * Esa cantidad es la cantida total de los map que se deben ejecutar.*/
 
-	t_job *unJob;
-	unJob->mapperPendientes =  cantidadTotalDeBloques(archivosDelJob);
-
+	t_job unJob;
+	unJob.mapperPendientes =  cantidadTotalDeBloques(archivosDelJob);
 
 	// Separo el mensaje que recibo con los archivos a trabajar (Job envía todos juntos separados con ,)
 	char** archivos =string_split((char*)archivosDelJob,",");
@@ -1232,7 +1231,7 @@ void *atenderJob (int *socketJob) {
 			}
 			printf("El estado del nodo %s es habilitado\n", nodoAux->nodo_id);
 			printf("El nodo %s está ejecutando map\n", nodoAux->nodo_id);
-
+			printf("La cantidad de map pendiente del job es %d",unJob.mapperPendientes --);
 
 			//Rellenar la estructura t_replanificarMap con el nodo_id del nodo que acabo de mandar a hacer el map y los demas campos
 			// y agregarlos a una lista de mappers que va a manejar marta q va a estar compuesta por las estructuras t_replanificarMap por cada map
@@ -1285,6 +1284,7 @@ void *atenderJob (int *socketJob) {
 		map->resultado = respuestaMap.resultado;
 
 		if(map->resultado ==1){
+			printf("La cantidad de map pendiente del job es %d",unJob.mapperPendientes ++);
 			printf("El map %s falló\n",map->archivoResultadoMap);
 			printf("El nodo: %s esta deshabiltado\n", nodoAux->nodo_id);
 			t_list *nodosQueFallaron;
@@ -2232,17 +2232,16 @@ t_nodo* buscarNodoPorIPYPuerto(char* ipNodo,int puertoNodo){
 int cantidadTotalDeBloques(char* archivosJob){
 	// Separo el mensaje que recibo con los archivos a trabajar (Job envía todos juntos separados con ,)
 	char** archivos =string_split((char*)archivosJob,",");
-	//recorrer los archivos
-	int i;
-	int cantBloquesTotales=0;
 	char **arrayArchivo;
-	char*nombreArchivo = string_new();
 	int cantBloques;
 	int posArchivo;
-	for(i=0; archivos[posArchivo]!=NULL;i++){
-		//por cada archivo recorrer los bloques
-		int posArray;
+	char nombreArchivo[TAM_NOMFINAL];
+	memset(nombreArchivo,'\0',TAM_NOMFINAL);
+	int cantBloquesTotales = 0;
+	//recorrer los archivos
+	for(posArchivo=0; archivos[posArchivo]!=NULL;posArchivo++){
 		//Separo el nombre del archivo por barras
+		int posArray;
 		arrayArchivo = string_split(archivos[posArchivo], "/");
 		for(posArray=0;arrayArchivo[posArray]!=NULL;posArray++){
 			if(arrayArchivo[posArray+1]==NULL){
@@ -2253,6 +2252,7 @@ int cantidadTotalDeBloques(char* archivosJob){
 		t_list* bloques;
 		bloques=buscarBloquesTotales(nombreArchivo);
 		cantBloques = list_size(bloques);
+		int cantBloquesTotales=0;
 		cantBloquesTotales = cantBloquesTotales + cantBloques;
 	}
 	return cantBloquesTotales;
