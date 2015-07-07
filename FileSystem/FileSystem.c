@@ -1784,14 +1784,17 @@ void FormatearFilesystem() {
 	//======================= FORMATEO PARTE 1 ============================
 	//==================ELIMINO LA LISTA DE ARCHIVOS=======================
 	//=====================================================================
-	t_archivo *archi=malloc(sizeof(t_archivo));
-	t_bloque *bloq=malloc(sizeof(t_bloque));
-
-	for (i=0;i<list_size(archivos);i++){
+	t_archivo *archi;
+	t_bloque *bloq;
+	int cantidad_archivos,cantidad_bloques,cantidad_copias;
+	cantidad_archivos=list_size(archivos);
+	for (i=0;i<cantidad_archivos;i++){
 		archi=list_get(archivos,i);
-		for (j=0;j<list_size(archi->bloques);j++){
+		cantidad_bloques=list_size(archi->bloques);
+		for (j=0;j<cantidad_bloques;j++){
 			bloq=list_get(archi->bloques,j);
-			for (k=0;k<list_size(bloq->copias);k++){
+			cantidad_copias=list_size(bloq->copias);
+			for (k=0;k<cantidad_copias;k++){
 				list_remove_and_destroy_element(bloq->copias,k,(void*)eliminar_lista_de_copias);
 			}
 			list_remove_and_destroy_element(archi->bloques,j,(void*)eliminar_lista_de_bloques);
@@ -2968,7 +2971,7 @@ int CopiarArchivoAMDFS(int flag, char* archvo_local, char* archivo_mdfs){
     		return -1;
     	}
     	printf ("Copia lista de nodos\n");
-    	//eliminar_listas(NULL,NULL,nodos_temporales);
+    	eliminar_listas(NULL,NULL,nodos_temporales);
     	printf ("Pasa eliminar lista nodos\n");
     	//Si llego aca es porque tod0 salio bien y actualizo la lista de archivos
     	list_add(archivos_temporales,archivo_temporal);
