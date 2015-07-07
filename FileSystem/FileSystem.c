@@ -1796,11 +1796,7 @@ void FormatearFilesystem() {
 	//=====================================================================
 	//======================= FORMATEO PARTE 1 ============================
 	//==================ELIMINO LA LISTA DE ARCHIVOS=======================
-<<<<<<< HEAD
 	//=====================================================================	
-=======
-	//=====================================================================
->>>>>>> branch 'master' of https://github.com/sisoputnfrba/tp-2015-1c-breaking-c.git
 	list_destroy_and_destroy_elements(archivos, (void*) eliminar_lista_de_archivos2);
 	archivos=list_create(); //queda la lista vacía
 	printf("Cantidad de archivos en MDFS: %d\n", list_size(archivos));
