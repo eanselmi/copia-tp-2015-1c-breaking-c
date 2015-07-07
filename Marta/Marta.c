@@ -923,8 +923,35 @@ void *connection_handler_jobs(){
 								exit(-1);
 							}
 							printf ("...Bloque del borrar bloque: %d\n",bloqueNodo);
-							//TODO borrar bloque
+							t_list * B;
+							int bloqueEncontrado=0;
+							B = buscarBloques (nombreArchivoNovedad, padreArchivoNovedad);
+							int CB;
+							CB = list_size(B);
+							int PB;
+							t_bloque * block;
+							for(PB = 0; PB < CB; PB++){
+								block = list_get(B, PB);
+								t_copias * CB;
+								int CCB;
+								int PC;
+								CCB = list_size(block->copias);
+								for(PC = 0; PC < CCB; PC ++){
+									CB = list_get(block->copias,PC);
+									if(strcmp(CB->nodo, nodoId) ==0 && CB->bloqueNodo == bloqueNodo){
+										bloqueEncontrado = 1;
+										break;
+									}
+								}
+								if(bloqueEncontrado ==1){
+									list_remove_and_destroy_element(block->copias,PC,(void*)eliminarListaCopias);
+									break;
+								}
+							}
+							if (bloqueEncontrado==1) break;
 						}
+						printf("Se ha borrado el bloque correctamente\n");
+						// fin de update eliminar bloque
 						if (strcmp(identificacion,"nuevo_bloque")==0){
 							printf ("Voy a agregar una nueva copia de un bloque de un archivo a las estructuras\n");
 							if ((nbytes = recv(socket_fs, nombreArchivoNovedad,	sizeof(nombreArchivoNovedad), MSG_WAITALL))	< 0) { //si entra aca es porque hubo un error
