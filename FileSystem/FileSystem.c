@@ -1796,7 +1796,7 @@ void FormatearFilesystem() {
 	//=====================================================================
 	//======================= FORMATEO PARTE 1 ============================
 	//==================ELIMINO LA LISTA DE ARCHIVOS=======================
-	//=====================================================================	
+	//=====================================================================
 	list_destroy_and_destroy_elements(archivos, (void*) eliminar_lista_de_archivos2);
 	archivos=list_create(); //queda la lista vacía
 	printf("Cantidad de archivos en MDFS: %d\n", list_size(archivos));
@@ -1805,7 +1805,7 @@ void FormatearFilesystem() {
 	//================= VACIO LOS NODOS PARA QUEDE 0KM ====================
 	//=====================================================================
 
-	/*t_nodo *unNodo;
+	t_nodo *unNodo;
 	for (i=0;i<list_size(nodos);i++){
 		unNodo=list_get(nodos,i);
 		unNodo->estado=0;    //PONGO EL ESTADO EN NO DISPONIBLE
@@ -1834,7 +1834,7 @@ void FormatearFilesystem() {
 	dir=fopen("directorios","w");
 	fclose(dir);
 	dir=fopen("archivos","w");
-	fclose(dir);*/
+	fclose(dir);
 }
 
 char *obtenerPath(char *nombre, int dir_id){
