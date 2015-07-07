@@ -1076,8 +1076,16 @@ void *atenderJob (int *socketJob) {
 		//exit(-1);
 	}
 
+	/*Sumamos la cantidad total de bloques del todos los archivo de un JOB.
+	 * Esa cantidad es la cantida total de los map que se deben ejecutar.*/
+
+	t_job *unJob;
+	unJob->mapperPendientes =  cantidadTotalDeBloques(archivosDelJob);
+
+
 	// Separo el mensaje que recibo con los archivos a trabajar (Job envía todos juntos separados con ,)
 	char** archivos =string_split((char*)archivosDelJob,",");
+
 
 	//Lo siguiente es para probar que efectivamente se reciba la lista de archivos
 	char nombreArchivo[TAM_NOMFINAL];
@@ -1129,7 +1137,6 @@ void *atenderJob (int *socketJob) {
 
 		bloques=buscarBloques(nombreArchivo,padre);
 		cantBloques = list_size(bloques);
-
 		for(posBloques=0; posBloques<cantBloques; posBloques++){ //recorremos los bloques del archivo que nos mando job
 
 			//Si el archivo no está disponible, no se hace el Job
@@ -1252,6 +1259,7 @@ void *atenderJob (int *socketJob) {
 			list_destroy(copiasNodo);
 		}
 	}
+
 
 	//SE ESPERAN EN UN CICLO FOR LA CANTIDAD DE RESPUESTAS IGUAL A CUANTOS MAPPER SE HALLAN ENVIADO (con tamaño de la listaMappers)
 
@@ -2219,4 +2227,47 @@ t_nodo* buscarNodoPorIPYPuerto(char* ipNodo,int puertoNodo){
 		}
 	}
 	return NULL;
+}
+
+int cantidadTotalDeBloques(char* archivosJob){
+	// Separo el mensaje que recibo con los archivos a trabajar (Job envía todos juntos separados con ,)
+	char** archivos =string_split((char*)archivosJob,",");
+	//recorrer los archivos
+	int i;
+	int cantBloquesTotales=0;
+	char **arrayArchivo;
+	char*nombreArchivo = string_new();
+	int cantBloques;
+	int posArchivo;
+	for(i=0; archivos[posArchivo]!=NULL;i++){
+		//por cada archivo recorrer los bloques
+		int posArray;
+		//Separo el nombre del archivo por barras
+		arrayArchivo = string_split(archivos[posArchivo], "/");
+		for(posArray=0;arrayArchivo[posArray]!=NULL;posArray++){
+			if(arrayArchivo[posArray+1]==NULL){
+				//me quedo con el nombre del archivo
+				strcpy(nombreArchivo,arrayArchivo[posArray]);
+			}
+		}
+		t_list* bloques;
+		bloques=buscarBloquesTotales(nombreArchivo);
+		cantBloques = list_size(bloques);
+		cantBloquesTotales = cantBloquesTotales + cantBloques;
+	}
+	return cantBloquesTotales;
+}
+
+t_list * buscarBloquesTotales(char* nombreArchivo){
+	t_archivo *archivoAux;
+	t_list *bloques;
+	int i;
+	for(i=0; i < list_size(listaArchivos); i++){ //recorre la lista global de archivos
+		archivoAux = list_get(listaArchivos,i);
+		if (strcmp(archivoAux->nombre,nombreArchivo) ==0){ //compara el nomnre del archivo del job con cada nombre de archivo de la lista global
+			bloques = archivoAux->bloques;
+			break;
+		}
+	}
+	return bloques;
 }
