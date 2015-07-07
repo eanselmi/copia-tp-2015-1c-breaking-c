@@ -1003,7 +1003,7 @@ void listarDirectoriosCreados(){
 		for (i = 0; i < cantidadHijosDeRaiz; i++){
 			memset(path,'\0',200);
 			//Seteo la / inicial de raiz
-			strcat(path,"/");
+			strcpy(path,"/");
 			t_dir* nodoHijo = list_get(listaHijosDeRaiz,i);
 			//concateno nombre hijo
 			strcat(path,nodoHijo->nombre);
@@ -2442,7 +2442,8 @@ void RenombrarDirectorio() {
 				elementoDeMiLista = list_get(directorios, i);
 				if (elementoDeMiLista->id == idARenombrar) {
 					encontrado = 1;
-					strcpy(elementoDeMiLista->nombre, pathNuevo);
+					//strcpy(elementoDeMiLista->nombre, pathNuevo);
+					elementoDeMiLista->nombre=strdup(pathNuevo);
 				}
 				i++;
 			}
@@ -3105,7 +3106,7 @@ int obtenerEstadoDelNodo(char* nodo){
 	int i;
 	for (i=0;i<list_size(nodos);i++){
 		unNodo=list_get(nodos,i);
-		if ((strcmp(unNodo->nodo_id,nodo)==0) && (unNodo->estado_red==1) && (unNodo->estado==1)) return 1;
+		if ((strcmp(unNodo->nodo_id,nodo)==0) && (unNodo->estado_red==1) && (unNodo->estado==1)) return 1;  //TODO REVISAR
 	}
 	return -1;
 }
@@ -3270,7 +3271,7 @@ void CopiarBloque() {
 	int socket_nodo;
 	printf("Eligió Copiar un bloque de un archivo\n");
 	printf ("Ingrese el nodo de origen:\n");
-	scanf ("%s",nodo_origen);
+	scanf ("%s",nodo_origen);  //TODO ARREGAR
 	printf ("Ingrese bloque de origen:\n");
 	scanf("%d",&bloque_origen);
 	printf ("Ingrese el nodo de destino:\n");
@@ -3291,7 +3292,7 @@ void CopiarBloque() {
 	}
 	for (i=0;i<list_size(nodos);i++){
 		origen=list_get(nodos,i);
-		if (strcmp(origen->nodo_id,nodo_origen)==0){
+		if (strcmp(origen->nodo_id,nodo_origen)==0){  //todo revisar
 			if (origen->estado==1 && origen->estado_red==1) origen_encontrado=1;
 			if (!bitarray_test_bit(origen->bloques_del_nodo,bloque_origen)){
 				printf ("El bloque %d del nodo %s esta vacio, no hay nada que copiar\n",bloque_origen,nodo_origen);
@@ -3303,10 +3304,10 @@ void CopiarBloque() {
 
 	for (i=0;i<list_size(nodos);i++){
 		destino=list_get(nodos,i);
-		if (strcmp(destino->nodo_id,nodo_destino)==0){
+		if (strcmp(destino->nodo_id,nodo_destino)==0){  //todo revisar
 			if (destino->estado==1 && destino->estado_red==1) destino_encontrado=1;
 			if (bitarray_test_bit(destino->bloques_del_nodo,bloque_destino)){
-				printf ("El bloque %d del nodo %s esta ocupado, no se puede copiar\n",bloque_destino,nodo_destino);
+				printf ("El bloque %d del nodo %s esta ocupado, no se puede copiar\n",bloque_destino,nodo_destino); //todo revisar
 				return;
 			}
 			break;
