@@ -1081,6 +1081,7 @@ void *atenderJob (int *socketJob) {
 	//Lo siguiente es para probar que efectivamente se reciba la lista de archivos
 	char nombreArchivo[TAM_NOMFINAL];
 	memset(nombreArchivo,'\0',TAM_NOMFINAL);
+	t_nodo *nodoAux;
 	for(posicionArchivo=0;archivos[posicionArchivo]!=NULL;posicionArchivo++){
 		int posArray;
 		int cantBloques;
@@ -1127,6 +1128,7 @@ void *atenderJob (int *socketJob) {
 
 		bloques=buscarBloques(nombreArchivo,padre);
 		cantBloques = list_size(bloques);
+
 		for(posBloques=0; posBloques<cantBloques; posBloques++){ //recorremos los bloques del archivo que nos mando job
 
 			//Si el archivo no está disponible, no se hace el Job
@@ -1146,7 +1148,7 @@ void *atenderJob (int *socketJob) {
 
 			int cantCopias;
 			t_bloque *bloque;
-			t_nodo *nodoAux;
+
 			t_replanificarMap *mapper;
 			t_mapper datosMapper;
 			t_list *copiasNodo;
@@ -1220,6 +1222,8 @@ void *atenderJob (int *socketJob) {
 				log_error(logger,"Fallo el envio de los datos para el mapper");
 				exit(-1);
 			}
+			printf("El estado del nodo %s al que enviamos a ejecutar map esta habilitado\n", nodoAux->nodo_id);
+			printf("El nodo %s está ejecutando map\n", nodoAux->nodo_id);
 
 
 			//Rellenar la estructura t_replanificarMap con el nodo_id del nodo que acabo de mandar a hacer el map y los demas campos
@@ -1273,6 +1277,7 @@ void *atenderJob (int *socketJob) {
 
 		if(map->resultado ==1){
 			printf("El map %s falló\n",map->archivoResultadoMap);
+			printf("El nodo: %s esta deshabiltado\n", nodoAux->nodo_id);
 			t_list *nodosQueFallaron;
 			nodosQueFallaron=list_create();
 			int posRepl;
@@ -1398,6 +1403,8 @@ void *atenderJob (int *socketJob) {
 				log_error(logger,"Fallo el envio de los datos para el mapper");
 				exit(-1);
 			}
+			printf("El estado del nodo %s al que enviamos a ejecutar map esta habilitado\n", otroNodoAux->nodo_id);
+			printf("El nodo %s está ejecutando map\n", otroNodoAux->nodo_id);
 			//rellenamos un nuevo struct t_replanificar map conlos datos del map que acabamos de enviar y lo agregamos a lista mappers
 			t_replanificarMap *nuevoMap=malloc(sizeof(t_replanificarMap));
 
@@ -1421,6 +1428,7 @@ void *atenderJob (int *socketJob) {
 		}
 		if(map->resultado==0){
 			printf("El map %s salio ok\n",map->archivoResultadoMap);
+			printf("El estado del nodo %s al que enviamos a ejecutar map esta habilitado\n", nodoAux->nodo_id);
 			// buscar en la lista del struct el nodo_id y luego buscarlo en la lista gral de nodos y restarle 1 a su catMappers
 			restarCantMapper(map->nodoId);
 		}
@@ -1543,6 +1551,8 @@ void *atenderJob (int *socketJob) {
 			log_error(logger, "Fallo mandar la cantidad de archivos a hacer reduce");
 			//exit(-1);
 		}
+		printf("El estado del nodo %s al que enviamos a ejecutar reduce esta habilitado\n", nodoMasRep );
+		printf("El nodo %s está ejecutando reduce\n", nodoMasRep);
 		int posicionNodoOk;
 		t_replanificarMap *nodoOk;
 		for(posicionNodoOk = 0; posicionNodoOk < cantNodosMapOk; posicionNodoOk ++){
@@ -1559,7 +1569,7 @@ void *atenderJob (int *socketJob) {
 			// Mando por cada t_replanificarMap ok, los datos de cada archivo
 			if(send(*socketJob, &archReduce,sizeof(t_archivosReduce),MSG_WAITALL)==-1){
 				perror("send");
-				log_error(logger, "Fallo mandar la archivo a hacer reduce");
+				log_error(logger, "Fallo mandar el archivo a hacer reduce");
 				//exit(-1);
 			}
 		}
@@ -1573,6 +1583,7 @@ void *atenderJob (int *socketJob) {
 		}
 
 		if(respuestaReduceFinal.resultado == 1){
+			printf("El estado del nodo %s al que enviamos a ejecutar reduce esta deshabilitado\n", nodoMasRep );
 			//Se aborta la ejecución de Reduce
 			log_info(logger,"Falló el Reduce %s. Se abortará el job",respuestaReduceFinal.archivoResultadoReduce);
 			char jobAborta[BUF_SIZE];
@@ -1588,6 +1599,7 @@ void *atenderJob (int *socketJob) {
 		}
 
 		if(respuestaReduceFinal.resultado == 0){
+			printf("El estado del nodo %s al que enviamos a ejecutar reduce esta habilitado\n", nodoMasRep );
 			printf("Reduce %s exitoso\n",respuestaReduceFinal.archivoResultadoReduce);
 			t_nodo *nodoARestar = buscarNodoPorIPYPuerto(respuestaReduceFinal.ip_nodo,respuestaReduceFinal.puerto_nodo);
 			restarCantReducers(nodoARestar->nodo_id);
@@ -1607,7 +1619,7 @@ void *atenderJob (int *socketJob) {
 		//Buscar el nodo donde está el archivo resultado del reduce para mandarle al FS el nodoID
 		t_nodo* nodoResultado;
 		nodoResultado = buscarNodoPorIPYPuerto(nodoReducer.ip_nodoPpal,nodoReducer.puerto_nodoPpal);
-
+		printf("El estado del nodo %s donde se va a guardar el archivo resultado esta habilitado\n", nodoResultado->nodo_id);
 		//Le digo al FS que se copie el resultado
 		printf("El job sin combiner termino OK\nMandar a FS que busque el resultado %s en el nodo %s\n",nodoReducer.nombreArchivoFinal,nodoResultado->nodo_id);
 
@@ -1750,6 +1762,8 @@ void *atenderJob (int *socketJob) {
 					log_error(logger, "Fallo mandar datos para hacer reducer");
 					//exit(-1);
 				}
+				printf("El estado del nodo %s al que enviamos a ejecutar reduce esta habilitado\n", nodoPrincipal->nodo_id );
+				printf("El nodo %s está ejecutando reduce\n", nodoPrincipal->nodo_id);
 				// Mando cantidad de archivos a hacer reduce
 				int cantArch = list_size(listaMapDelNodo);
 				if(send(*socketJob, &cantArch,sizeof(int),MSG_WAITALL)==-1){
@@ -1804,6 +1818,7 @@ void *atenderJob (int *socketJob) {
 			}
 
 			if(respuestaReduce.resultado == 1){
+				//printf("El estado del nodo %s al que enviamos a ejecutar reduce esta deshabilitado\n", nodoPrincipal->nodo_id );
 				//Se aborta la ejecución de Reduce
 				log_info(logger,"Falló el Reduce %s. Se abortará el job",respuestaReduce.archivoResultadoReduce);
 				t_nodo *nodoARestar = buscarNodoPorIPYPuerto(respuestaReduce.ip_nodo,respuestaReduce.puerto_nodo);
