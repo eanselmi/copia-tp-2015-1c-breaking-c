@@ -346,13 +346,13 @@ void *manejador_de_escuchas(){
 
 						if(strncmp(mensaje,"resultado", 9) == 0){
 							//Recibo un numero de bloque del FS
-							char nombreArchivoResultado[100];
-							memset(nombreArchivoResultado,'\0',100);
+							char nombreArchivoResultado[60];
+							memset(nombreArchivoResultado,'\0',60);
 							char ruta_local[100];
-							int bytes;
-							int send_bytes;
 							char buff_resultado[4096];
-							memset(buff_resultado,'\0',4096);
+							char buff_enviar[4096];
+							char renglon[512];
+							memset(renglon,'\0',512);
 							memset(ruta_local,'\0',100);
 							strcpy(ruta_local,"/tmp/");
 							if ((read_size = recv(conectorFS, nombreArchivoResultado, sizeof(nombreArchivoResultado),0)) <= 0) {
@@ -367,13 +367,39 @@ void *manejador_de_escuchas(){
 								exit(1);
 							}
 
-							bzero(buff_resultado, 4096);
-							while((bytes = fread(buff_resultado, sizeof(char),4096,archivo_resultado))>0){
-								if(send(conectorFS, buff_resultado, bytes, 0) < 0){
-									perror ("Send resultado");
-									exit(1);
+							int posicionBuffer=0,posicionInicial,i=0,byteLeido,corta=0;
+
+							while(corta!=1){
+								memset(buff_resultado,'\0',4096);
+								memset(buff_enviar,'\0',4096);
+								if(feof(archivo_resultado)){
+									strcpy(buff_enviar,"corta");
+									corta=1;
+									if(send(conectorFS,buff_enviar,sizeof(buff_enviar),MSG_WAITALL)==-1){
+										perror("send");
+										log_error(logger,"Se desconecto un nodo");
+									}
+									break;
 								}
-								bzero(buff_resultado, 4096);
+								fseek(archivo_resultado,posicionBuffer,SEEK_SET);
+								fread(buff_resultado,sizeof(char),sizeof(buff_resultado),archivo_resultado);
+								posicionInicial=posicionBuffer;
+								i=0;
+								for(byteLeido=0;byteLeido<4096;byteLeido++){
+									renglon[i]=buff_resultado[byteLeido];
+									if(buff_resultado[byteLeido]=='\n'){
+										posicionBuffer=posicionInicial+byteLeido+1;
+										strcat(buff_enviar,renglon);
+										memset(renglon,'\0',512);
+										i=-1;
+									}
+									i++;
+									if (buff_resultado[byteLeido]=='\0') break;
+								}
+								if(send(conectorFS,buff_enviar,sizeof(buff_enviar),MSG_WAITALL)==-1){
+									perror("send");
+									log_error(logger,"Se desconecto un nodo");
+								}
 							}
 							printf("Archivo resultado enviado correctamente\n");
 							fclose(archivo_resultado);
