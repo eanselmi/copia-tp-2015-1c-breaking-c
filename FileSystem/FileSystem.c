@@ -1761,8 +1761,8 @@ static void eliminar_lista_de_copias (t_copias *self){
 	free(self);
 }
 static void eliminar_lista_de_nodos (t_nodo *self){
-	bitarray_destroy(self->bloques_del_nodo);
-	free(self->bloques_bitarray);
+	//bitarray_destroy(self->bloques_del_nodo);
+	//free(self->bloques_bitarray);
 	free(self->ip);
 	free(self);
 }
@@ -1820,6 +1820,7 @@ void FormatearFilesystem() {
 	//=====================================================================
 
 	list_clean_and_destroy_elements(directorios,(void*)eliminar_lista_de_directorio);
+
 	if(marta_presente == 1){
 		memset(identificacion,'\0',BUF_SIZE);
 		strcpy(identificacion, "marta_formatea");
@@ -1829,6 +1830,7 @@ void FormatearFilesystem() {
 			exit(-1);
 		}
 	}
+
 	//Abro los archivos directorios y archivos en modo w para borrarlos
 	FILE *dir;
 	dir=fopen("directorios","w");
@@ -2248,7 +2250,7 @@ static void directorio_destroy(t_dir* self) {
 }
 
 void eliminar_listas(t_list *archivos_l, t_list *directorios_l, t_list *nodos_l){
-	int i,j,k;
+	//int i,j,k;
 	FILE* dir;
 
 	//=====================================================================
@@ -2256,7 +2258,7 @@ void eliminar_listas(t_list *archivos_l, t_list *directorios_l, t_list *nodos_l)
 	//==================ELIMINO LA LISTA DE ARCHIVOS=======================
 	//=====================================================================
 	if (archivos_l!=NULL){
-		t_archivo *archi;
+		/*t_archivo *archi;
 		t_bloque *bloq;
 
 		for (i=0;i<list_size(archivos_l);i++){
@@ -2270,7 +2272,8 @@ void eliminar_listas(t_list *archivos_l, t_list *directorios_l, t_list *nodos_l)
 			}
 			list_remove_and_destroy_element(archivos_l,i,(void*)eliminar_lista_de_archivos);
 		}
-		list_destroy(archivos_l);
+		list_destroy(archivos_l);*/
+		list_destroy_and_destroy_elements(archivos_l, (void*) eliminar_lista_de_archivos2);
 
 	}
 	//=====================================================================
@@ -2279,8 +2282,8 @@ void eliminar_listas(t_list *archivos_l, t_list *directorios_l, t_list *nodos_l)
 	//=====================================================================
 
 	if (nodos_l!=NULL){
-		list_clean_and_destroy_elements(nodos_l,(void*)eliminar_lista_de_nodos);
-		list_destroy(nodos_l);
+		list_destroy_and_destroy_elements(nodos_l,(void*)eliminar_lista_de_nodos);
+		//list_destroy(nodos_l);
 	}
 	//=====================================================================
 	//======================= FORMATEO PARTE 3 ============================
@@ -2288,18 +2291,13 @@ void eliminar_listas(t_list *archivos_l, t_list *directorios_l, t_list *nodos_l)
 	//=====================================================================
 
 	if (directorios_l!=NULL){
-		list_clean_and_destroy_elements(directorios_l,(void*)eliminar_lista_de_directorio);
-		list_destroy(directorios_l);
+		list_destroy_and_destroy_elements(directorios_l,(void*)eliminar_lista_de_directorio);
+		//list_destroy(directorios_l);
 	}
+
+	//Salida corresta del FS
 	if (archivos_l!=NULL && directorios_l!=NULL && nodos_l!=NULL){
 		printf ("Adios!\n");
-		FILE* archivo_persistencia;
-		if((archivo_persistencia=fopen("persistencia","r+"))==NULL){
-			log_error(logger,"El archivo de persistencia no existe en el filesystem local");
-			perror("fopen");
-		}
-		fprintf (archivo_persistencia,"%s","0");
-		fclose(archivo_persistencia);
 
 		//Abro los archivos directorios y archivos en modo w para borrarlos
 		dir=fopen("directorios","w");
@@ -2900,7 +2898,7 @@ int CopiarArchivoAMDFS(int flag, char* archvo_local, char* archivo_mdfs){
     	for (aux1=0;aux1<aux2-1;aux1++) nombre_del_archivo = strtok_r(NULL,"/",&saveptr);
     	memset(archivo_temporal->nombre,'\0',200);
     	strcpy(archivo_temporal->nombre,nombre_del_archivo);
-    	archivo_temporal->padre=idPadre; //modifico al path del archivo en el MDFS
+    	archivo_temporal->padre=idPadre;
     	fclose(archivoLocal);
 
     	if(marta_presente == 1){
@@ -2960,17 +2958,19 @@ int CopiarArchivoAMDFS(int flag, char* archvo_local, char* archivo_mdfs){
     	persistir_archivo(archivo_temporal);
     	printf ("Pasa persistencia\n");
     	//Si llego hasta aca salio tod0 bien, actualizo la lista real de nodos
-    	//eliminar_listas(NULL,NULL,nodos);
-    	list_destroy(nodos);
+    	eliminar_listas(NULL,NULL,nodos);
+    	//list_destroy(nodos);
     	nodos=list_create();
     	if (copiar_lista_de_nodos(nodos,nodos_temporales)){
     		printf ("No se pudo crear la copia de la lista de nodos\n");
     		return -1;
     	}
     	printf ("Copia lista de nodos\n");
-    	//eliminar_listas(NULL,NULL,nodos_temporales);
-    	list_destroy(nodos_temporales);
+    	eliminar_listas(NULL,NULL,nodos_temporales);
+    	//list_destroy(nodos_temporales);
     	printf ("Pasa eliminar lista nodos\n");
+
+
     	//Si llego aca es porque tod0 salio bien y actualizo la lista de archivos
     	list_add(archivos_temporales,archivo_temporal);
     	eliminar_listas(archivos,NULL,NULL);
