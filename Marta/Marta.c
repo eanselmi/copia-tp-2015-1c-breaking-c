@@ -799,7 +799,7 @@ void *connection_handler_jobs(){
 							printf("archivo movido a: %s\n", archivoAux->nombre);
 							printf("padre nuevo: %d\n", archivoAux->padre);
 						}
-						//fin update de RenombrarArchivo
+						//fin update de mover archivo
 						if (strcmp(identificacion,"nuevo_arch")==0){
 							printf ("Voy a agregar un nuevo archivo a las estructuras\n");
 							t_archivo* nuevoArchivo = malloc(sizeof(t_archivo));
@@ -924,7 +924,7 @@ void *connection_handler_jobs(){
 							}
 							printf ("...Bloque del borrar bloque: %d\n",bloqueNodo);
 							t_list * B;
-							int bloqueEncontrado=0;
+							int copiaEncontrada = 0;
 							B = buscarBloques (nombreArchivoNovedad, padreArchivoNovedad);
 							int CB;
 							CB = list_size(B);
@@ -939,18 +939,15 @@ void *connection_handler_jobs(){
 								for(PC = 0; PC < CCB; PC ++){
 									CB = list_get(block->copias,PC);
 									if(strcmp(CB->nodo, nodoId) ==0 && CB->bloqueNodo == bloqueNodo){
-										bloqueEncontrado = 1;
+										copiaEncontrada = 1;
+										list_remove_and_destroy_element(block->copias,PC,(void*)eliminarCopia);
 										break;
 									}
 								}
-								if(bloqueEncontrado ==1){
-									list_remove_and_destroy_element(block->copias,PC,(void*)eliminarListaCopias);
-									break;
-								}
+								if(copiaEncontrada == 1) break;
 							}
-							if (bloqueEncontrado==1) break;
 						}
-						printf("Se ha borrado el bloque correctamente\n");
+
 						// fin de update eliminar bloque
 						if (strcmp(identificacion,"nuevo_bloque")==0){
 							printf ("Voy a agregar una nueva copia de un bloque de un archivo a las estructuras\n");
@@ -2415,5 +2412,9 @@ void estadoNodos(){
 	}
 	printf("#############################\n");
 	return;
+}
+
+static void eliminarCopia(t_copias *self){
+	free(self);
 }
 
