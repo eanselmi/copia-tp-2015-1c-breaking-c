@@ -105,4 +105,6 @@ int BuscarArchivoPos(char* nombreArch, uint32_t idPadre);
 static void eliminarListaCopias (t_copias* self);
 static void eliminarListaBloques(t_bloque* self);
 static void eliminarListaArchivos (t_archivo* self);
+int cantidadTotalDeBloques(char* archivosJob);
+t_list * buscarBloquesTotales(char* nombreArchivo);
 
