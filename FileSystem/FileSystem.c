@@ -371,8 +371,8 @@ void persistir_directorio(t_dir *directorio){
 	id=string_itoa((int)directorio->id);
 	char *padre=string_new();
 	padre=string_itoa((int)directorio->padre);
-	char *nom=string_new();
-	strcpy(nom,directorio->nombre);
+	char *nom=strdup(directorio->nombre);
+	//strcpy(nom,directorio->nombre);
 	char persistir_directorio[200];
 	memset(persistir_directorio,'\0',200);
 
