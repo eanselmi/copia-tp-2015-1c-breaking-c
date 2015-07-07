@@ -1082,6 +1082,7 @@ void *atenderJob (int *socketJob) {
 	t_job unJob;
 	unJob.mapperPendientes =  cantidadTotalDeBloques(archivosDelJob);
 
+
 	// Separo el mensaje que recibo con los archivos a trabajar (Job envía todos juntos separados con ,)
 	char** archivos =string_split((char*)archivosDelJob,",");
 
@@ -1436,6 +1437,7 @@ void *atenderJob (int *socketJob) {
 
 		}
 		if(map->resultado==0){
+			printf("La cantidad de map pendiente del job es %d",unJob.mapperPendientes);
 			printf("El map %s salio ok\n",map->archivoResultadoMap);
 			printf("El estado del nodo %s es habilitado\n", nodoAux->nodo_id);
 			// buscar en la lista del struct el nodo_id y luego buscarlo en la lista gral de nodos y restarle 1 a su catMappers
@@ -1446,6 +1448,8 @@ void *atenderJob (int *socketJob) {
 /************************************************************************************************************************************************
 * SIN COMBINER
 * ************************************************************************************************************************************************/
+	unJob.reducePendientes = 1;
+	printf("Si es con combiner la cantidad de reduce pendientes es %d",unJob.reducePendientes);
 	sleep(3);
 	//Si es sin combiner manda a hacer reduce al nodo que tenga mas archivos resultados MAP
 	if(strcmp(mensajeCombiner, "NO")==0){
@@ -1553,6 +1557,7 @@ void *atenderJob (int *socketJob) {
 			perror("send");
 			log_error(logger, "Fallo mandar datos para hacer reducer");
 		}
+		printf("La cantidad de reduce pendiente del job es %d",unJob.reducePendientes --);
 		printf("El estado del nodo %s es habilitado\n", nodoMasRep );
 		printf("El nodo %s está ejecutando reduce\n", nodoMasRep);
 
@@ -1593,6 +1598,7 @@ void *atenderJob (int *socketJob) {
 		}
 
 		if(respuestaReduceFinal.resultado == 1){
+			printf("La cantidad de reduce pendiente del job es %d",unJob.reducePendientes ++);
 			printf("El estado del nodo %s es deshabilitado\n", nodoMasRep );
 			//Se aborta la ejecución de Reduce
 			log_info(logger,"Falló el Reduce %s. Se abortará el job",respuestaReduceFinal.archivoResultadoReduce);
@@ -1609,6 +1615,7 @@ void *atenderJob (int *socketJob) {
 		}
 
 		if(respuestaReduceFinal.resultado == 0){
+			printf("La cantidad de reduce pendiente del job es %d",unJob.reducePendientes);
 			printf("El estado del nodo %s es habilitado\n", nodoMasRep );
 			printf("Reduce %s exitoso\n",respuestaReduceFinal.archivoResultadoReduce);
 			t_nodo *nodoARestar = buscarNodoPorIPYPuerto(respuestaReduceFinal.ip_nodo,respuestaReduceFinal.puerto_nodo);
@@ -1707,6 +1714,7 @@ void *atenderJob (int *socketJob) {
 				list_add(listaNodosDistintos,nodoId);
 			}
 		}
+		printf("Cuando es con combiner la cantidad de reduce pendientes del job es %d", unJob.reducePendientes + 1);
 
 		int i;
 		t_list *listaMapDelNodo;
@@ -1772,6 +1780,7 @@ void *atenderJob (int *socketJob) {
 					log_error(logger, "Fallo mandar datos para hacer reducer");
 					//exit(-1);
 				}
+				printf("la cantidad de reduce pendientes del job es %d", unJob.reducePendientes --);
 				printf("El estado del nodo %s es habilitado\n", nodoPrincipal->nodo_id );
 				printf("El nodo %s está ejecutando reduce con combiner\n", nodoPrincipal->nodo_id);
 				// Mando cantidad de archivos a hacer reduce
@@ -1829,6 +1838,7 @@ void *atenderJob (int *socketJob) {
 			}
 
 			if(respuestaReduce.resultado == 1){
+				printf("la cantidad de reduce pendientes del job es %d", unJob.reducePendientes ++);
 				t_nodo *nodoARestar = buscarNodoPorIPYPuerto(respuestaReduce.ip_nodo,respuestaReduce.puerto_nodo);
 				printf("El estado del nodo %s es deshabilitado\n", nodoARestar->nodo_id);
 				//Se aborta la ejecución de Reduce
@@ -1837,6 +1847,7 @@ void *atenderJob (int *socketJob) {
 				jobAbortado=1; //Se marca el flag del job abortado. Se esperan las demas respuestas para bajar 1 en cantreducers de los nodos
 			}
 			if(respuestaReduce.resultado == 0){
+				printf("La cantidad de reduce pendientes del job es %d",unJob.reducePendientes);
 				t_nodo *nodoARestar = buscarNodoPorIPYPuerto(respuestaReduce.ip_nodo,respuestaReduce.puerto_nodo);
 				printf("En el nodo %s se ejecutó reduce con combiner\n", nodoARestar->nodo_id);
 				printf("El estado del nodo %s es habilitado\n", nodoARestar->nodo_id);
@@ -1916,7 +1927,7 @@ void *atenderJob (int *socketJob) {
 			log_error(logger, "Fallo mandar datos para hacer reducer");
 			//exit(-1);
 		}
-
+		printf("La cantidad de reduce pendiente del job es %d",unJob.reducePendientes --);
 		printf("En el nodo %s se ejecutó reduce con combiner\n", nodoRF->nodo_id);
 		printf("El estado del nodo %s es habilitado\n", nodoRF->nodo_id);
 
@@ -1979,6 +1990,7 @@ void *atenderJob (int *socketJob) {
 		}
 
 		if(respuestaReduceFinal.resultado == 1){
+			printf("La cantidad de reduce pendiente del job es %d",unJob.reducePendientes ++);
 			//Se aborta la ejecución de Reduce
 			t_nodo *nodoARestar = buscarNodoPorIPYPuerto(respuestaReduceFinal.ip_nodo,respuestaReduceFinal.puerto_nodo);
 			printf("El estado del nodo %s es deshabilitado\n", nodoARestar->nodo_id);
@@ -1994,6 +2006,7 @@ void *atenderJob (int *socketJob) {
 			pthread_exit((void*)0);
 		}
 		if(respuestaReduceFinal.resultado == 0){
+			printf("La cantidad de reduce pendiente del job es %d",unJob.reducePendientes);
 			t_nodo *nodoARestar = buscarNodoPorIPYPuerto(respuestaReduceFinal.ip_nodo,respuestaReduceFinal.puerto_nodo);
 			printf("En el nodo %s se ejecutó reduce con combiner\n", nodoARestar->nodo_id);
 			printf("El estado del nodo %s es habilitado\n", nodoARestar->nodo_id);
