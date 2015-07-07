@@ -2588,7 +2588,7 @@ int copiar_lista_de_archivos(t_list* destino, t_list* origen){
 int copiar_lista_de_nodos(t_list* destino, t_list* origen){
 	int i,k;
 	for (i=0;i<list_size(origen);i++){
-		t_nodo *original=malloc(sizeof(t_nodo));
+		t_nodo *original;
 		t_nodo *copia=malloc(sizeof(t_nodo));
 		original=list_get(origen,i);
 		memset(copia->nodo_id, '\0', 6);
@@ -2959,7 +2959,7 @@ int CopiarArchivoAMDFS(int flag, char* archvo_local, char* archivo_mdfs){
     	}
 
     	persistir_archivo(archivo_temporal);
-
+    	printf ("Pasa persistencia\n");
     	//Si llego hasta aca salio tod0 bien, actualizo la lista real de nodos
     	eliminar_listas(NULL,NULL,nodos);
     	nodos=list_create();
@@ -2967,8 +2967,9 @@ int CopiarArchivoAMDFS(int flag, char* archvo_local, char* archivo_mdfs){
     		printf ("No se pudo crear la copia de la lista de nodos\n");
     		return -1;
     	}
-    	eliminar_listas(NULL,NULL,nodos_temporales);
-
+    	printf ("Copia lista de nodos\n");
+    	//eliminar_listas(NULL,NULL,nodos_temporales);
+    	printf ("Pasa eliminar lista nodos\n");
     	//Si llego aca es porque tod0 salio bien y actualizo la lista de archivos
     	list_add(archivos_temporales,archivo_temporal);
     	eliminar_listas(archivos,NULL,NULL);
@@ -2977,6 +2978,7 @@ int CopiarArchivoAMDFS(int flag, char* archvo_local, char* archivo_mdfs){
     		printf ("No se pudo crear la copia de la lista de archivos\n");
     		return -1;
     	}
+    	printf ("Pasa copia lista archivos\n");
     	eliminar_listas(archivos_temporales,NULL,NULL);
     	return 0;
 }
