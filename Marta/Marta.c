@@ -564,6 +564,16 @@ static void eliminarListaArchivos (t_archivo* self){
 	free(self);
 }
 
+static void eliminarListaBloques2(t_bloque *self){
+	list_destroy_and_destroy_elements(self->copias, (void*) eliminarListaCopias);
+	free(self);
+}
+
+static void eliminarListaArchivos2 (t_archivo *self){
+	list_destroy_and_destroy_elements(self->bloques, (void*) eliminarListaBloques2);
+	free(self);
+}
+
 
 
 void *connection_handler_jobs(){
@@ -671,8 +681,34 @@ void *connection_handler_jobs(){
 						printf ("%s\n",identificacion);
 						if (strcmp(identificacion,"marta_formatea")==0){
 							printf ("Voy a formatear las estructuras por pedido del FS\n");
+							int cantArchi;
+							cantArchi=list_size(listaArchivos);
+							printf("Cantidad de archivos antes de formatear: %d\n", cantArchi);
 							//TODO limpiar estructuras de Marta
+							//Se borra la lista de archivos
+							list_destroy_and_destroy_elements(listaArchivos, (void*) eliminarListaArchivos2);
+							//Se pasan a estado no disponible los nodos que haya conectados
+							t_nodo* unNodoF;
+							int u;
+							for (u=0;u<list_size(listaNodos);u++){
+								unNodoF=list_get(listaNodos,u);
+								unNodoF->estado=0;
+							}
+							int cantArchi2;
+							cantArchi2=list_size(listaArchivos);
+							printf("Cantidad de archivos en MDFS luego de formatear: %d\n", cantArchi2);
+							//listo para ver comprobar que los cambio de estado
+							t_nodo* nodoL;
+							int v, w;
+							v= list_size(listaNodos);
+							printf("Nodos en la lista: %d \n", v);
+							for (w=0;w<v;w++){
+								nodoL = list_get(listaNodos,w);
+								printf ("Nodo_ID:%s Estado: %d\n", nodoL->nodo_id, nodoL->estado );
+							}
+
 						}
+						//fin de update FormatearFileSystem
 						if (strcmp(identificacion,"elim_arch")==0){
 							printf ("Voy a borrar un archivo de las estructuras\n");
 							memset(nombreArchivoNovedad, '\0',200);
