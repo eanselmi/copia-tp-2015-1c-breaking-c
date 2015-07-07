@@ -60,32 +60,12 @@ int main(int argc, char *argv[]) {
 	directorios = list_create(); //crea la lista de directorios
 //============= REVISO LA PERSISTENCIA Y EL ESTADO DE LA ULTIMA EJECUCUION DEL FILESYSTEM ===================
 
-
-	/*FILE* archivo_persistencia;
-	if((archivo_persistencia=fopen("persistencia","r+"))==NULL){
-		log_error(logger,"El archivo de persistencia no existe en el filesystem local");
-		perror("fopen");
-	}
-	valor_persistencia=string_new();
-	if((fgets(valor_persistencia,sizeof(valor_persistencia),archivo_persistencia))==NULL){
-		perror ("fgets del archivo de persistencia");
-		exit(-1);
-	}
-	rewind(archivo_persistencia);
-	fprintf (archivo_persistencia,"%s","1");
-	fclose(archivo_persistencia);
-	if (atoi(valor_persistencia)==1){
-		recuperar_persistencia(); //Hay que restaurar la persistencia
-	}else {
-		//como no hay persistencia inicializo los indices para los directorios, 0 si está libre, 1 ocupado.
-
-	}*/
 	int estado_recupero = recuperar_persistencia();
 	if (estado_recupero==0){
 		printf ("EL Filesystem inicia en estado nuevo - no existe persistencia que recuperar \n");
 	}
 	if (estado_recupero==1){
-		printf ("El Filesystem inicia recuperando solo directorios \n");
+		printf ("El Filesysten inicia recuperando directorios y archivos \n");
 	}
 	if (estado_recupero==2){
 		printf ("El Filesysten inicia recuperando directorios y archivos \n");
@@ -978,7 +958,7 @@ void listar_directorios(){
 	int i;
 	if (list_size(directorios)==0){
 		printf ("No hay directorios cargados\n");
-		Menu();
+		return;
 	}
 	for (i=0;i<list_size(directorios);i++){
 		dir=list_get(directorios,i);
@@ -1586,34 +1566,26 @@ void *connection_handler_escucha(void) {
 								}
 								//Recibir archivo resultado del nodo y guardarlo en /tmp con el nombre del archivo
 								archivo_resultado=fopen(ruta_local,"w");
-								while(1){
-									bytes=recv(nodo_con_resultado->socket,buff_archivo_resultado,1024,0);
-									if (bytes<MENSAJE_SIZE) //Termino el envio y el nodo corto la conexion
-										break;
-									if (bytes<0){
-										perror ("Recv del recibir archivo de resultado");
+								bzero(buff_archivo_resultado,4096);
+								while((bytes = recv(nodo_con_resultado->socket, buff_archivo_resultado, 4096, 0)) > 0){
+									int para_escribir = fwrite(buff_archivo_resultado, sizeof(char), bytes, archivo_resultado);
+									if(para_escribir < bytes){
+										perror("Error en fwrite  del archivo resultado\n");
+									}
+									bzero(buff_archivo_resultado, 4096);
+									if (bytes == 0 || bytes != 4096){
 										break;
 									}
-									fprintf (archivo_resultado,"%s",buff_archivo_resultado);
-									bytes=0;
-									memset(buff_archivo_resultado,'\0',MENSAJE_SIZE);
 								}
-								if (bytes>0){
-									fprintf (archivo_resultado,"%s",buff_archivo_resultado);
-									memset(buff_archivo_resultado,'\0',MENSAJE_SIZE);
-									fclose(archivo_resultado);
+								if(bytes < 0){
+									perror ("error recv resultado");
 								}
-								if (bytes==0){ //la recepcion del archivo salio bien
-									fclose(archivo_resultado);
-								}else{ //La recepcion fallo
-									//.............
-								}
+								fclose(archivo_resultado);
+
 								printf ("Termino de recibir el archivo\n");
 								//Ahora envio el archivo al mdfs
-								//strcat(path_mdfs,"/");
-								//strcat(path_mdfs,nombreArchivoResultado);
-								//CopiarArchivoAMDFS(99,ruta_local,path_mdfs);
-								//printf ("Archivo resultado copiado exitosamente\n");
+								CopiarArchivoAMDFS(99,ruta_local,path_mdfs);
+								printf ("Archivo resultado copiado exitosamente\n");
 							}
 						}
 					}else{
@@ -2690,7 +2662,7 @@ int CopiarArchivoAMDFS(int flag, char* archvo_local, char* archivo_mdfs){
 	if((archivoLocal = fopen(path,"r"))==NULL){
     	log_error(logger,"El archivo que quiere copiar no existe en el filesystem local");
     	perror("fopen");
-    	Menu();
+    	return -1;
     }
 
 
@@ -2699,8 +2671,7 @@ int CopiarArchivoAMDFS(int flag, char* archvo_local, char* archivo_mdfs){
 		scanf("%s", pathMDFS);
 	}else strcpy(pathMDFS,archivo_mdfs);
 	int contador=0,indice_path;
-	printf ("%s\n",archivo_mdfs);
-	printf ("%s\n",pathMDFS);
+
 	for (indice_path=0;indice_path<strlen(pathMDFS);indice_path++)	if (pathMDFS[indice_path]=='/') contador++;
 	if (contador>1){
 		directoriosPorSeparado=string_split(pathMDFS,"/");
@@ -2720,13 +2691,13 @@ int CopiarArchivoAMDFS(int flag, char* archvo_local, char* archivo_mdfs){
     uint32_t idPadre = BuscarPadre(directorioDestino);
     if(idPadre == -1){
       	printf("El directorio no existe. Se debe crear el directorio desde el menú. \n");
-       	Menu();
+       	return -1;
     }
     //Buscar Archivo. Si no existe se muestra mensaje de error y se debe volver al menú para crearlo
     uint32_t posArchivo = BuscarArchivoPorNombre (pathMDFS,idPadre);
     if(!(posArchivo == -1)){
      printf("El archivo ya existe. Se debe especificar un archivo nuevo. \n");
-     Menu();
+     return -1;
     }
 
     //Se debe crear un nuevo archivo con el nombre ingresado, cuyo padre sea "idPadre"
@@ -3072,12 +3043,12 @@ int CopiarArchivoDelMDFS(int flag, char*unArchivo) {
 		int idPadre = BuscarPadre(directorio);
 		if (idPadre==-1){
 			printf("El directorio no existe\n");
-			Menu();
+			return -1;
 		}
 		int posArchivo = BuscarArchivoPorNombre(pathArchivo, idPadre);
 		if (posArchivo==-1){
 			printf ("El archivo no existe\n");
-			Menu();
+			return -1;
 		}
 		archivo = list_get(archivos, posArchivo);
 		copiaLocal = fopen(ruta_local, "w");
@@ -3167,7 +3138,7 @@ void MD5DeArchivo() {
 
 		if(CopiarArchivoDelMDFS(99,path)==-1){
 			printf ("El archivo seleccionado no esta disponible\n");
-			Menu();
+			return;
 		}
 
 		strcpy(ruta,path);
@@ -3593,7 +3564,7 @@ int VerBloque() {
 			if (socket_nodo == -1){
 				log_error(logger, "El nodo ingresado no es valido o no esta disponible\n");
 				printf("El nodo ingresado no es valido o no esta disponible\n");
-				Menu();
+				return -1;
 			}
 			enviarNumeroDeBloqueANodo(socket_nodo, nroBloque);
 			bloqueParaVer = recibirBloque(socket_nodo);

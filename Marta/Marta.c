@@ -483,6 +483,7 @@ int main(int argc, char**argv){
 
 
 		//TEST PARA NOTIFICAR AL FS QUE BUSQUE UN ARCHIVO RESULTADO DE UN REDUCE
+/*
 		memset(identificacion,'\0',BUF_SIZE);
 		strcpy(identificacion,"resultado");
 		if((send(socket_fs,identificacion,sizeof(identificacion),MSG_WAITALL))==-1) {
@@ -515,6 +516,7 @@ int main(int argc, char**argv){
 			log_error(logger,"FALLO el envio del saludo al FS");
 			exit(-1);
 		}
+*/
 
 
 

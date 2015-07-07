@@ -346,7 +346,6 @@ void *manejador_de_escuchas(){
 							//Recibo un numero de bloque del FS
 							char nombreArchivoResultado[100];
 							memset(nombreArchivoResultado,'\0',100);
-							int archivo_resultado;
 							char ruta_local[100];
 							int bytes;
 							int send_bytes;
@@ -360,22 +359,22 @@ void *manejador_de_escuchas(){
 								exit(-1);
 							}
 							strcat(ruta_local,nombreArchivoResultado);
-							if((archivo_resultado=open(ruta_local,O_RDONLY)) < 0){
-								perror ("Error al abrir el archivo resultado");
-							}else{
-								while (1){
-									if((bytes = read(archivo_resultado, buff_resultado, 1024)) <= 0)
-										break;
-									if ((send_bytes=send(conectorFS,buff_resultado,1024,0)) == -1) {
-										perror("send");
-										log_error(logger, "FALLO el envio del bloque ");
-										exit(-1);
-									}
-									send_bytes=0;
-									memset(buff_resultado,'\0',4096);
-								}
+							FILE *archivo_resultado = fopen(ruta_local, "r");
+							if(archivo_resultado == NULL){
+								perror ("fopen archivo resultado");
+								exit(1);
 							}
-							close(archivo_resultado);
+
+							bzero(buff_resultado, 4096);
+							while((bytes = fread(buff_resultado, sizeof(char),4096,archivo_resultado))>0){
+								if(send(conectorFS, buff_resultado, bytes, MSG_WAITALL) < 0){
+									perror ("Send resultado");
+									exit(1);
+								}
+								bzero(buff_resultado, 4096);
+							}
+							printf("Archivo resultado enviado correctamente\n");
+							fclose(archivo_resultado);
 						}
 					}
 				}
