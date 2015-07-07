@@ -22,7 +22,6 @@
 t_list *nodos_temporales;
 t_list *archivos_temporales;
 t_datos_y_bloque combo;
-//uint32_t n_bloque;
 fd_set master; // conjunto maestro de descriptores de fichero
 fd_set read_fds; // conjunto temporal de descriptores de fichero para select()
 t_log* logger;
@@ -178,15 +177,6 @@ int main(int argc, char *argv[]) {
 		log_error(logger,"Falló la creación del hilo que maneja las conexiones");
 		return 1;
 	}
-/*//ya no va más acá porque tengo persistencia y hay ids creados para directorios
-	//inicializo los indices para los directorios, 0 si está libre, 1 ocupado.
-	for (j = 1; j < sizeof(indiceDirectorios); j++) {
-		indiceDirectorios[j] = 0;
-	}
-	indiceDirectorios[0] = 1; //raiz queda reservado como ocupado
-	directoriosDisponibles = (MAX_DIRECTORIOS - 1);
-*/
-
 	Menu();
 	log_destroy(logger);
 
@@ -283,7 +273,6 @@ int recuperar_persistencia(){
 	char *saveptr;
 	char *nombre;
 	int idYaUsado=0;
-	//char *md5;
 	int recupero_directorios=0;
 	int recupero_archivos=0;
 	dir=fopen("directorios","r");
@@ -346,9 +335,6 @@ int recuperar_persistencia(){
 						char *andre;
 						andre=strtok_r(NULL,";",&saveptr);
 						copia->nodo=strdup(andre);
-				//		md5=strtok_r(NULL,";",&saveptr);
-						//memset(copia->md5,'\0',32);
-						//strcpy(copia->md5,md5);
 						copia->bloqueNodo=atoi(strtok_r(NULL,";",&saveptr));
 						list_add(bloque->copias,copia);
 					}
@@ -372,7 +358,6 @@ void persistir_directorio(t_dir *directorio){
 	char *padre=string_new();
 	padre=string_itoa((int)directorio->padre);
 	char *nom=strdup(directorio->nombre);
-	//strcpy(nom,directorio->nombre);
 	char persistir_directorio[200];
 	memset(persistir_directorio,'\0',200);
 
@@ -541,8 +526,6 @@ void persistir_archivo(t_archivo *archivo){
 			fprintf (dir,"%s",";");
 			fprintf (dir,"%s",copia->nodo);
 			fprintf (dir,"%s",";");
-			//fprintf (dir,"%s",copia->md5);
-			//fprintf (dir,"%s",";");
 			fprintf (dir,"%d",copia->bloqueNodo);
 		}
 	}
@@ -609,7 +592,6 @@ void actualizar_persistencia_archivo_renombrado(char* nombre,int idPadre,char *n
 		char* n_bloques=string_new();
 		char *n_copias=string_new();
 		char *nodo_id=string_new();
-		//char *md5=string_new();
 		char *n_bloque=string_new();
 		while (fgets(buffer, sizeof(buffer),dir) != NULL){
 			if (strcmp(buffer,"\n")!=0){
@@ -629,13 +611,10 @@ void actualizar_persistencia_archivo_renombrado(char* nombre,int idPadre,char *n
 						strcat(nueva_copia,n_copias);
 						for (j=0;j<atoi(n_copias);j++){
 							nodo_id=strtok_r(NULL,";",&saveptr);
-			//				md5=strtok_r(NULL,";",&saveptr);
 							n_bloque=strtok_r(NULL,";",&saveptr);
 							strcat(nueva_copia,";");
 							strcat(nueva_copia,nodo_id);
 							strcat(nueva_copia,";");
-						//	strcat(nueva_copia,md5);
-							//strcat(nueva_copia,";");
 							strcat(nueva_copia,n_bloque);
 						}
 					}
@@ -681,7 +660,6 @@ void actualizar_persistencia_archivo_movido(char* nombre,int idPadre,int nuevo_i
 		char* n_bloques=string_new();
 		char *n_copias=string_new();
 		char *nodo_id=string_new();
-		//char *md5=string_new();
 		char *n_bloque=string_new();
 		while (fgets(buffer, sizeof(buffer),dir) != NULL){
 			if (strcmp(buffer,"\n")!=0){
@@ -701,13 +679,10 @@ void actualizar_persistencia_archivo_movido(char* nombre,int idPadre,int nuevo_i
 						strcat(nueva_copia,n_copias);
 						for (j=0;j<atoi(n_copias);j++){
 							nodo_id=strtok_r(NULL,";",&saveptr);
-			//				md5=strtok_r(NULL,";",&saveptr);
 							n_bloque=strtok_r(NULL,";",&saveptr);
 							strcat(nueva_copia,";");
 							strcat(nueva_copia,nodo_id);
 							strcat(nueva_copia,";");
-				//			strcat(nueva_copia,md5);
-					//		strcat(nueva_copia,";");
 							strcat(nueva_copia,n_bloque);
 						}
 					}
@@ -757,7 +732,6 @@ void actualizar_persistencia_eliminar_bloque(char* nodoId,int bloque){
 	char* n_bloques=string_new();
 	char *n_copias=string_new();
 	char *nodo_id=string_new();
-	//char *md5=string_new();
 	char *n_bloque=string_new();
 	while (fgets(buffer, sizeof(buffer),dir) != NULL){
 		if (strcmp(buffer,"\n")!=0){
@@ -777,7 +751,6 @@ void actualizar_persistencia_eliminar_bloque(char* nodoId,int bloque){
 				strcat(buffer_2,n_copias);
 				for (j=0;j<atoi(n_copias);j++){
 					nodo_id=strtok_r(NULL,";",&saveptr);
-		//			md5=strtok_r(NULL,";",&saveptr);
 					n_bloque=strtok_r(NULL,";",&saveptr);
 					if (strcmp(nodoId,nodo_id)==0 && atoi(n_bloque)==bloque){
 						nuevo_n_copias--;
@@ -787,8 +760,6 @@ void actualizar_persistencia_eliminar_bloque(char* nodoId,int bloque){
 						strcat(buffer_2,";");
 						strcat(buffer_2,nodo_id);
 						strcat(buffer_2,";");
-			//			strcat(buffer_2,md5);
-				//		strcat(buffer_2,";");
 						strcat(buffer_2,n_bloque);
 					}
 				}
@@ -842,7 +813,6 @@ void actualizar_persistencia_copiar_bloque(char* nodoId,int bloque,char* nodoId_
 	char* n_bloques=string_new();
 	char *n_copias=string_new();
 	char *nodo_id=string_new();
-	//char *md5=string_new();
 	char *n_bloque=string_new();
 	while (fgets(buffer, sizeof(buffer),dir) != NULL){
 		if (strcmp(buffer,"\n")!=0){
@@ -862,7 +832,6 @@ void actualizar_persistencia_copiar_bloque(char* nodoId,int bloque,char* nodoId_
 				strcat(buffer_2,n_copias);
 				for (j=0;j<atoi(n_copias);j++){
 					nodo_id=strtok_r(NULL,";",&saveptr);
-		//			md5=strtok_r(NULL,";",&saveptr);
 					n_bloque=strtok_r(NULL,";",&saveptr);
 					if (strcmp(nodoId,nodo_id)==0 && atoi(n_bloque)==bloque){
 						nuevo_n_copias++;
@@ -877,8 +846,6 @@ void actualizar_persistencia_copiar_bloque(char* nodoId,int bloque,char* nodoId_
 							strcat(buffer_2,";");
 							strcat(buffer_2,nodo_id);
 							strcat(buffer_2,";");
-			//				strcat(buffer_2,md5);
-				//			strcat(buffer_2,";");
 							strcat(buffer_2,n_bloque);
 						}else if (nuevo_n_copias>10){
 							int longotud_cadena=strlen(buffer_2);
@@ -891,16 +858,12 @@ void actualizar_persistencia_copiar_bloque(char* nodoId,int bloque,char* nodoId_
 							strcat(buffer_2,";");
 							strcat(buffer_2,nodo_id);
 							strcat(buffer_2,";");
-					//		strcat(buffer_2,md5);
-						//	strcat(buffer_2,";");
 							strcat(buffer_2,n_bloque);
 						}else{
 							buffer_2[1]=string_itoa(nuevo_n_copias)[0];
 							strcat(buffer_2,";");
 							strcat(buffer_2,nodo_id);
 							strcat(buffer_2,";");
-							//strcat(buffer_2,md5);
-						//	strcat(buffer_2,";");
 							strcat(buffer_2,n_bloque);
 						}
 
@@ -908,8 +871,6 @@ void actualizar_persistencia_copiar_bloque(char* nodoId,int bloque,char* nodoId_
 						strcat(buffer_2,";");
 						strcat(buffer_2,nodoId_nuevo);
 						strcat(buffer_2,";");
-						//strcat(buffer_2,md5);
-					//	strcat(buffer_2,";");
 						strcat(buffer_2,string_itoa(bloque_nuevo));
 
 					}
@@ -917,8 +878,6 @@ void actualizar_persistencia_copiar_bloque(char* nodoId,int bloque,char* nodoId_
 						strcat(buffer_2,";");
 						strcat(buffer_2,nodo_id);
 						strcat(buffer_2,";");
-					//	strcat(buffer_2,md5);
-					//	strcat(buffer_2,";");
 						strcat(buffer_2,n_bloque);
 					}
 				}
@@ -1650,9 +1609,6 @@ void *connection_handler_escucha(void) {
 uint32_t BuscarPadre(char* path) {
 	t_dir* dir;
 	int directorioPadre = 0,tamanio; //seteo a raíz
-//	int j,count=0;
-//	for (j=0;j<strlen(path);j++) if (path[j]=='/') count ++;
-//	if (count==1) return 0;
 	if(strcmp(path,"/")==0){
 		return directorioPadre;
 	}
@@ -1675,7 +1631,6 @@ uint32_t BuscarPadre(char* path) {
 				break;
 			} else {
 				if (i == tamanio - 1) {
-					//printf("No se encontró el directorio");
 					directorioPadre = -1;
 					return directorioPadre;
 				}
@@ -1707,7 +1662,6 @@ int BuscarArchivoPorNombre(const char *path, uint32_t idPadre) {
 				break;
 			} else {
 				if (posArchivo == tam - 1) {
-					//printf("No se encontró el archivo");
 					posicionArchivo = -1;
 					return posicionArchivo;
 				}
@@ -1782,7 +1736,6 @@ static void eliminar_lista_de_bloques(t_bloque *self){
 }
 
 static void eliminar_lista_de_archivos (t_archivo *self){
-	//list_destroy(self->bloques);
 	free(self);
 }
 static void eliminar_lista_de_directorio(t_dir *self){
@@ -1842,7 +1795,6 @@ void FormatearFilesystem() {
 char *obtenerPath(char *nombre, int dir_id){
 	char cad[200];
 	char *path=string_new();
-	//memset(path,'\0',200);
 	memset(cad,'\0',200);
 
 	if (dir_id==0){
@@ -2185,7 +2137,6 @@ void CrearDirectorio() {
 	char** directorioNuevo;
 	t_dir* directorioACrear;
 	int cantDirACrear = 0;
-	//directorioACrear = malloc(sizeof(t_dir));
 	long idAValidar; //uso este tipo para cubrir rango de uint32_t y el -1,  deberia mejorar el nombre de la variable
 	printf("Ingrese el path del directorio desde raíz ejemplo /home/utnso \n");
 	memset(path,'\0',200);
@@ -2195,10 +2146,8 @@ void CrearDirectorio() {
 		return;
 	}
 	directorioNuevo = string_split((char*) path, "/"); //Devuelve un array del path del directorio a crear
-	//int indiceVectorDirNuevo=1;
 	int indiceVectorDirNuevo = 0; //empiezo por el primero del split
 	while (directorioNuevo[indiceVectorDirNuevo] != NULL) {
-		//list_find(directorios,(void*) ExisteEnLaLista());  //ver más adelante de usar la función de lcommons
 		if (indiceVectorDirNuevo == 0) { //el primero del split siempre va a ser hijo de raiz
 			idPadre = 0;
 		}
@@ -2250,7 +2199,6 @@ static void directorio_destroy(t_dir* self) {
 }
 
 void eliminar_listas(t_list *archivos_l, t_list *directorios_l, t_list *nodos_l){
-	//int i,j,k;
 	FILE* dir;
 
 	//=====================================================================
@@ -2283,7 +2231,6 @@ void eliminar_listas(t_list *archivos_l, t_list *directorios_l, t_list *nodos_l)
 
 	if (nodos_l!=NULL){
 		list_destroy_and_destroy_elements(nodos_l,(void*)eliminar_lista_de_nodos);
-		//list_destroy(nodos_l);
 	}
 	//=====================================================================
 	//======================= FORMATEO PARTE 3 ============================
@@ -2292,7 +2239,6 @@ void eliminar_listas(t_list *archivos_l, t_list *directorios_l, t_list *nodos_l)
 
 	if (directorios_l!=NULL){
 		list_destroy_and_destroy_elements(directorios_l,(void*)eliminar_lista_de_directorio);
-		//list_destroy(directorios_l);
 	}
 
 	//Salida corresta del FS
@@ -2383,7 +2329,6 @@ void EliminarDirectorio() {
 						i++;
 					}
 					posicionElementoAEliminar = i - 1;
-					//list_remove_and_destroy_element(t_list *, int index, void(*element_destroyer)(void*));
 					list_remove_and_destroy_element(directorios,posicionElementoAEliminar, (void*) directorio_destroy);
 					indiceDirectorios[idAEliminar] = 0; //Desocupo el indice en vector de indices disponibles para poder usar ese id en el futuro
 					directoriosDisponibles++; //Incremento la cantidad de directorios libres
@@ -2402,17 +2347,14 @@ void RenombrarDirectorio() {
 	listarDirectoriosCreados();
 	int tamanioLista = list_size(directorios);
 	if (tamanioLista > 0){
-		//char* pathOriginal = string_new();
 		char pathOriginal[200];
 		memset(pathOriginal, '\0', 200);
 		char copiaPath[200];
 		memset(copiaPath, '\0', 200);
 		char** vectorPathOriginal;
-		//char* pathNuevo = string_new();
 		char pathNuevo[200];
 		memset(pathNuevo, '\0', 200);
 		t_dir* elementoDeMiLista;
-		//elementoDeMiLista = malloc(sizeof(t_dir));
 		int i = 0;
 		int idParaRenombrar;
 		uint32_t idARenombrar;
@@ -2442,7 +2384,6 @@ void RenombrarDirectorio() {
 				elementoDeMiLista = list_get(directorios, i);
 				if (elementoDeMiLista->id == idARenombrar) {
 					encontrado = 1;
-					//strcpy(elementoDeMiLista->nombre, pathNuevo);
 					elementoDeMiLista->nombre=strdup(pathNuevo);
 				}
 				i++;
@@ -2461,15 +2402,12 @@ void MoverDirectorio() {
 	listarDirectoriosCreados();
 	int tamanioLista = list_size(directorios);
 	if (tamanioLista > 0){
-		//char* pathOriginal = string_new();
 		char pathOriginal[200];
 		memset(pathOriginal, '\0', 200);
 		char** vectorPathOriginal;
-		//char* pathNuevo = string_new();
 		char pathNuevo[200];
 		memset(pathNuevo, '\0', 200);
 		char** vectorPathNuevo;
-		//char* nombreDirAMover = string_new();
 		char nombreDirAMover[200];
 		memset(nombreDirAMover, '\0', 200);
 		t_dir* elementoDeMiLista;
@@ -2492,7 +2430,6 @@ void MoverDirectorio() {
 			padreNuevo = BuscarPadre(pathNuevo);
 			vectorPathNuevo = string_split((char*) pathNuevo, "/");
 		}
-		//padreNuevo = BuscarPadre(pathNuevo);
 		vectorPathOriginal = string_split((char*) pathOriginal, "/");
 		while (vectorPathOriginal[i] != NULL && idEncontrado != -1) {
 			if (i == 0) {
@@ -2573,7 +2510,6 @@ int copiar_lista_de_archivos(t_list* destino, t_list* origen){
 				t_copias *copia_copia=malloc(sizeof(t_copias));
 				copia_original=list_get(bloque_original->copias,k);
 				copia_copia->bloqueNodo=copia_original->bloqueNodo;
-				//strcpy(copia_copia->md5,copia_original->md5);
 				copia_copia->nodo=strdup(copia_original->nodo);
 				list_add(bloque_copia->copias,copia_copia);
 			}
@@ -2746,13 +2682,8 @@ int CopiarArchivoAMDFS(int flag, char* archvo_local, char* archivo_mdfs){
 						//Agrego la copia del bloque a la lista de copias de este bloque particular
 						t_copias *copia_temporal=malloc(sizeof(t_copias));
 						copia_temporal->bloqueNodo=combo.n_bloque;
-						//char *cadena_para_md5=malloc(20971520);
-					//	strcpy(cadena_para_md5,combo.buf_20mb);
-					//	memset(copia_temporal->md5,'\0',32);
-						//strcpy(copia_temporal->md5,obtener_md5(cadena_para_md5));
 						copia_temporal->nodo=strdup(nodo_temporal->nodo_id);
 						list_add(bloque_temporal->copias,copia_temporal);
-						//free(cadena_para_md5);
     				}
     			}
     			if (bandera!=3){
@@ -2808,20 +2739,15 @@ int CopiarArchivoAMDFS(int flag, char* archvo_local, char* archivo_mdfs){
     					//Agrego la copia del bloque a la lista de copias de este bloque particular
     					t_copias *copia_temporal=malloc(sizeof(t_copias));
     					copia_temporal->bloqueNodo=combo.n_bloque;
-    			//		char *cadena_para_md5=malloc(20971520);
-    				//	strcpy(cadena_para_md5,combo.buf_20mb);
-    		//			memset(copia_temporal->md5,'\0',32);
-    			//		strcpy(copia_temporal->md5,obtener_md5(cadena_para_md5));
     					copia_temporal->nodo=strdup(nodo_temporal->nodo_id);
     					list_add(bloque_temporal->copias,copia_temporal);
-    				//	free(cadena_para_md5);
     				}
     			}
     			if (bandera!=3){
     				printf ("No hay suficientes nodos disponibles con espacio libre\n");
     				return -1;
     			}
-    			pos = 0; //pos = 0;
+    			pos = 0;
     			cantBytes-=aux;
     			fseek(archivoLocal,cantBytes,SEEK_SET);
     			memset(combo.buf_20mb,'\0',BLOCK_SIZE);
@@ -2875,13 +2801,8 @@ int CopiarArchivoAMDFS(int flag, char* archvo_local, char* archivo_mdfs){
     				//Agrego la copia del bloque a la lista de copias de este bloque particular
 					t_copias *copia_temporal=malloc(sizeof(t_copias));
 					copia_temporal->bloqueNodo=combo.n_bloque;
-					//char *cadena_para_md5=malloc(20971520);
-					//strcpy(cadena_para_md5,combo.buf_20mb);
-				//	memset(copia_temporal->md5,'\0',32);
-			//		strcpy(copia_temporal->md5,obtener_md5(cadena_para_md5));
 					copia_temporal->nodo=strdup(nodo_temporal->nodo_id);
 					list_add(bloque_temporal->copias,copia_temporal);
-				//	free(cadena_para_md5);
     			}
     		}
     		if (bandera!=3){
@@ -2960,7 +2881,6 @@ int CopiarArchivoAMDFS(int flag, char* archvo_local, char* archivo_mdfs){
     	printf ("Pasa persistencia\n");
     	//Si llego hasta aca salio tod0 bien, actualizo la lista real de nodos
     	eliminar_listas(NULL,NULL,nodos);
-    	//list_destroy(nodos);
     	nodos=list_create();
     	if (copiar_lista_de_nodos(nodos,nodos_temporales)){
     		printf ("No se pudo crear la copia de la lista de nodos\n");
@@ -2968,7 +2888,6 @@ int CopiarArchivoAMDFS(int flag, char* archvo_local, char* archivo_mdfs){
     	}
     	printf ("Copia lista de nodos\n");
     	eliminar_listas(NULL,NULL,nodos_temporales);
-    	//list_destroy(nodos_temporales);
     	printf ("Pasa eliminar lista nodos\n");
 
 
@@ -3106,7 +3025,7 @@ int obtenerEstadoDelNodo(char* nodo){
 	int i;
 	for (i=0;i<list_size(nodos);i++){
 		unNodo=list_get(nodos,i);
-		if ((strcmp(unNodo->nodo_id,nodo)==0) && (unNodo->estado_red==1) && (unNodo->estado==1)) return 1;  //TODO REVISAR
+		if ((strcmp(unNodo->nodo_id,nodo)==0) && (unNodo->estado_red==1) && (unNodo->estado==1)) return 1;
 	}
 	return -1;
 }
@@ -3168,7 +3087,6 @@ void MD5DeArchivo() {
 
 
 void BorrarBloque() {
-	//printf("Eligió Borrar un bloque que compone un archivo\n");
 	int i, cantNodos, bloque, nodoEncontrado;
 	nodoEncontrado = 0;
 	t_nodo* nodoBuscado;
@@ -3178,7 +3096,6 @@ void BorrarBloque() {
 	t_copias *unaCopia;
 	int bloque_encontrado=0;
 	cantNodos = list_size(nodos);
-	//char* nodoId = malloc(1);
 	char nodoId[6];
 	memset(nodoId,'\0',6);
 	printf("Ingrese el ID del nodo del que desea borrar un bloque:\n");
@@ -3261,10 +3178,8 @@ void BorrarBloque() {
 
 
 void CopiarBloque() {
-	//char *nodo_origen=string_new();
 	char nodo_origen[6];
 	memset(nodo_origen,'\0',6);
-	//char *nodo_destino=string_new();
 	char nodo_destino[6];
 	memset(nodo_destino,'\0',6);
 	int bloque_origen, bloque_destino;
@@ -3275,7 +3190,7 @@ void CopiarBloque() {
 	int socket_nodo;
 	printf("Eligió Copiar un bloque de un archivo\n");
 	printf ("Ingrese el nodo de origen:\n");
-	scanf ("%s",nodo_origen);  //TODO ARREGAR
+	scanf ("%s",nodo_origen);
 	printf ("Ingrese bloque de origen:\n");
 	scanf("%d",&bloque_origen);
 	printf ("Ingrese el nodo de destino:\n");
@@ -3296,7 +3211,7 @@ void CopiarBloque() {
 	}
 	for (i=0;i<list_size(nodos);i++){
 		origen=list_get(nodos,i);
-		if (strcmp(origen->nodo_id,nodo_origen)==0){  //todo revisar
+		if (strcmp(origen->nodo_id,nodo_origen)==0){
 			if (origen->estado==1 && origen->estado_red==1) origen_encontrado=1;
 			if (!bitarray_test_bit(origen->bloques_del_nodo,bloque_origen)){
 				printf ("El bloque %d del nodo %s esta vacio, no hay nada que copiar\n",bloque_origen,nodo_origen);
@@ -3308,10 +3223,10 @@ void CopiarBloque() {
 
 	for (i=0;i<list_size(nodos);i++){
 		destino=list_get(nodos,i);
-		if (strcmp(destino->nodo_id,nodo_destino)==0){  //todo revisar
+		if (strcmp(destino->nodo_id,nodo_destino)==0){
 			if (destino->estado==1 && destino->estado_red==1) destino_encontrado=1;
 			if (bitarray_test_bit(destino->bloques_del_nodo,bloque_destino)){
-				printf ("El bloque %d del nodo %s esta ocupado, no se puede copiar\n",bloque_destino,nodo_destino); //todo revisar
+				printf ("El bloque %d del nodo %s esta ocupado, no se puede copiar\n",bloque_destino,nodo_destino);
 				return;
 			}
 			break;
@@ -3360,12 +3275,7 @@ void CopiarBloque() {
 	//Agrego la copia del bloque a la lista de copias de este bloque particular
 	t_copias *copia_temporal=malloc(sizeof(t_copias));
 	copia_temporal->bloqueNodo=bloque_destino;
-	//char *cadena_para_md5=malloc(20971520);
-	//strcpy(cadena_para_md5,combo.buf_20mb);
-	//strcpy(copia_temporal->md5,obtener_md5(cadena_para_md5));
 	copia_temporal->nodo=strdup(nodo_destino);
-	//free(cadena_para_md5);
-
 
 	//Busco el bloque en el destino para agregar la nueva copia del bloque
 	t_archivo *unArchivo;
@@ -3582,7 +3492,6 @@ int VerBloque() {
 			bloqueParaVer = recibirBloque(socket_nodo);
 			archivoParaVerPath = fopen("./archBloqueParaVer.txt", "w");
 			fprintf(archivoParaVerPath, "%s", bloqueParaVer);
-			//printf ("El md5 del bloque que traje es: %s\n",obtener_md5(bloqueParaVer));
 			printf("El bloque se copio en el archivo: ./archBloqueParaVer.txt\n");
 			fclose(archivoParaVerPath);
 			free(bloqueParaVer);
