@@ -1778,7 +1778,6 @@ void FormatearFilesystem() {
 
 	list_clean_and_destroy_elements(directorios,(void*)eliminar_lista_de_directorio);
 
-	//TODO
 	//Actualizo vector de directorios disponibles y el control para máxima cantidad de directorios a crear
 	for (j = 1; j < sizeof(indiceDirectorios); j++) {
 		indiceDirectorios[j] = 0;
