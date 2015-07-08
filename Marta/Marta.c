@@ -983,9 +983,25 @@ void *connection_handler_jobs(){
 								log_error(logger,"FALLO el Recv del bloque del nodo destino del copiar bloque");
 								exit(-1);
 							}
-							printf ("...Bloque del copiar bloque: %d\n",bloqueNodoDestino);
+							printf ("...Bloque del copiar bloque: %d\n",bloqueNodoDestino);							t_archivo *miArchivo;
+							t_bloque *miBloque;
+							t_copias *miCopia=malloc(sizeof(t_copias));
+							int g;
+							for (g=0;g<list_size(listaArchivos);g++){
+								miArchivo=list_get(listaArchivos,g);
+								if (miArchivo->padre==padreArchivoNovedad && strcmp(miArchivo->nombre,nombreArchivoNovedad)==0){
+									miBloque=list_get(miArchivo->bloques,bloqueNodo);
+									miCopia->bloqueNodo=bloqueNodoDestino;
+									miCopia->nodo=strdup(nodoId);
+									list_add(miBloque->copias,miCopia);
+									break;
+								}
+							}
 
-							t_list* B1;
+
+
+
+							/*t_list* B1;
 							t_bloque* B;
 							B1 = buscarBloques(nombreArchivoNovedad, padreArchivoNovedad);
 							B = list_get(B1, bloqueNodoDestino);
@@ -993,7 +1009,7 @@ void *connection_handler_jobs(){
 							memset(D->nodo,'\0',6);
 							strcpy(D->nodo,nodoId);
 							D->bloqueNodo = bloqueNodo;
-							list_add(B->copias, D);
+							list_add(B->copias, D);*/
 
 						}
 
