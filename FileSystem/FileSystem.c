@@ -1817,6 +1817,7 @@ void FormatearFilesystem() {
 	fclose(dir);
 	dir=fopen("archivos","w");
 	fclose(dir);
+	log_info(logger,"Se Formateo correctamente todo el FileSystem");
 }
 
 char *obtenerPath(char *nombre, int dir_id){
@@ -1892,6 +1893,7 @@ void EliminarArchivo() {
 		//Si hay archivos luego de listarlos, el usuario procede
 		printf("\nIngrese el path del archivo a eliminar:\n");
 		scanf("%s", path);
+		log_info(logger,"Se selecciono eliminar el archivo %s",path);
 		int contador=0,indice_path;
 		for (indice_path=0;indice_path<strlen(path);indice_path++)	if (path[indice_path]=='/') contador++;
 		if (contador>1){
@@ -1905,16 +1907,19 @@ void EliminarArchivo() {
 			directorio=strdup("/");
 		}else if (contador==0){
 			printf ("Directorio destino mal ingresado\n");
+			log_info(logger,"Fallo la eliminacion del archivo %s",path);
 			return;
 		}
 		int idPadre = BuscarPadre(directorio);
 		if (idPadre==-1){
 			printf("El directorio no existe\n");
+			log_info(logger,"Fallo la eliminacion del archivo %s",path);
 			return;
 		}
 		int posArchivo = BuscarArchivoPorNombre(path, idPadre);
 		if (posArchivo==-1){
 			printf("El archivo no existe\n");
+			log_info(logger,"Fallo la eliminacion del archivo %s",path);
 			return;
 		}
 		archivo = list_get(archivos, posArchivo);
@@ -1942,6 +1947,7 @@ void EliminarArchivo() {
 		}
 		list_remove_and_destroy_element(archivos,posArchivo,(void*)eliminar_lista_de_archivos);
 		printf ("Archivo eliminado exitosamente\n");
+		log_info(logger,"Se elimino correctamente el archivo %s",path);
 		actualizar_persistencia_archivo_eliminado(nombreArchivo,idPadre);
 		//Actualizo a Marta
 		if(marta_presente == 1){
@@ -1989,7 +1995,7 @@ void RenombrarArchivo() {
 		}
 		printf("\nIngrese el path del archivo a renombrar, por ejemplo /home/tp/nombreArchivo \n");
 		scanf("%s", path);
-
+		log_info(logger,"Selecciono renombrar el archivo: %s",path);
 		int contador=0,indice_path;
 		for (indice_path=0;indice_path<strlen(path);indice_path++)	if (path[indice_path]=='/') contador++;
 		if (contador>1){
@@ -2003,12 +2009,14 @@ void RenombrarArchivo() {
 			directorio=strdup("/");
 		}else if (contador==0){
 			printf ("Directorio destino mal ingresado\n");
+			log_info(logger,"Fallo la renombracion del archivo %s",path);
 			return;
 		}
 
 		int idPadre = BuscarPadre(directorio);
 		if (idPadre==-1){
 			printf("El archivo no existe\n");
+			log_info(logger,"Fallo la renombracion del archivo %s",path);
 			return;
 		}
 		int posArchivo = BuscarArchivoPorNombre(path, idPadre);
@@ -2018,6 +2026,7 @@ void RenombrarArchivo() {
 		strcpy(viejoNombre,archivo->nombre);
 		strcpy(archivo->nombre, nuevoNombre);
 		printf ("Archivo renombrado exitosamente\n");
+		log_info(logger,"El archivo %s se renombro exitosamente a ",path,nuevoNombre);
 		actualizar_persistencia_archivo_renombrado(viejoNombre,idPadre,nuevoNombre);
 
 		//Aviso a marta que tiene que renombrar un archivo
@@ -2070,7 +2079,7 @@ void MoverArchivo() {
 		printf("\nIngrese el path del archivo que quiere mover, por ejemplo /home/tp/nombreArchivo \n");
 		memset(path,'\0',200);
 		scanf("%s", path);
-
+		log_info(logger,"Selecciono mover el archivo %s",path);
 		int contador=0,indice_path;
 		for (indice_path=0;indice_path<strlen(path);indice_path++)	if (path[indice_path]=='/') contador++;
 		if (contador>1){
@@ -2084,6 +2093,7 @@ void MoverArchivo() {
 			directorioDestino=strdup("/");
 		}else if (contador==0){
 			printf ("Directorio destino mal ingresado\n");
+			log_info(logger,"Fallo mover el archivo %s",path);
 			return;
 		}
 
@@ -2091,11 +2101,13 @@ void MoverArchivo() {
 		printf ("Padre: %d\n",idPadre);
 		if (idPadre==-1){
 			printf ("El path no existe\n");
+			log_info(logger,"Fallo mover el archivo %s",path);
 			return;
 		}
 		int posArchivo = BuscarArchivoPorNombre(path, idPadre);
 		if (posArchivo==-1){
 			printf ("El archivo no existe\n");
+			log_info(logger,"Fallo mover el archivo %s",path);
 			return;
 		}
 		archivo = list_get(archivos, posArchivo);
@@ -2103,14 +2115,17 @@ void MoverArchivo() {
 		printf("Ingrese el nuevo path \n");
 		memset(nuevoPath,'\0',200);
 		scanf("%s", nuevoPath);
+		log_info(logger,"El nuevo path del archivo sera %s",nuevoPath);
 		int idPadreNuevo = BuscarPadre(nuevoPath);
 		if (idPadreNuevo==-1){
 			printf ("El path destino no existe\n");
+			log_info(logger,"Fallo mover el archivo a %s",nuevoPath);
 			return;
 		}
 		archivo->padre = idPadreNuevo;
 		actualizar_persistencia_archivo_movido(archivo->nombre,idPadre,idPadreNuevo);
 		printf ("Archivo movido exitosamente\n");
+		log_info(logger,"El archivo %s se movio correctamente a %s",path,nuevoPath);
 		if(marta_presente == 1){
 			memset(identificacion,'\0',BUF_SIZE);
 			strcpy(identificacion, "mov_arch");
@@ -2168,8 +2183,10 @@ void CrearDirectorio() {
 	printf("Ingrese el path del directorio desde raíz ejemplo /home/utnso \n");
 	memset(path,'\0',200);
 	scanf("%s", path);
+	log_info(logger,"Selecciono crear el directorio %s",path);
 	if (strcmp(path,"/")==0){
 		printf("No puede crearlo porque ese directorio ya es raíz \n");
+		log_info(logger,"Fallo crear el directorio %s",path);
 		return;
 	}
 	directorioNuevo = string_split((char*) path, "/"); //Devuelve un array del path del directorio a crear
@@ -2183,6 +2200,7 @@ void CrearDirectorio() {
 		if (idAValidar != -1) {  //quiere decir que existe
 			if (directorioNuevo[indiceVectorDirNuevo + 1] == NULL) {
 				printf("El directorio ingresado ya existe. No se realizara ninguna accion \n");
+				log_info(logger,"Fallo crear el directorio %s, ya existe",path);
 				listarDirectoriosCreados();
 			} else {
 				idPadre = (uint32_t) idAValidar; //actualizo valor del padre con el que existe y avanzo en split para ver el siguiente directorio
@@ -2210,9 +2228,11 @@ void CrearDirectorio() {
 
 				}
 				printf("El directorio se ha creado satisfactoriamente \n");
+				log_info(logger,"El directorio %s se creo correctamente",path);
 				listarDirectoriosCreados();
 			} else {
 				printf("No se puede crear el directorio ya que sobrepasaría el límite máximo de directorios permitidos: %d\n",MAX_DIRECTORIOS);
+				log_info(logger,"Fallo crear el directorio %s, max. cantidad de directorios superada",path);
 				//No puede pasarse de 1024 directorios
 				listarDirectoriosCreados();
 			}
@@ -2304,8 +2324,10 @@ void EliminarDirectorio() {
 		int posicionElementoAEliminar;
 		printf("Ingrese el path del directorio que desea eliminar, desde raíz ejemplo /home/utnso \n");
 		scanf("%s", pathAEliminar);
+		log_info(logger,"Selecciono eliminar el directorio %s",pathAEliminar);
 		if (strcmp(pathAEliminar,"/")==0){
 			printf("No se puede puede eliminar la raíz \n");
+			log_info(logger,"Fallo eliminar el directorio %s",pathAEliminar);
 			return;
 		}
 		strcpy(copia_pathAEliminar,pathAEliminar);
@@ -2320,6 +2342,7 @@ void EliminarDirectorio() {
 		}
 		if (idEncontrado == -1) {
 			printf("No existe el directorio para eliminar \n");
+			log_info(logger,"Fallo eliminar el directorio %s",pathAEliminar);
 		} else {
 			tieneDirOArch = 0;
 			idAEliminar = idEncontrado;
@@ -2334,6 +2357,7 @@ void EliminarDirectorio() {
 			if (tieneDirOArch == 1) {
 				printf(
 						"El directorio que desea eliminar no puede ser eliminado ya que posee subdirectorios \n");
+						log_info(logger,"Fallo eliminar el directorio %s",pathAEliminar);
 			} else {
 				i = 0;
 				while (tieneDirOArch == 0 && i < tamanioListaArch) {
@@ -2345,6 +2369,7 @@ void EliminarDirectorio() {
 				}
 				if (tieneDirOArch == 1) {
 					printf("El directorio que desea eliminar no puede ser eliminado ya que posee archivos \n");
+					log_info(logger,"Fallo eliminar el directorio %s",pathAEliminar);
 				} else {
 					i = 0;
 					encontrePos = 0; //no lo encontre
@@ -2361,6 +2386,7 @@ void EliminarDirectorio() {
 					directoriosDisponibles++; //Incremento la cantidad de directorios libres
 					actualizar_persistencia_directorio_eliminado(idPadre);
 					printf("El directorio se ha eliminado correctamente. \n");
+					log_info(logger,"El directorio %s se elimino correctamente",pathAEliminar);
 				}
 			}
 		}
@@ -2389,10 +2415,12 @@ void RenombrarDirectorio() {
 		char encontrado; //0 si no lo encontro, 1 si lo encontro
 		printf("Ingrese el path del directorio que desea renombrar, desde raíz ejemplo /home/utnso \n");
 		scanf("%s", pathOriginal);
+		log_info(logger,"Selecciono renombrar el directorio %s",pathOriginal);
 		strcpy(copiaPath,pathOriginal);
 		idParaRenombrar=BuscarPadre(copiaPath);
 		printf("Ingrese el nuevo nombre de directorio sin barras \n");
 		scanf("%s", pathNuevo);
+		log_info(logger,"Selecciono renombrar el directorio %s por %s",pathOriginal,pathNuevo);
 		vectorPathOriginal = string_split((char*) pathOriginal, "/");
 		while (vectorPathOriginal[i] != NULL && idEncontrado != -1) {
 			if (i == 0) {
@@ -2403,6 +2431,7 @@ void RenombrarDirectorio() {
 		}
 		if (idEncontrado == -1) {
 			printf("No existe el directorio para renombrar \n");
+			log_info(logger,"Fallo renombrar el directorio %s",pathOriginal);
 		} else {
 			i = 0;
 			encontrado = 0;
@@ -2416,6 +2445,7 @@ void RenombrarDirectorio() {
 				i++;
 			}
 			printf("El directorio se ha renombrado exitosamente. \n");
+			log_info(logger,"El directorio %s fue renombrado correctamente por %s",pathOriginal,pathNuevo);
 			actualizar_persistencia_directorio_renombrado(idParaRenombrar,pathNuevo);
 			listarDirectoriosCreados();
 		}
@@ -2450,6 +2480,7 @@ void MoverDirectorio() {
 		padreViejo = BuscarPadre(pathOriginal);
 		printf("Ingrese el path del directorio al que desea moverlo, desde raíz ejemplo /home/tp \n");
 		scanf("%s", pathNuevo);
+		log_info(logger,"Selecciono mover el directorio %s a %s",pathOriginal,pathNuevo);
 		if (strcmp(pathNuevo,"/")==0){
 			padreNuevo = 0;
 		}
@@ -2467,6 +2498,7 @@ void MoverDirectorio() {
 		}
 		if (idEncontrado == -1) {
 			printf("No existe el path original \n");
+			log_info(logger,"Fallo mover el directorio %s",pathOriginal);
 		} else {
 			idDirAMover = idEncontrado;
 			strcpy(nombreDirAMover, vectorPathOriginal[(i - 1)]); //revisar, puse -1 porque avancé hasta el NULL.
@@ -2486,6 +2518,7 @@ void MoverDirectorio() {
 			}
 			if (idEncontrado == -1) {
 				printf("No existe el path al que desea moverlo \n");
+				log_info(logger,"Fallo mover el directorio %s",pathOriginal);
 			} else {
 				idNuevoPadre = idEncontrado;
 				if (ExisteEnLaLista(directorios, nombreDirAMover, idNuevoPadre)	== -1) { //ver si el padre no tiene hijos que se llamen igual que el directorio a mover
@@ -2500,6 +2533,7 @@ void MoverDirectorio() {
 						i++;
 					}
 					printf("El directorio se ha movido satisfactoriamente \n");
+					log_info(logger,"El directorio %s se movio correctamente a %s",pathOriginal,pathNuevo);
 					actualizar_persistencia_directorio_movido(padreViejo, padreNuevo);
 					listarDirectoriosCreados();
 				} else {
@@ -2617,6 +2651,7 @@ int CopiarArchivoAMDFS(int flag, char* archvo_local, char* archivo_mdfs){
 		printf("Eligió Copiar un archivo local al MDFS\n");
 		printf("Ingrese el path del archivo local desde raíz, por ejemplo /home/tp/nombreArchivo \n");
 		scanf("%s", path);
+		log_info(logger,"Selecciono copiar el archivo %s al MDFS",path);
 	}else strcpy(path,archvo_local);
 
 	//Validacion de si existe el archivo en el filesystem local
@@ -2630,6 +2665,7 @@ int CopiarArchivoAMDFS(int flag, char* archvo_local, char* archivo_mdfs){
 	if (flag!=99){
 		printf("Ingrese el path del archivo destino desde raíz, por ejemplo /tmp/nombreArchivo \n");
 		scanf("%s", pathMDFS);
+		log_info(logger,"El destino seleccionado en MDFS es: %s",pathMDFS);
 	}else strcpy(pathMDFS,archivo_mdfs);
 	int contador=0,indice_path;
 
@@ -2645,6 +2681,7 @@ int CopiarArchivoAMDFS(int flag, char* archvo_local, char* archivo_mdfs){
 		directorioDestino=strdup("/");
 	}else if (contador==0){
 		printf ("Directorio destino mal ingresado\n");
+		log_info(logger,"Error al copiar el archivo %s al MDFS",path);
 		return -1;
 	}
 
@@ -2652,12 +2689,14 @@ int CopiarArchivoAMDFS(int flag, char* archvo_local, char* archivo_mdfs){
     uint32_t idPadre = BuscarPadre(directorioDestino);
     if(idPadre == -1){
       	printf("El directorio no existe. Se debe crear el directorio desde el menú. \n");
+      	log_info(logger,"Error al copiar el archivo %s al MDFS",path);
        	return -1;
     }
     //Buscar Archivo. Si no existe se muestra mensaje de error y se debe volver al menú para crearlo
     uint32_t posArchivo = BuscarArchivoPorNombre (pathMDFS,idPadre);
     if(!(posArchivo == -1)){
      printf("El archivo ya existe. Se debe especificar un archivo nuevo. \n");
+     log_info(logger,"Error al copiar el archivo %s al MDFS",path);
      return -1;
     }
 
@@ -2695,6 +2734,7 @@ int CopiarArchivoAMDFS(int flag, char* archvo_local, char* archivo_mdfs){
 						}
 						if (corte==0){
 							printf ("El nodo %s no tiene bloques libles, se cancela la subida del archivo\n",nodo_temporal->nodo_id);
+							log_info(logger,"Error al copiar el archivo %s al MDFS",path);
 							return -1;
 						}
 						printf ("voy a mandar al nodo %s la copia %d del bloque %d y la guardara en el bloque %d\n",nodo_temporal->nodo_id,indice+1,n_copia,combo.n_bloque);
@@ -2715,6 +2755,7 @@ int CopiarArchivoAMDFS(int flag, char* archvo_local, char* archivo_mdfs){
     			}
     			if (bandera!=3){
     				printf ("No hay suficientes nodos disponibles con espacio libre\n");
+    				log_info(logger,"Error al copiar el archivo %s al MDFS",path);
     				return -1;
     			}
     			memset(combo.buf_20mb,'\0',BLOCK_SIZE);
@@ -2750,6 +2791,7 @@ int CopiarArchivoAMDFS(int flag, char* archvo_local, char* archivo_mdfs){
     					}
     					if (corte==0){
     						printf ("El nodo %s no tiene bloques libles, se cancela la subida del archivo\n",nodo_temporal->nodo_id);
+    						log_info(logger,"Error al copiar el archivo %s al MDFS",path);
     						return -1;
     					}
     					printf ("voy a mandar al nodo %s la copia %d del bloque %d y la guardara en el bloque %d\n",nodo_temporal->nodo_id,indice+1,n_copia,combo.n_bloque);
@@ -2772,13 +2814,13 @@ int CopiarArchivoAMDFS(int flag, char* archvo_local, char* archivo_mdfs){
     			}
     			if (bandera!=3){
     				printf ("No hay suficientes nodos disponibles con espacio libre\n");
+    				log_info(logger,"Error al copiar el archivo %s al MDFS",path);
     				return -1;
     			}
     			pos = 0;
     			cantBytes-=aux;
     			fseek(archivoLocal,cantBytes,SEEK_SET);
     			memset(combo.buf_20mb,'\0',BLOCK_SIZE);
-
     		}
     		list_add(archivo_temporal->bloques,bloque_temporal);
     	}
@@ -2813,6 +2855,7 @@ int CopiarArchivoAMDFS(int flag, char* archvo_local, char* archivo_mdfs){
     				}
     				if (corte==0){
     					printf ("El nodo %s no tiene bloques libles, se cancela la subida del archivo\n",nodo_temporal->nodo_id);
+    					log_info(logger,"Error al copiar el archivo %s al MDFS",path);
     					return -1;
     				}
     				printf ("voy a mandar al nodo %s la copia %d del bloque %d y la guardara en el bloque %d\n",nodo_temporal->nodo_id,indice+1,n_copia,combo.n_bloque);
@@ -2834,6 +2877,7 @@ int CopiarArchivoAMDFS(int flag, char* archvo_local, char* archivo_mdfs){
     		}
     		if (bandera!=3){
     			printf ("No hay suficientes nodos disponibles con espacio libre\n");
+    			log_info(logger,"Error al copiar el archivo %s al MDFS",path);
     			return -1;
     		}
     		list_add(archivo_temporal->bloques,bloque_temporal);
@@ -2928,6 +2972,7 @@ int CopiarArchivoAMDFS(int flag, char* archvo_local, char* archivo_mdfs){
     	}
     	printf ("Pasa copia lista archivos\n");
     	eliminar_listas(archivos_temporales,NULL,NULL);
+    	log_info(logger,"El archivo %s se copio correctamente al al MDFS",path);
     	return 0;
 }
 int CopiarArchivoDelMDFS(int flag, char*unArchivo) {
@@ -2965,6 +3010,7 @@ int CopiarArchivoDelMDFS(int flag, char*unArchivo) {
 			printf("\nEligió Copiar un archivo del MDFS al filesystem local\n");
 			printf ("Ingrese el archivo a copiar con su path completo, ej. /directorio/archivo.ext\n");
 			scanf("%s",pathArchivo);
+			log_info(logger,"Selecciono copiar el archivo %s Del MDFS",pathArchivo);
 		}else strcpy(pathArchivo,unArchivo);
 		strcpy(ruta,pathArchivo);
 		for (aux1=0;aux1<strlen(ruta);aux1++) if (ruta[aux1]=='/') aux2++;
@@ -2987,17 +3033,20 @@ int CopiarArchivoDelMDFS(int flag, char*unArchivo) {
 			directorio=strdup("/");
 		}else if (contador==0){
 			printf ("Directorio destino mal ingresado\n");
+			log_info(logger,"Error al copiar el archivo %s Del MDFS",pathArchivo);
 			return -1;
 		}
 
 		int idPadre = BuscarPadre(directorio);
 		if (idPadre==-1){
 			printf("El directorio no existe\n");
+			log_info(logger,"Error al copiar el archivo %s Del MDFS",pathArchivo);
 			return -1;
 		}
 		int posArchivo = BuscarArchivoPorNombre(pathArchivo, idPadre);
 		if (posArchivo==-1){
 			printf ("El archivo no existe\n");
+			log_info(logger,"Error al copiar el archivo %s Del MDFS",pathArchivo);
 			return -1;
 		}
 		archivo = list_get(archivos, posArchivo);
@@ -3023,11 +3072,13 @@ int CopiarArchivoDelMDFS(int flag, char*unArchivo) {
 			}
 			if (bloqueDisponible==0){
 				printf ("El archivo no se puede recuperar, el bloque %d no esta disponible\n",j);
+				log_info(logger,"Error al copiar el archivo %s Del MDFS",pathArchivo);
 				return -1;
 			}
 		}
 		fclose(copiaLocal);
 		if (flag!=99) printf ("El archivo se copio exitosamente\n");
+		log_info(logger,"el archivo %s se copio correctamente Del MDFS",pathArchivo);
 		return 0;
 	}else{
 		if (flag!=99){
@@ -3085,9 +3136,11 @@ void MD5DeArchivo() {
 		char *saveptr;
 		printf ("\nIngrese el path del archivo en MDFS:\n");
 		scanf ("%s",path);
+		log_info(logger,"Solicito calcular el MD5 del archivo %s Del MDFS",path);
 
 		if(CopiarArchivoDelMDFS(99,path)==-1){
 			printf ("El archivo seleccionado no esta disponible\n");
+			log_info(logger,"Error al calcular el MD5 del archivo %s Del MDFS",path);
 			return;
 		}
 
@@ -3108,6 +3161,7 @@ void MD5DeArchivo() {
 		wait(NULL);
 		read(fd[0], result, sizeof(result));
 		printf("%s",result);
+		log_info(logger,"El MD5 del archivo %s Del MDFS se calculo correctamente %s",path,result);
 	}else printf ("No hay archivos cargados en MDFS\n");
 
 }
