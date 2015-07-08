@@ -1778,6 +1778,16 @@ void FormatearFilesystem() {
 
 	list_clean_and_destroy_elements(directorios,(void*)eliminar_lista_de_directorio);
 
+	//TODO
+	//Actualizo vector de directorios disponibles y el control para máxima cantidad de directorios a crear
+	for (j = 1; j < sizeof(indiceDirectorios); j++) {
+		indiceDirectorios[j] = 0;
+	}
+	indiceDirectorios[0] = 1; //raiz queda reservado como ocupado
+	directoriosDisponibles = (MAX_DIRECTORIOS - 1); //actualizo cantidad disponibles a crear restando raíz
+
+
+
 	if(marta_presente == 1){
 		memset(identificacion,'\0',BUF_SIZE);
 		strcpy(identificacion, "marta_formatea");
