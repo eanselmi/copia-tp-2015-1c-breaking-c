@@ -152,10 +152,11 @@ int main(int argc, char *argv[]) {
 						fdmax = newfd;
 					}
 					list_add(nodos,agregar_nodo_a_lista(nodo_id, newfd, 0, 1,inet_ntoa(remote_client.sin_addr),remote_client.sin_port,*puerto_escucha_nodo, *bloquesTotales,*bloquesTotales));
-					printf("\nSe conectó un nuevo nodo: %s con %d bloques totales\n",inet_ntoa(remote_client.sin_addr), *bloquesTotales);
-					log_info(logger,"Se conectó un nuevo nodo: %s con %d bloques totales",inet_ntoa(remote_client.sin_addr), *bloquesTotales);
+					printf("\nSe conectó el nodo: %s desde %s con %d bloques disponibles",nodo_id,inet_ntoa(remote_client.sin_addr), *bloquesTotales);
+					log_info(logger,"Se conectó el nodo: %s desde %s con %d bloques disponibles",nodo_id,inet_ntoa(remote_client.sin_addr), *bloquesTotales);
 				} else {
 					printf("Ya existe un nodo con el mismo id o direccion ip\n");
+					log_info(logger,"Se conecto el Nodo: %s con identidad duplicada, ya existe un nodo con ese id conectado al FileSystem\n",nodo_id);
 					close(newfd);
 				}
 			}
@@ -164,6 +165,7 @@ int main(int argc, char *argv[]) {
 		} else {
 			close(newfd);
 			printf("\nSe conecto algo pero no se que fue, lo rechazo\n");
+			log_info(logger,"Se intento conectar un proceso al FileSystem que no es un Nodo antes de que el sistema este disponible");
 		}
 	}
 	//Cuando sale de este ciclo el proceso FileSystem ya se encuentra en condiciones de iniciar sus tareas
@@ -1371,8 +1373,8 @@ void *connection_handler_escucha(void) {
 											fdmax = newfd;
 										}
 										list_add(nodos,agregar_nodo_a_lista(nodo_id,newfd, 0, 1,inet_ntoa(remote_client.sin_addr),remote_client.sin_port,*puerto_escucha_nodo,*bloquesTotales,*bloquesTotales));
-										printf("\nSe conectó un nuevo nodo: %s con %d bloques totales\n",inet_ntoa(remote_client.sin_addr),*bloquesTotales);
-										log_info(logger,"Se conectó un nuevo nodo: %s con %d bloques totales",inet_ntoa(remote_client.sin_addr),*bloquesTotales);
+										printf("\nSe conectó el nodo: %s desde %s con %d bloques disponibles",nodo_id,inet_ntoa(remote_client.sin_addr), *bloquesTotales);
+										log_info(logger,"Se conectó el nodo: %s desde %s con %d bloques disponibles",nodo_id,inet_ntoa(remote_client.sin_addr), *bloquesTotales);
 
 										if(marta_presente == 1){
 											char identificacion_marta[BUF_SIZE];
@@ -1408,6 +1410,7 @@ void *connection_handler_escucha(void) {
 
 									} else {
 										printf("Ya existe un nodo con el mismo id o direccion ip\n");
+										log_info(logger,"Se conecto el Nodo: %s con identidad duplicada, ya existe un nodo con ese id conectado al FileSystem\n",nodo_id);
 										close(newfd);
 									}
 								}
@@ -1425,10 +1428,18 @@ void *connection_handler_escucha(void) {
 										fdmax = newfd;
 									}
 									modificar_estado_nodo(nodo_id, newfd,remote_client.sin_port, 0, 1); //cambio su estado de la lista a 1 que es activo
-									printf("Se reconectó el nodo %s\n",inet_ntoa(remote_client.sin_addr));
-									log_info(logger, "Se reconectó el nodo %s",inet_ntoa(remote_client.sin_addr));
+									int bloques_libres_del_reconectado;
+									int h;
+									t_nodo *miNodo;
+									for (h=0;h<list_size(nodos);h++){
+										miNodo=list_get(nodos,h);
+										if (strcmp(miNodo->nodo_id,nodo_id)==0) bloques_libres_del_reconectado=miNodo->bloques_libres;
+									}
+									printf("Se reconectó el Nodo: %s desde la ip: %s con %d bloques libres\n",nodo_id,inet_ntoa(remote_client.sin_addr),bloques_libres_del_reconectado);
+									log_info(logger, "Se reconectó el Nodo: %s desde la ip: %s con %d bloques libres\n",nodo_id,inet_ntoa(remote_client.sin_addr),bloques_libres_del_reconectado);
 								} else {
 									printf("Se reconecto un nodo con datos alterados, se lo desconecta\n");
+									log_info(logger,"Se reconecto el Nodo: %s con identidad alterada\n",nodo_id);
 									close(newfd);
 								}
 
@@ -1450,6 +1461,7 @@ void *connection_handler_escucha(void) {
 								close(i); // ¡Hasta luego!
 								FD_CLR(i, &master); // eliminar del conjunto maestro
 								printf("Marta se desconecto\n");
+								log_info(logger, "El proceso Marta se Desconecto del FileSystem\n");
 							}else{
 								// el recv dio -1 , osea, error
 								}
@@ -1572,6 +1584,7 @@ void *connection_handler_escucha(void) {
 									strcpy(nodo_id, id_temporal);
 									modificar_estado_nodo(nodo_id, i,remote_client.sin_port, 0, 0);
 									printf("Se desconecto el nodo %s, %d\n",inet_ntoa(remote_client.sin_addr),remote_client.sin_port);
+									log_info(logger, "Se desconecto el Nodo: %s del FileSystem\n",nodo_id);
 									close(i); // ¡Hasta luego!
 									FD_CLR(i, &master); // eliminar del conjunto maestro
 
