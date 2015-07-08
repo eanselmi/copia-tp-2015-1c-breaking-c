@@ -160,6 +160,7 @@ int main(int argc, char *argv[]) {
 					close(newfd);
 				}
 			}
+
 			free(bloquesTotales);
 			free(puerto_escucha_nodo);
 		} else {
