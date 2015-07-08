@@ -685,7 +685,6 @@ void *connection_handler_jobs(){
 							int cantArchi;
 							cantArchi=list_size(listaArchivos);
 							printf("Cantidad de archivos antes de formatear: %d\n", cantArchi);
-							//TODO limpiar estructuras de Marta
 							//Se borra la lista de archivos
 							list_destroy_and_destroy_elements(listaArchivos, (void*) eliminarListaArchivos2);
 							//Se pasan a estado no disponible los nodos que haya conectados
@@ -940,14 +939,15 @@ void *connection_handler_jobs(){
 									CB = list_get(block->copias,PC);
 									if(strcmp(CB->nodo, nodoId) ==0 && CB->bloqueNodo == bloqueNodo){
 										copiaEncontrada = 1;
-										list_remove_and_destroy_element(block->copias,PC,(void*)eliminarCopia);
 										break;
 									}
 								}
-								if(copiaEncontrada == 1) break;
+								if(copiaEncontrada == 1){
+									list_remove_and_destroy_element(block->copias,PC,(void*)eliminarCopia);
+									break;
+								}
 							}
-
-
+							if(copiaEncontrada == 1) break;
 						}
 
 						// fin de update eliminar bloque
@@ -983,7 +983,7 @@ void *connection_handler_jobs(){
 								log_error(logger,"FALLO el Recv del bloque del nodo destino del copiar bloque");
 								exit(-1);
 							}
-							printf ("...Bloque del borrar bloque: %d\n",bloqueNodoDestino);
+							printf ("...Bloque del copiar bloque: %d\n",bloqueNodoDestino);
 
 							t_list* B1;
 							t_bloque* B;
