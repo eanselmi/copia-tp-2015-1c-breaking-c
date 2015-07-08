@@ -17,6 +17,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <semaphore.h>
+#include <wait.h>
 
 
 #include "Nodo.h"
@@ -176,7 +177,7 @@ int main(int argc , char *argv[]){
 		exit(-1);
 	}
 	// escuchar
-	if (listen(listener, 10) == -1) {
+	if (listen(listener, 100) == -1) {
 		perror("listen");
 		log_error(logger,"FALLO el Listen");
 		exit(1);
@@ -610,8 +611,8 @@ void ordenarMapper(char* pathMapperTemporal, char* nombreMapperOrdenado){
 	char** pathMapperSeparado;
 	char* nombreMapperTemporal;
 	char* contenidoDelMapper;
-	sem_t terminoSort;
-	sem_init(&terminoSort,0,1);
+//	sem_t terminoSort;
+//	sem_init(&terminoSort,0,1);
 	nombreMapperTemporal=string_new();
 	pathMapperSeparado=string_split(pathMapperTemporal,"/");
 	string_append(&nombreMapperTemporal,pathMapperSeparado[1]); // le agrega al nombre mapper lo que hay dps de /tmp
@@ -632,7 +633,7 @@ void ordenarMapper(char* pathMapperTemporal, char* nombreMapperOrdenado){
 		close(outfd[0]); /* innecesarios para el hijo */
 		close(outfd[1]);
 		execlp("/usr/bin/sort","sort",NULL);
-	    sem_post(&terminoSort);
+//	    sem_post(&terminoSort);
 	}
 	else
 	{
@@ -643,7 +644,8 @@ void ordenarMapper(char* pathMapperTemporal, char* nombreMapperOrdenado){
 		close(outfd[0]); /* Estan siendo usados por el hijo */
 		close(outfd[1]);
 		free(contenidoDelMapper);
-		sem_wait(&terminoSort);
+		waitpid(pid,NULL,0);
+//		sem_wait(&terminoSort);
 		dup2(bak,STDOUT_FILENO);
 	}
 }
@@ -700,6 +702,7 @@ void ejecutarMapper(char *script,int bloque,char *resultado){
 
 	close(outfd[0]); /* Estan siendo usados por el hijo */
 	close(outfd[1]);
+	waitpid(pid,NULL,0);
 //	sem_wait(&terminoElMap);
 	dup2(bak,STDOUT_FILENO);
 	}
@@ -1226,10 +1229,10 @@ void ejecutarReduce(t_list* archivosApareando,char* script,char* resultado, int*
 	int bak,pid,archivo_resultado;
 	bak=0;
 	char *path;
-	sem_t terminoElReduce;
+//	sem_t terminoElReduce;
 	t_respuestaNodoReduce respuestaNR;
 	memset(respuestaNR.ip_nodoFallido,'\0',20);
-	sem_init(&terminoElReduce,0,1);
+//	sem_init(&terminoElReduce,0,1);
 	pipe(outfd); /* Donde escribe el padre */
 	if((pid=fork())==-1){
 		perror("fork reduce");
@@ -1250,7 +1253,7 @@ void ejecutarReduce(t_list* archivosApareando,char* script,char* resultado, int*
 		string_append(&path,"/");
 		string_append(&path,script);
 		execlp(path,script,NULL); //Ejecuto el script
-		sem_post(&terminoElReduce);
+//		sem_post(&terminoElReduce);
 	}
 	else
 	{
@@ -1435,8 +1438,9 @@ void ejecutarReduce(t_list* archivosApareando,char* script,char* resultado, int*
 			//cuando alguno de los archivos sea EOF, se tiene que cerrar (fclose ya sea en el nodo o local)
 		}
 		close(outfd[1]);
+		waitpid(pid,NULL,0);
 		dup2(bak,STDOUT_FILENO);
-		sem_wait(&terminoElReduce);
+//		sem_wait(&terminoElReduce);
 	}
 
 
