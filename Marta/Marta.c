@@ -1938,7 +1938,7 @@ void *atenderJob (int *socketJob) {
 				nodoMapOkk=list_get(listaMapDelNodo,0);
 				strcpy(nodoReducer->ip_nodoPpal,nodoPrincipal->ip);
 				nodoReducer->puerto_nodoPpal=nodoPrincipal->puerto_escucha_nodo;
-				strcpy(nodoReducer->nombreArchivoFinal,nodoMapOkk->nombreArchivoDelJob);
+				strcpy(nodoReducer->nombreArchivoFinal,nodoMapOkk->archivoResultadoMap);
 				list_add(listaReducerDeUnSoloArchivo,nodoReducer);
 			}
 			list_destroy(listaMapDelNodo);
