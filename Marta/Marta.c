@@ -1115,12 +1115,10 @@ void *atenderJob (int *socketJob) {
 	char accion[BUF_SIZE];
 	char mensaje_fs[BUF_SIZE];
 	t_list* listaMappers;
-	t_list* listaReducerDeUnSoloArchivo;
 	t_list* listaReducerParcial;
 	memset(mensaje_fs,'\0',BUF_SIZE);
 	memset(accion,'\0',BUF_SIZE);
 	listaMappers = list_create();
-	listaReducerDeUnSoloArchivo=list_create();
 	listaReducerParcial=list_create();
 	char archivoResultado[200];
 	int posicionArchivo;
@@ -1164,13 +1162,6 @@ void *atenderJob (int *socketJob) {
 		log_info(logger,"FALLO el Recv");
 		//exit(-1);
 	}
-
-	/*Sumamos la cantidad total de bloques del todos los archivo de un JOB.
-	 * Esa cantidad es la cantida total de los map que se deben ejecutar.*/
-
-	t_job unJob;
-	unJob.mapperPendientes =  cantidadTotalDeBloques(archivosDelJob);
-
 
 	// Separo el mensaje que recibo con los archivos a trabajar (Job envía todos juntos separados con ,)
 	char** archivos =string_split((char*)archivosDelJob,",");
@@ -1374,9 +1365,7 @@ void *atenderJob (int *socketJob) {
 		map->resultado = respuestaMap.resultado;
 
 		if(map->resultado ==1){
-			printf("La cantidad de map pendiente del job es %d",unJob.mapperPendientes ++);
 			printf("El map %s falló\n",map->archivoResultadoMap);
-			printf("El nodo: %s esta deshabiltado\n", nodoAux->nodo_id);
 			t_list *nodosQueFallaron;
 			nodosQueFallaron=list_create();
 			int posRepl;
@@ -1502,8 +1491,6 @@ void *atenderJob (int *socketJob) {
 				log_error(logger,"Fallo el envio de los datos para el mapper");
 				exit(-1);
 			}
-			printf("El estado del nodo %s es habilitado\n", otroNodoAux->nodo_id);
-			printf("El nodo %s está ejecutando map\n", otroNodoAux->nodo_id);
 			//rellenamos un nuevo struct t_replanificar map conlos datos del map que acabamos de enviar y lo agregamos a lista mappers
 			t_replanificarMap *nuevoMap=malloc(sizeof(t_replanificarMap));
 
@@ -1545,8 +1532,6 @@ void *atenderJob (int *socketJob) {
 /************************************************************************************************************************************************
 * SIN COMBINER
 * ************************************************************************************************************************************************/
-	unJob.reducePendientes = 1;
-	printf("Si es con combiner la cantidad de reduce pendientes es %d\n",unJob.reducePendientes);
 	sleep(5);
 
 	//Si es sin combiner manda a hacer reduce al nodo que tenga mas archivos resultados MAP
@@ -1703,8 +1688,6 @@ void *atenderJob (int *socketJob) {
 		}
 
 		if(respuestaReduceFinal.resultado == 1){
-			printf("La cantidad de reduce pendiente del job es %d",unJob.reducePendientes ++);
-			printf("El estado del nodo %s es deshabilitado\n", nodoMasRep );
 			//Se aborta la ejecución de Reduce
 			log_info(logger,"Falló el Reduce %s. Se abortará el job",respuestaReduceFinal.archivoResultadoReduce);
 			char jobAborta[BUF_SIZE];
@@ -1751,7 +1734,6 @@ void *atenderJob (int *socketJob) {
 		//Buscar el nodo donde está el archivo resultado del reduce para mandarle al FS el nodoID
 		t_nodo* nodoResultado;
 		nodoResultado = buscarNodoPorIPYPuerto(nodoReducer.ip_nodoPpal,nodoReducer.puerto_nodoPpal);
-		printf("El estado del nodo %s donde se va a guardar el archivo resultado esta habilitado\n", nodoResultado->nodo_id);
 		//Le digo al FS que se copie el resultado
 		printf("El job sin combiner termino OK\nMandar a FS que busque el resultado %s en el nodo %s\n",nodoReducer.nombreArchivoFinal,nodoResultado->nodo_id);
 
@@ -1831,7 +1813,6 @@ void *atenderJob (int *socketJob) {
 				list_add(listaNodosDistintos,nodoId);
 			}
 		}
-		printf("Cuando es con combiner la cantidad de reduce pendientes del job es %d\n", unJob.reducePendientes + 1);
 
 		int i;
 		t_list *listaMapDelNodo;
@@ -1855,96 +1836,87 @@ void *atenderJob (int *socketJob) {
 					list_add(listaMapDelNodo,nodoMapOk);
 				}
 			}
-			if(list_size(listaMapDelNodo)>1){
-				// Mando a ejecutar reduce
-				char mensajeReducerParcial[BUF_SIZE];
-				memset(mensajeReducerParcial, '\0', BUF_SIZE);
-				strcpy(mensajeReducerParcial,"ejecuta reduce");
-				if(send(*socketJob, mensajeReducerParcial,sizeof(mensajeReducerParcial),MSG_WAITALL)==-1){
-					perror("send");
-					log_error(logger, "Fallo mandar hacer reducer");
-					//exit(-1);
-				}
-				//Mando los datos del Nodo Principal y el nombre del archivo resultado//
 
-				strcpy(nodoReducerParcial.ip_nodoPpal,nodoPrincipal->ip);
-				nodoReducerParcial.puerto_nodoPpal=nodoPrincipal->puerto_escucha_nodo;
-				strcpy(nodoReducer->ip_nodoPpal,nodoPrincipal->ip);
-				nodoReducer->puerto_nodoPpal=nodoPrincipal->puerto_escucha_nodo;
-
-				char* tiempoReduce=string_new();
-				char** arrayTiempoReduce;
-				char* archivoReduceTemp=string_new();
-
-				string_append(&archivoReduceTemp,"/tmp/Job");
-				string_append(&archivoReduceTemp,stringNroJob);
-				arrayTiempoReduce=string_split(temporal_get_string_time(),":"); //creo array con hora minutos segundos y milisegundos separados
-				string_append(&tiempoReduce,arrayTiempoReduce[0]);//Agrego horas
-				string_append(&tiempoReduce,arrayTiempoReduce[1]);//Agrego minutos
-				string_append(&tiempoReduce,arrayTiempoReduce[2]);//Agrego segundos
-				string_append(&tiempoReduce,arrayTiempoReduce[3]);//Agrego milisegundos
-				string_append(&archivoReduceTemp,"_Reduce");
-				string_append(&archivoReduceTemp,string_itoa(i));
-				string_append(&archivoReduceTemp,"_");
-				string_append(&archivoReduceTemp,tiempoReduce);
-				string_append(&archivoReduceTemp,".txt");
-
-				strcpy(nodoReducerParcial.nombreArchivoFinal,archivoReduceTemp);
-				strcpy(nodoReducer->nombreArchivoFinal,archivoReduceTemp);
-
-				if(send(*socketJob, &nodoReducerParcial,sizeof(t_reduce),MSG_WAITALL)==-1){
-					perror("send");
-					log_error(logger, "Fallo mandar datos para hacer reducer");
-					//exit(-1);
-				}
-
-				// Mando cantidad de archivos a hacer reduce
-
-				int cantArch = list_size(listaMapDelNodo);
-				if(send(*socketJob, &cantArch,sizeof(int),MSG_WAITALL)==-1){
-					perror("send");
-					log_error(logger, "Fallo mandar la cantidad de archivos a hacer reduce");
-					//exit(-1);
-				}
-				//Le mando los datos de cada uno de los archivos: IP Nodo, Puerto Nodo, nombreArchivo resultado de map (t_archivosReduce)
-				int posNodoOk;
-				t_replanificarMap *nodoOk;
-				for(posNodoOk = 0; posNodoOk < list_size(listaMapDelNodo); posNodoOk ++){
-					t_archivosReduce archReducePorNodo;
-					memset(archReducePorNodo.archivoAAplicarReduce,'\0',TAM_NOMFINAL);
-					memset(archReducePorNodo.ip_nodo,'\0',20);
-
-					nodoOk = list_get(listaMapDelNodo,posNodoOk);
-					strcpy(archReducePorNodo.archivoAAplicarReduce, nodoOk->archivoResultadoMap);
-					strcpy(archReducePorNodo.ip_nodo, nodoPrincipal->ip);
-					archReducePorNodo.puerto_nodo = nodoPrincipal->puerto_escucha_nodo;
-
-					// Mando por cada t_replanificarMap ok, los datos de cada archivo
-					if(send(*socketJob, &archReducePorNodo,sizeof(t_archivosReduce),MSG_WAITALL)==-1){
-						perror("send");
-						log_error(logger, "Fallo mandar la archivo a hacer reduce");
-						//exit(-1);
-					}
-				}
-
-				pthread_mutex_lock(&mutexModNodo);
-				sumarCantReducers(nodoPrincipal->nodo_id);
-				pthread_mutex_unlock(&mutexModNodo);
-
-				list_add(listaReducerParcial,nodoReducer);
+			// Mando a ejecutar reduce
+			char mensajeReducerParcial[BUF_SIZE];
+			memset(mensajeReducerParcial, '\0', BUF_SIZE);
+			strcpy(mensajeReducerParcial,"ejecuta reduce");
+			if(send(*socketJob, mensajeReducerParcial,sizeof(mensajeReducerParcial),MSG_WAITALL)==-1){
+				perror("send");
+				log_error(logger, "Fallo mandar hacer reducer");
+				//exit(-1);
 			}
-			if(list_size(listaMapDelNodo)==1){
-				t_replanificarMap *nodoMapOkk;
-				nodoMapOkk=list_get(listaMapDelNodo,0);
-				strcpy(nodoReducer->ip_nodoPpal,nodoPrincipal->ip);
-				nodoReducer->puerto_nodoPpal=nodoPrincipal->puerto_escucha_nodo;
-				strcpy(nodoReducer->nombreArchivoFinal,nodoMapOkk->archivoResultadoMap);
-				list_add(listaReducerDeUnSoloArchivo,nodoReducer);
+			//Mando los datos del Nodo Principal y el nombre del archivo resultado//
+
+			strcpy(nodoReducerParcial.ip_nodoPpal,nodoPrincipal->ip);
+			nodoReducerParcial.puerto_nodoPpal=nodoPrincipal->puerto_escucha_nodo;
+			strcpy(nodoReducer->ip_nodoPpal,nodoPrincipal->ip);
+			nodoReducer->puerto_nodoPpal=nodoPrincipal->puerto_escucha_nodo;
+
+			char* tiempoReduce=string_new();
+			char** arrayTiempoReduce;
+			char* archivoReduceTemp=string_new();
+
+			string_append(&archivoReduceTemp,"/tmp/Job");
+			string_append(&archivoReduceTemp,stringNroJob);
+			arrayTiempoReduce=string_split(temporal_get_string_time(),":"); //creo array con hora minutos segundos y milisegundos separados
+			string_append(&tiempoReduce,arrayTiempoReduce[0]);//Agrego horas
+			string_append(&tiempoReduce,arrayTiempoReduce[1]);//Agrego minutos
+			string_append(&tiempoReduce,arrayTiempoReduce[2]);//Agrego segundos
+			string_append(&tiempoReduce,arrayTiempoReduce[3]);//Agrego milisegundos
+			string_append(&archivoReduceTemp,"_Reduce");
+			string_append(&archivoReduceTemp,string_itoa(i));
+			string_append(&archivoReduceTemp,"_");
+			string_append(&archivoReduceTemp,tiempoReduce);
+			string_append(&archivoReduceTemp,".txt");
+
+			strcpy(nodoReducerParcial.nombreArchivoFinal,archivoReduceTemp);
+			strcpy(nodoReducer->nombreArchivoFinal,archivoReduceTemp);
+
+			if(send(*socketJob, &nodoReducerParcial,sizeof(t_reduce),MSG_WAITALL)==-1){
+				perror("send");
+				log_error(logger, "Fallo mandar datos para hacer reducer");
+				//exit(-1);
 			}
-			list_destroy(listaMapDelNodo);
+
+			// Mando cantidad de archivos a hacer reduce
+
+			int cantArch = list_size(listaMapDelNodo);
+			if(send(*socketJob, &cantArch,sizeof(int),MSG_WAITALL)==-1){
+				perror("send");
+				log_error(logger, "Fallo mandar la cantidad de archivos a hacer reduce");
+				//exit(-1);
+			}
+			//Le mando los datos de cada uno de los archivos: IP Nodo, Puerto Nodo, nombreArchivo resultado de map (t_archivosReduce)
+			int posNodoOk;
+			t_replanificarMap *nodoOk;
+			for(posNodoOk = 0; posNodoOk < list_size(listaMapDelNodo); posNodoOk ++){
+				t_archivosReduce archReducePorNodo;
+				memset(archReducePorNodo.archivoAAplicarReduce,'\0',TAM_NOMFINAL);
+				memset(archReducePorNodo.ip_nodo,'\0',20);
+
+				nodoOk = list_get(listaMapDelNodo,posNodoOk);
+				strcpy(archReducePorNodo.archivoAAplicarReduce, nodoOk->archivoResultadoMap);
+				strcpy(archReducePorNodo.ip_nodo, nodoPrincipal->ip);
+				archReducePorNodo.puerto_nodo = nodoPrincipal->puerto_escucha_nodo;
+
+				// Mando por cada t_replanificarMap ok, los datos de cada archivo
+				if(send(*socketJob, &archReducePorNodo,sizeof(t_archivosReduce),MSG_WAITALL)==-1){
+					perror("send");
+					log_error(logger, "Fallo mandar la archivo a hacer reduce");
+					//exit(-1);
+				}
+			}
+
+			pthread_mutex_lock(&mutexModNodo);
+			sumarCantReducers(nodoPrincipal->nodo_id);
+			pthread_mutex_unlock(&mutexModNodo);
+
+			list_add(listaReducerParcial,nodoReducer);
 		}
+		list_destroy(listaMapDelNodo);
 
-		printf("Se enviaron todos los reduce con combiner --> Se esperan las respuestas \n");
+
 		estadoNodos();
 		//Recibir la respuesta del JOB confirmando que termino con los reduce de los que están en el mismo nodo
 		//SE ESPERAN EN UN CICLO FOR LA CANTIDAD DE RESPUESTAS IGUAL A CUANTOS REDUCE SE HALLAN ENVIADO
@@ -1960,9 +1932,7 @@ void *atenderJob (int *socketJob) {
 			}
 
 			if(respuestaReduce.resultado == 1){
-				printf("la cantidad de reduce pendientes del job es %d", unJob.reducePendientes ++);
 				t_nodo *nodoARestar = buscarNodoPorIPYPuerto(respuestaReduce.ip_nodo,respuestaReduce.puerto_nodo);
-				printf("El estado del nodo %s es deshabilitado\n", nodoARestar->nodo_id);
 				//Se aborta la ejecución de Reduce
 				log_info(logger,"Falló el Reduce %s. Se abortará el job",respuestaReduce.archivoResultadoReduce);
 
@@ -1973,8 +1943,6 @@ void *atenderJob (int *socketJob) {
 				jobAbortado=1; //Se marca el flag del job abortado. Se esperan las demas respuestas para bajar 1 en cantreducers de los nodos
 			}
 			if(respuestaReduce.resultado == 0){
-				printf("El reduce %s salio OK\n",respuestaReduce.archivoResultadoReduce);
-
 				t_nodo *nodoARestar = buscarNodoPorIPYPuerto(respuestaReduce.ip_nodo,respuestaReduce.puerto_nodo);
 				pthread_mutex_lock(&mutexModNodo);
 				restarCantReducers(nodoARestar->nodo_id);
@@ -2087,25 +2055,6 @@ void *atenderJob (int *socketJob) {
 				//exit(-1);
 			}
 		}
-		/*Le mando los datos de cada uno de los archivos de la listaReducerDeUnSoloArchivo:
-		 * IP Nodo, Puerto Nodo, nombreArchivo resultado de map (t_archivosReduce) */
-		for(posNodoOk = 0; posNodoOk < list_size(listaReducerDeUnSoloArchivo); posNodoOk ++){
-			t_archivosReduce archivosReduceFinal;
-			memset(archivosReduceFinal.archivoAAplicarReduce,'\0',TAM_NOMFINAL);
-			memset(archivosReduceFinal.ip_nodo,'\0',20);
-
-			nodoOk = list_get(listaReducerDeUnSoloArchivo,posNodoOk);
-			strcpy(archivosReduceFinal.archivoAAplicarReduce, nodoOk->nombreArchivoFinal);
-			strcpy(archivosReduceFinal.ip_nodo, nodoOk->ip_nodoPpal);
-			archivosReduceFinal.puerto_nodo = nodoOk->puerto_nodoPpal;
-
-			// Mando por cada t_reduce , los datos de cada archivo
-			if(send(*socketJob, &archivosReduceFinal,sizeof(t_archivosReduce),MSG_WAITALL)==-1){
-				perror("send");
-				log_error(logger, "Fallo mandar la archivo a hacer reduce");
-				//exit(-1);
-			}
-		}
 
 		pthread_mutex_lock(&mutexModNodo);
 		sumarCantReducers(nodoRF->nodo_id);
@@ -2124,10 +2073,8 @@ void *atenderJob (int *socketJob) {
 		}
 
 		if(respuestaReduceFinal.resultado == 1){
-			printf("La cantidad de reduce pendiente del job es %d",unJob.reducePendientes ++);
 			//Se aborta la ejecución de Reduce
 			t_nodo *nodoARestar = buscarNodoPorIPYPuerto(respuestaReduceFinal.ip_nodo,respuestaReduceFinal.puerto_nodo);
-			printf("El estado del nodo %s es deshabilitado\n", nodoARestar->nodo_id);
 			char jobAborta[BUF_SIZE];
 			memset(jobAborta,'\0',BUF_SIZE);
 			log_info(logger,"Falló el Reduce %s. Se abortará el job",respuestaReduceFinal.archivoResultadoReduce);
@@ -2143,10 +2090,7 @@ void *atenderJob (int *socketJob) {
 			pthread_exit((void*)0);
 		}
 		if(respuestaReduceFinal.resultado == 0){
-			printf("La cantidad de reduce pendiente del job es %d",unJob.reducePendientes);
 			t_nodo *nodoARestar = buscarNodoPorIPYPuerto(respuestaReduceFinal.ip_nodo,respuestaReduceFinal.puerto_nodo);
-			printf("En el nodo %s se ejecutó reduce con combiner\n", nodoARestar->nodo_id);
-			printf("El estado del nodo %s es habilitado\n", nodoARestar->nodo_id);
 			printf("Reduce %s exitoso\n",respuestaReduceFinal.archivoResultadoReduce);
 			pthread_mutex_lock(&mutexModNodo);
 			restarCantReducers(nodoARestar->nodo_id);
@@ -2383,49 +2327,6 @@ t_nodo* buscarNodoPorIPYPuerto(char* ipNodo,int puertoNodo){
 		}
 	}
 	return NULL;
-}
-
-int cantidadTotalDeBloques(char* archivosJob){
-	// Separo el mensaje que recibo con los archivos a trabajar (Job envía todos juntos separados con ,)
-	char** archivos =string_split((char*)archivosJob,",");
-	char **arrayArchivo;
-	int cantBloques;
-	int posArchivo;
-	char nombreArchivo[TAM_NOMFINAL];
-	memset(nombreArchivo,'\0',TAM_NOMFINAL);
-	int cantBloquesTotales = 0;
-	//recorrer los archivos
-	for(posArchivo=0; archivos[posArchivo]!=NULL;posArchivo++){
-		//Separo el nombre del archivo por barras
-		int posArray;
-		arrayArchivo = string_split(archivos[posArchivo], "/");
-		for(posArray=0;arrayArchivo[posArray]!=NULL;posArray++){
-			if(arrayArchivo[posArray+1]==NULL){
-				//me quedo con el nombre del archivo
-				strcpy(nombreArchivo,arrayArchivo[posArray]);
-			}
-		}
-		t_list* bloques;
-		bloques=buscarBloquesTotales(nombreArchivo);
-		cantBloques = list_size(bloques);
-		int cantBloquesTotales=0;
-		cantBloquesTotales = cantBloquesTotales + cantBloques;
-	}
-	return cantBloquesTotales;
-}
-
-t_list * buscarBloquesTotales(char* nombreArchivo){
-	t_archivo *archivoAux;
-	t_list *bloques;
-	int i;
-	for(i=0; i < list_size(listaArchivos); i++){ //recorre la lista global de archivos
-		archivoAux = list_get(listaArchivos,i);
-		if (strcmp(archivoAux->nombre,nombreArchivo) ==0){ //compara el nomnre del archivo del job con cada nombre de archivo de la lista global
-			bloques = archivoAux->bloques;
-			break;
-		}
-	}
-	return bloques;
 }
 
 void estadoNodos(){
