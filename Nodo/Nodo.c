@@ -42,11 +42,10 @@ t_list* archivosAbiertos; //Archivos ya abiertos que otro nodo me pide que pase 
 //sem_t semBloques[205]; //Soporta nodos de hasta 4GB 205 *20MB = 4100 MB --> ~4GB  (serían 205 bloques)
 int nroMap; //Maps totales
 int nroReduce; //Reduce totales
-//pthread_mutex_t mutexMap=PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutexMap=PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutexReduce=PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutexNroMap=PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutexNroReduce=PTHREAD_MUTEX_INITIALIZER;
-//sem_t multiejecucionMap;
 
 
 
@@ -88,7 +87,6 @@ int main(int argc , char *argv[]){
 //	for(semBloque=0;semBloque<*bloquesTotales;semBloque++){
 //		sem_init(&semBloques[semBloque],0,1);
 //	}
-//	sem_init(&multiejecucionMap,0,4);
 
 	//Estructura para conexion con FS
 	filesystem.sin_family = AF_INET;
@@ -206,7 +204,7 @@ int main(int argc , char *argv[]){
 }
 
 void *manejador_de_escuchas(){
-//	pthread_t mapperThread;
+	pthread_t mapperThread;
 	pthread_t reducerThread;
 	char mensaje[BUF_SIZE]; //Mensaje que recivirá de los clientes
 	char archivoAPasar[TAM_NOMFINAL]; //Nombre del archivo que me pide otro nodo
@@ -216,10 +214,9 @@ void *manejador_de_escuchas(){
 	int socketModificado,nbytes,newfd,addrlen,read_size;
 	struct sockaddr_in remote_client; //Direccion del cliente que se conectará
 	int* socketNodo; //para identificar los que son nodos conectados
-//	int* socketMapper; //para identificar los que son mappers conectados
+	int* socketMapper; //para identificar los que son mappers conectados
 	int* socketReducer; //para identificar los que son reducers conectados
 	int* bloqueParaFS;
-//	int nroMapper=0;
 
 
 	printf("Nodo en la espera de conexiones/solicitudes del FS\n");
@@ -272,117 +269,15 @@ void *manejador_de_escuchas(){
 							}
 							if(nbytes>0 && strncmp(mensaje,"soy mapper",11)==0){
 								//se conectó un hilo mapper
-//								socketMapper=malloc(sizeof(int));
-//								*socketMapper=newfd;
-								int resultado=0;
-								char** arrayTiempo;
-								t_datosMap datosParaElMap;
+								socketMapper=malloc(sizeof(int));
+								*socketMapper=newfd;
 
-								char *resultadoTemporal=string_new();
-								char *nombreNuevoMap=string_new(); //será el nombre del nuevo map
-								char *tiempo=string_new(); //string que tendrá la hora
-								char *pathNuevoMap=string_new();//El path completo del nuevo Map
-								FILE* scriptMap;
+								log_info(logger,"Se conectó un hilo mapper desde %s",inet_ntoa(remote_client.sin_addr));
 
-//								pthread_mutex_lock(&mutexNroMap);
-								char * stringNroMap=string_itoa(nroMap);
-								log_info(logger,"Se conectó hilo mapper %s desde %s",stringNroMap,inet_ntoa(remote_client.sin_addr));
-								nroMap++;
-//								pthread_mutex_unlock(&mutexNroMap);
-
-								if(recv(newfd,&datosParaElMap,sizeof(t_datosMap),MSG_WAITALL)==-1){
-									perror("recv");
-									log_error(logger,"Fallo al recibir los datos para el map");
-									pthread_exit((void*)0);
+								if(pthread_create(&mapperThread,NULL,(void*)rutinaMap,socketMapper)!=0){
+									perror("pthread_create");
+									log_error(logger,"Fallo la creación del hilo manejador de escuchas");
 								}
-
-								//printf("Se aplicará la rutina mapper en el bloque %d\n",datosParaElMap.bloque);
-
-								//printf("Se guardará el resultado del mapper en el archivo temporal %s\n",datosParaElMap.nomArchTemp);
-
-								//printf("se recibió la rutina mapper:\n%s",datosParaElMap.rutinaMap);
-
-								//Creo el archivo que guarda la rutina de map enviada por el Job
-								//Generar un nombre para este script Map
-								string_append(&nombreNuevoMap,stringNroMap);
-								string_append(&nombreNuevoMap,"mapJob");
-								arrayTiempo=string_split(temporal_get_string_time(),":"); //creo array con hora minutos segundos y milisegundos separados
-								string_append(&tiempo,arrayTiempo[0]);//Agrego horas
-								string_append(&tiempo,arrayTiempo[1]);//Agrego minutos
-								string_append(&tiempo,arrayTiempo[2]);//Agrego segundos
-								string_append(&tiempo,arrayTiempo[3]);//Agrego milisegundos
-								string_append(&nombreNuevoMap,tiempo); //Concateno la fecha en formato hhmmssmmmm al nombre map
-								string_append(&nombreNuevoMap,".sh"); //agrego la extensión
-								string_append(&pathNuevoMap,config_get_string_value(configurador,"PATHMAPPERS"));
-								string_append(&pathNuevoMap,"/");
-								string_append(&pathNuevoMap,nombreNuevoMap);
-								//Genero nombre para el resultado temporal (luego a este se debera aplicar sort)
-								string_append(&resultadoTemporal,datosParaElMap.nomArchTemp);
-								//string_append(&resultadoTemporal,tiempo);
-								//	string_append(&resultadoTemporal,".tmp");
-
-								//Meto al nombre map final el ddirectorio temporal
-
-								//	printf("Nombre del map temporal(antes del sort):%s\n",resultadoTemporal);
-								//	printf("Nombre del map ordenado(luego del sort):%s\n",datosParaElMap.nomArchTemp);
-
-								log_info(logger,"Hilo map %s bajando rutina map enviada por el Job",stringNroMap);
-								if((scriptMap=fopen(pathNuevoMap,"w+"))==NULL){ //path donde guardara el script
-									perror("fopen");
-									log_error(logger,"Fallo al crear el script del mapper");
-									pthread_exit((void*)0);
-								}
-								if(fputs(datosParaElMap.rutinaMap,scriptMap)==EOF){
-									perror("fputs");
-									log_error(logger,"Fallo el fputs en una rutina map");
-									pthread_exit((void*)0);
-								}
-
-								// agrego permisos de ejecucion
-								if(chmod(pathNuevoMap,S_IRWXU|S_IRWXG|S_IROTH|S_IXOTH)==-1){
-									perror("chmod");
-									log_error(logger,"Fallo el cambio de permisos para el script de map");
-									pthread_exit((void*)0);
-								}
-								fclose(scriptMap); //cierro el file
-
-								sleep(2);
-								log_info(logger,"Hilo map %s ejecutando el script mapper",stringNroMap);
-
-								//	sem_wait(&multiejecucionMap);
-								//pthread_mutex_lock(&mutexMap);
-								ejecutarMapper(pathNuevoMap,datosParaElMap.bloque,resultadoTemporal);
-								//pthread_mutex_unlock(&mutexMap);
-								//	sem_post(&multiejecucionMap);
-
-								//	log_info(logger,"Hilo map %s ejecutando el sort",stringNroMap);
-								//	char * nombreMapperTemporal=string_new();
-								//	char ** pathMapperSeparado=string_split(resultadoTemporal,"/");
-								//	string_append(&nombreMapperTemporal,pathMapperSeparado[1]); // le agrega al nombre mapper lo que hay dps de /tmp
-								//
-								//	ordenarMapper(nombreMapperTemporal,datosParaElMap.nomArchTemp);
-
-								if(send(newfd,&resultado,sizeof(int),MSG_WAITALL)==-1){
-									perror("send");
-									log_error(logger,"Fallo el envío del resultado al map");
-									pthread_exit((void*)0);
-								}
-
-								log_info(logger,"Hilo map %s finalizado con éxito",stringNroMap);
-
-								free(arrayTiempo);
-								free(resultadoTemporal);
-								free(nombreNuevoMap);
-								free(tiempo);
-								free(pathNuevoMap);
-
-
-//								log_info(logger,"Se conectó hilo mapper %s desde %s",string_itoa(nroMapper),inet_ntoa(remote_client.sin_addr));
-//								nroMapper++;
-//								if(pthread_create(&mapperThread,NULL,(void*)rutinaMap,socketMapper)!=0){
-//									perror("pthread_create");
-//									log_error(logger,"Fallo la creación del hilo manejador de escuchas");
-//								}
 
 							}
 							if(nbytes>0 && strncmp(mensaje,"soy reducer",12)==0){
@@ -623,43 +518,43 @@ void *manejador_de_escuchas(){
 
 				//-- Conexión con hilo mapper --//
 
-//				if(estaEnListaMappers(socketModificado)==0){
-//					if ((nbytes=recv(socketModificado,mensaje,sizeof(mensaje),MSG_WAITALL))==-1){ //da error
-//						perror("recv");
-//						log_error(logger,"Falló el receive");
-//						exit(-1);
-//					}
-//					if(nbytes==0){ //se desconectó
-//						close(socketModificado);
-//						FD_CLR(socketModificado,&master);
-////						log_info(logger,"Se fue un mapper");
-//					}
-//					else{
-//						/* -- el mapper envío un mensaje a tratar -- */
-//
-//
-//					}
-//				}
-//
-//
-//				//-- Conexión con hilo reducer --//
-//
-//				if(estaEnListaReducers(socketModificado)==0){
-//					if ((nbytes=recv(socketModificado,mensaje,sizeof(mensaje),MSG_WAITALL))==-1){ //da error
-//						perror("recv");
-//						log_error(logger,"Falló el receive");
-//						exit(-1);
-//					}
-//					if(nbytes==0){ //se desconectó
-//						close(socketModificado);
-//						FD_CLR(socketModificado,&master);
-//					}
-//					else{
-//
-//						/* -- el reducer envío un mensaje a tratar -- */
-//
-//					}
-//				}
+				if(estaEnListaMappers(socketModificado)==0){
+					if ((nbytes=recv(socketModificado,mensaje,sizeof(mensaje),MSG_WAITALL))==-1){ //da error
+						perror("recv");
+						log_error(logger,"Falló el receive");
+						exit(-1);
+					}
+					if(nbytes==0){ //se desconectó
+						close(socketModificado);
+						FD_CLR(socketModificado,&master);
+//						log_info(logger,"Se fue un mapper");
+					}
+					else{
+						/* -- el mapper envío un mensaje a tratar -- */
+
+
+					}
+				}
+
+
+				//-- Conexión con hilo reducer --//
+
+				if(estaEnListaReducers(socketModificado)==0){
+					if ((nbytes=recv(socketModificado,mensaje,sizeof(mensaje),MSG_WAITALL))==-1){ //da error
+						perror("recv");
+						log_error(logger,"Falló el receive");
+						exit(-1);
+					}
+					if(nbytes==0){ //se desconectó
+						close(socketModificado);
+						FD_CLR(socketModificado,&master);
+					}
+					else{
+
+						/* -- el reducer envío un mensaje a tratar -- */
+
+					}
+				}
 			}
 		}
 	}
@@ -708,176 +603,109 @@ void removerDeListaDeArchivosAbiertos(FILE* archivoARemover){
 static void eliminarArchivo(t_archivoAbierto * archivoAbierto) {
     free(archivoAbierto);
 }
-//
-//void ordenarMapper(char* nombreMapperTemporal, char* nombreMapperOrdenado){
-//	int outfd[2];
-//	int bak,pid,archivo_resultado;
-//	bak=0;
-//	char* contenidoDelMapper;
-////	char *ejecucion []={"/usr/bin/sort","sort",NULL};
-//	archivo_resultado=open(nombreMapperOrdenado,O_RDWR|O_CREAT,S_IRWXU|S_IRWXG); //abro file resultado, si no esta lo crea, asigno permisos
-//
-//	// si cada nodo tiene su tmp en una carpeta distinta --> string_append(&nombreMapperTemporal,pathMapperSeparado[2]); // le agrega al nombre mapper lo que hay dps de /tmp/nombredir
-//	pipe(outfd);
-//	if((pid=fork())==-1){
-//		perror("fork sort");
-//	}
-//	else if(pid==0)
-//	{
-//		//fflush(stdout);
-//		bak=dup(STDOUT_FILENO);
-//		dup2(archivo_resultado,STDOUT_FILENO); //STDOUT de este proceso se grabara en el file resultado
-//		close(archivo_resultado);
-//		close(STDIN_FILENO);
-//		dup2(outfd[0], STDIN_FILENO); //STDIN de este proceso será STDOUT del proceso padre
-//		close(outfd[0]); /* innecesarios para el hijo */
-//		close(outfd[1]);
-//		if(execlp("/usr/bin/sort","sort",NULL)==-1){
-//			perror("Sort del map");
-//			log_error(logger,"Error en la ejecucion de un sort");
-//		}
-//	}
-//	else
-//	{
-//		//Se debe escribir el contenido de la rutina Map
-//		contenidoDelMapper=getFileContent(nombreMapperTemporal);
-//		write(outfd[1],contenidoDelMapper,strlen(contenidoDelMapper));
-//		close(outfd[0]); /* Estan siendo usados por el hijo */
-//		close(outfd[1]);
-//		waitpid(pid,NULL,0);
-//		free(contenidoDelMapper);
-//		dup2(bak,STDOUT_FILENO);
-//	}
-//}
+
+void ordenarMapper(char* pathMapperTemporal, char* nombreMapperOrdenado){
+	int outfd[2];
+	int bak,pid,archivo_resultado;
+	bak=0;
+	char** pathMapperSeparado;
+	char* nombreMapperTemporal;
+	char* contenidoDelMapper;
+//	sem_t terminoSort;
+//	sem_init(&terminoSort,0,1);
+	nombreMapperTemporal=string_new();
+	pathMapperSeparado=string_split(pathMapperTemporal,"/");
+	string_append(&nombreMapperTemporal,pathMapperSeparado[1]); // le agrega al nombre mapper lo que hay dps de /tmp
+	// si cada nodo tiene su tmp en una carpeta distinta --> string_append(&nombreMapperTemporal,pathMapperSeparado[2]); // le agrega al nombre mapper lo que hay dps de /tmp/nombredir
+	pipe(outfd);
+	if((pid=fork())==-1){
+		perror("fork sort");
+	}
+	else if(pid==0)
+	{
+		archivo_resultado=open(nombreMapperOrdenado,O_RDWR|O_CREAT,S_IRWXU|S_IRWXG); //abro file resultado, si no esta lo crea, asigno permisos
+		fflush(stdout);
+		bak=dup(STDOUT_FILENO);
+		dup2(archivo_resultado,STDOUT_FILENO); //STDOUT de este proceso se grabara en el file resultado
+		close(archivo_resultado);
+		close(STDIN_FILENO);
+		dup2(outfd[0], STDIN_FILENO); //STDIN de este proceso será STDOUT del proceso padre
+		close(outfd[0]); /* innecesarios para el hijo */
+		close(outfd[1]);
+		execlp("/usr/bin/sort","sort",NULL);
+//	    sem_post(&terminoSort);
+	}
+	else
+	{
+		//Se debe escribir el contenido de la rutina Map
+		contenidoDelMapper=getFileContent(nombreMapperTemporal);
+		//printf("Tamaño del contenido que mando al sort: %d",strlen(contenidoDelMapper));
+		write(outfd[1],contenidoDelMapper,strlen(contenidoDelMapper));
+		close(outfd[0]); /* Estan siendo usados por el hijo */
+		close(outfd[1]);
+		free(contenidoDelMapper);
+		waitpid(pid,NULL,0);
+//		sem_wait(&terminoSort);
+		dup2(bak,STDOUT_FILENO);
+	}
+}
 
 
 void ejecutarMapper(char *script,int bloque,char *resultado){
-	int pipein[2];
-	int pipeout[2];
-	pid_t pidHijo1;
-//	pid_t pidHijo2;
-//	char *path;
-//	int archivo_resultado;
+	int outfd[2];
+	int bak,pid,archivo_resultado;
+//	int tamanioAMapear;
+	bak=0;
+	char *path;
 	char *bloqueAMapear;
-//	char * path=string_new();
-//	string_append(&path,config_get_string_value(configurador,"PATHMAPPERS"));
-//	string_append(&path,"/");
-//	string_append(&path,script);
-//	char * ejecucionMap[]={path,script,NULL};
-
-	pipe(pipein);
-	pidHijo1 = fork();
-	if (pidHijo1==0) {
-		pipe(pipeout);
-		pid_t pidHijo2 = fork();
-		if(pidHijo2==0){
-			//HIJO 2: SORT
-			close(pipein[1]);
-			close(pipein[0]);
-			close(pipeout[1]);
-			dup2(pipeout[0],0);
-			close(pipeout[0]);
-			FILE *fdtmp;
-			if (resultado != NULL) {
-				if((fdtmp = fopen(resultado,"w+"))==NULL){
-					perror("fopen map");
-				}
-				dup2(fileno(fdtmp),1);
-			}
-			execl("/usr/bin/sort", "sort", NULL);
-			fclose(fdtmp);
-		}
-		else{
-			//HIJO 1: MAPPER
-			close(pipein[1]);
-			close(pipeout[0]);
-			dup2(pipein[0],0);
-			close(pipein[0]);
-			dup2(pipeout[1],1);
-			close(pipeout[1]);
-			execve(script,NULL,NULL);
-		}
-	}else{
-		close(pipein[0]);
-		bloqueAMapear=getBloque(bloque);
-		int len = strlen(bloqueAMapear);
-		write(pipein[1],bloqueAMapear,len);
-		close(pipein[1]);
-		wait(NULL);
+//	sem_t terminoElMap;
+//	sem_init(&terminoElMap,0,1);
+	pipe(outfd); /* Donde escribe el padre */
+	if((pid=fork())==-1){
+		perror("fork mapper");
 	}
+	else if(pid==0)
+	{
 
-//	archivo_resultado=open(resultado,O_RDWR|O_CREAT,S_IRWXU|S_IRWXG); //abro file resultado, si no esta lo crea, asigno permisos
-//		if (pipe(outfd) == -1)
-//	{
-//		printf("Error al abrir pipe 1\n");
-//		//exit(1);
-//	}
-//	if (pipe(outfdHijo1) == -1)
-//	{
-//		printf("Error al abrir pipe 2\n");
-//		//exit(1);
-//	}
-//
-//	//printf("pipes abiertos\n");
-//
-//
-//	if((pidHijo1=fork())==-1){
-//		perror("fork mapper");
-//	}
-//	else if(pidHijo1==0)
-//	{
-//		//Hijo 1 --> Recibe el bloque , hace map, tira al sort
-//		//fflush(stdout);
-//		//bak=dup(STDOUT_FILENO);
-//		dup2(outfdHijo1[1],STDOUT_FILENO); //STDOUT de este proceso se grabara en STDIN de proceso hijo
-//		//close(archivo_resultado);
-//		close(STDIN_FILENO);
-//		dup2(outfd[0], STDIN_FILENO); //STDIN de este proceso será STDOUT del proceso padre
-//		close(outfd[0]); /* innecesarios para el hijo */
-//		close(outfd[1]);
-//		close(outfdHijo1[0]);
-//		close(outfdHijo1[1]);
-//		if(execvp(ejecucionMap[0],ejecucionMap)==-1){
-//			perror("Ejecucion map:");
-//			log_error(logger,"Error en la ejecucion de un map");
+	archivo_resultado=open(resultado,O_RDWR|O_CREAT,S_IRWXU|S_IRWXG); //abro file resultado, si no esta lo crea, asigno permisos
+	fflush(stdout);
+	bak=dup(STDOUT_FILENO);
+	dup2(archivo_resultado,STDOUT_FILENO); //STDOUT de este proceso se grabara en el file resultado
+	close(archivo_resultado);
+	close(STDIN_FILENO);
+	dup2(outfd[0], STDIN_FILENO); //STDIN de este proceso será STDOUT del proceso padre
+	close(outfd[0]); /* innecesarios para el hijo */
+	close(outfd[1]);
+	path=string_new();
+	string_append(&path,config_get_string_value(configurador,"PATHMAPPERS"));
+	string_append(&path,"/");
+	string_append(&path,script);
+	char *ejecucion []={path,script,NULL};
+	if(execvp(ejecucion[0],ejecucion)==-1){
+		perror("Ejecucion map:");
+		log_error(logger,"Error en la ejecucion de un map");
+	}
+//	sem_post(&terminoElMap);
+	}
+	else
+	{
+
+	bloqueAMapear=getBloque(bloque);
+
+//	for(tamanioAMapear=BLOCK_SIZE;tamanioAMapear>=0;tamanioAMapear--){
+//		if(bloqueAMapear[tamanioAMapear]=='\n'){
+//			break;
 //		}
 //	}
-//	else
-//	{
-//		if((pidHijo2=fork())==-1){
-//			perror("fork mapper");
-//		}
-//		else if(pidHijo2==0){
-//			//Hijo 2 --> Recibe el map, sort, tira al archivo
-//			//bak=dup(STDOUT_FILENO);
-//			dup2(archivo_resultado,STDOUT_FILENO); //STDOUT de este proceso se grabara en STDIN de proceso hijo
-//			close(archivo_resultado);
-//			close(STDIN_FILENO);
-//			dup2(outfdHijo1[0], STDIN_FILENO); //STDIN de este proceso será STDOUT del proceso padre
-//			close(outfd[0]); /* innecesarios para el hijo */
-//			close(outfd[1]);
-//			close(outfdHijo1[0]);
-//			close(outfdHijo1[1]);
-//			//waitpid(pidHijo1,NULL,0);
-//			if(system("sort")<=0){
-//				log_error(logger,"Fallo el sort");
-//			}
-////			if(execlp("/usr/bin/sort","sort",NULL)==-1){
-////				perror("Sort del map");
-////				log_error(logger,"Error en la ejecucion de un sort");
-////			}
-//		}
-//		bloqueAMapear=getBloque(bloque);
-//
-//		write(outfd[1],bloqueAMapear,strlen(bloqueAMapear));/* Escribe en el stdin del hijo el contenido del bloque*/
-//
-//		close(outfd[0]); /* Estan siendo usados por el hijo */
-//		close(outfd[1]);
-//		close(outfdHijo1[0]);
-//		close(outfdHijo1[1]);
-//		waitpid(pidHijo2,NULL,0);
-//		//dup2(bak,STDOUT_FILENO);
-//	}
+
+	write(outfd[1],bloqueAMapear,strlen(bloqueAMapear));/* Escribe en el stdin del hijo el contenido del bloque*/
+
+	close(outfd[0]); /* Estan siendo usados por el hijo */
+	close(outfd[1]);
+	waitpid(pid,NULL,0);
+//	sem_wait(&terminoElMap);
+	dup2(bak,STDOUT_FILENO);
+	}
 
 }
 
@@ -894,31 +722,31 @@ int estaEnListaNodos(int socket){
 	return -1;
 }
 
-//int estaEnListaMappers(int socket){
-//	int i,tamanio;
-//	int* mapperDeLaLista;
-//	tamanio=list_size(listaMappersConectados);
-//	for(i=0;i<tamanio;i++){
-//		mapperDeLaLista=list_get(listaMappersConectados,i);
-//		if(*mapperDeLaLista==socket){
-//			return 0;
-//		}
-//	}
-//	return -1;
-//}
-//
-//int estaEnListaReducers(int socket){
-//	int i,tamanio;
-//	int* reducerDeLaLista;
-//	tamanio=list_size(listaReducersConectados);
-//	for(i=0;i<tamanio;i++){
-//		reducerDeLaLista=list_get(listaReducersConectados,i);
-//		if(*reducerDeLaLista==socket){
-//			return 0;
-//		}
-//	}
-//	return -1;
-//}
+int estaEnListaMappers(int socket){
+	int i,tamanio;
+	int* mapperDeLaLista;
+	tamanio=list_size(listaMappersConectados);
+	for(i=0;i<tamanio;i++){
+		mapperDeLaLista=list_get(listaMappersConectados,i);
+		if(*mapperDeLaLista==socket){
+			return 0;
+		}
+	}
+	return -1;
+}
+
+int estaEnListaReducers(int socket){
+	int i,tamanio;
+	int* reducerDeLaLista;
+	tamanio=list_size(listaReducersConectados);
+	for(i=0;i<tamanio;i++){
+		reducerDeLaLista=list_get(listaReducersConectados,i);
+		if(*reducerDeLaLista==socket){
+			return 0;
+		}
+	}
+	return -1;
+}
 
 
 void setBloque(uint32_t numBloque,char* datosAEscribir){
@@ -1031,111 +859,106 @@ char* mapearFileDeDatos(){
 	return fileDatos;
 }
 
-//void* rutinaMap(int* sckMap){
-//	pthread_detach(pthread_self());
-//	char** arrayTiempo;
-//	t_datosMap datosParaElMap;
-//
-//	char *resultadoTemporal=string_new();
-//	char *nombreNuevoMap=string_new(); //será el nombre del nuevo map
-//	char *tiempo=string_new(); //string que tendrá la hora
-//	char *pathNuevoMap=string_new();//El path completo del nuevo Map
-//	FILE* scriptMap;
-//
-//	pthread_mutex_lock(&mutexNroMap);
-//	char * stringNroMap=string_itoa(nroMap);
-//	nroMap++;
-//	pthread_mutex_unlock(&mutexNroMap);
-//
-//	if(recv(*sckMap,&datosParaElMap,sizeof(t_datosMap),MSG_WAITALL)==-1){
-//		perror("recv");
-//		log_error(logger,"Fallo al recibir los datos para el map");
-//		pthread_exit((void*)0);
-//	}
-//
-//	//printf("Se aplicará la rutina mapper en el bloque %d\n",datosParaElMap.bloque);
-//
-//	//printf("Se guardará el resultado del mapper en el archivo temporal %s\n",datosParaElMap.nomArchTemp);
-//
-//	//printf("se recibió la rutina mapper:\n%s",datosParaElMap.rutinaMap);
-//
-//	//Creo el archivo que guarda la rutina de map enviada por el Job
-//	//Generar un nombre para este script Map
-//	string_append(&nombreNuevoMap,stringNroMap);
-//	string_append(&nombreNuevoMap,"mapJob");
-//	arrayTiempo=string_split(temporal_get_string_time(),":"); //creo array con hora minutos segundos y milisegundos separados
-//	string_append(&tiempo,arrayTiempo[0]);//Agrego horas
-//	string_append(&tiempo,arrayTiempo[1]);//Agrego minutos
-//	string_append(&tiempo,arrayTiempo[2]);//Agrego segundos
-//	string_append(&tiempo,arrayTiempo[3]);//Agrego milisegundos
-//	string_append(&nombreNuevoMap,tiempo); //Concateno la fecha en formato hhmmssmmmm al nombre map
-//	string_append(&nombreNuevoMap,".sh"); //agrego la extensión
-//	string_append(&pathNuevoMap,config_get_string_value(configurador,"PATHMAPPERS"));
-//	string_append(&pathNuevoMap,"/");
-//	string_append(&pathNuevoMap,nombreNuevoMap);
-//	//Genero nombre para el resultado temporal (luego a este se debera aplicar sort)
-//	string_append(&resultadoTemporal,datosParaElMap.nomArchTemp);
-//	//string_append(&resultadoTemporal,tiempo);
-////	string_append(&resultadoTemporal,".tmp");
-//
-//	//Meto al nombre map final el ddirectorio temporal
-//
-////	printf("Nombre del map temporal(antes del sort):%s\n",resultadoTemporal);
-////	printf("Nombre del map ordenado(luego del sort):%s\n",datosParaElMap.nomArchTemp);
-//
-//	log_info(logger,"Hilo map %s bajando rutina map enviada por el Job",stringNroMap);
-//	if((scriptMap=fopen(pathNuevoMap,"w+"))==NULL){ //path donde guardara el script
-//		perror("fopen");
-//		log_error(logger,"Fallo al crear el script del mapper");
-//		pthread_exit((void*)0);
-//	}
-//	if(fputs(datosParaElMap.rutinaMap,scriptMap)==EOF){
-//		perror("fputs");
-//		log_error(logger,"Fallo el fputs en una rutina map");
-//		pthread_exit((void*)0);
-//	}
-//
-//	// agrego permisos de ejecucion
-//	if(chmod(pathNuevoMap,S_IRWXU|S_IRWXG|S_IROTH|S_IXOTH)==-1){
-//		perror("chmod");
-//		log_error(logger,"Fallo el cambio de permisos para el script de map");
-//		pthread_exit((void*)0);
-//	}
-//	fclose(scriptMap); //cierro el file
-//
-//	sleep(2);
-//	log_info(logger,"Hilo map %s ejecutando el script mapper",stringNroMap);
-//
-////	sem_wait(&multiejecucionMap);
-//	//pthread_mutex_lock(&mutexMap);
-//	ejecutarMapper(pathNuevoMap,datosParaElMap.bloque,resultadoTemporal);
-//	//pthread_mutex_unlock(&mutexMap);
-////	sem_post(&multiejecucionMap);
-//
-////	log_info(logger,"Hilo map %s ejecutando el sort",stringNroMap);
-////	char * nombreMapperTemporal=string_new();
-////	char ** pathMapperSeparado=string_split(resultadoTemporal,"/");
-////	string_append(&nombreMapperTemporal,pathMapperSeparado[1]); // le agrega al nombre mapper lo que hay dps de /tmp
-////
-////	ordenarMapper(nombreMapperTemporal,datosParaElMap.nomArchTemp);
-//
-//	if(send(*sckMap,0,sizeof(int),MSG_WAITALL)==-1){
-//		perror("send");
-//		log_error(logger,"Fallo el envío del resultado al map");
-//		pthread_exit((void*)0);
-//	}
-//
-//	log_info(logger,"Hilo map %s finalizado con éxito",stringNroMap);
-//
-//	free(arrayTiempo);
-//	free(resultadoTemporal);
-//	free(nombreNuevoMap);
-//	free(tiempo);
-//	free(pathNuevoMap);
-//
-//	pthread_exit((void*)0);
-//
-//}
+void* rutinaMap(int* sckMap){
+	pthread_detach(pthread_self());
+	char** arrayTiempo;
+	int resultado=1;
+	t_datosMap datosParaElMap;
+
+	char *resultadoTemporal=string_new();
+	char *nombreNuevoMap=string_new(); //será el nombre del nuevo map
+	char *tiempo=string_new(); //string que tendrá la hora
+	char *pathNuevoMap=string_new();//El path completo del nuevo Map
+	FILE* scriptMap;
+
+	pthread_mutex_lock(&mutexNroMap);
+	char * stringNroMap=string_itoa(nroMap);
+	nroMap++;
+	pthread_mutex_unlock(&mutexNroMap);
+
+	if(recv(*sckMap,&datosParaElMap,sizeof(t_datosMap),MSG_WAITALL)==-1){
+		perror("recv");
+		log_error(logger,"Fallo al recibir los datos para el map");
+		pthread_exit((void*)0);
+	}
+
+	printf("Se aplicará la rutina mapper en el bloque %d\n",datosParaElMap.bloque);
+
+	//printf("Se guardará el resultado del mapper en el archivo temporal %s\n",datosParaElMap.nomArchTemp);
+
+	//printf("se recibió la rutina mapper:\n%s",datosParaElMap.rutinaMap);
+
+	//Creo el archivo que guarda la rutina de map enviada por el Job
+	//Generar un nombre para este script Map
+	string_append(&nombreNuevoMap,stringNroMap);
+	string_append(&nombreNuevoMap,"mapJob");
+	arrayTiempo=string_split(temporal_get_string_time(),":"); //creo array con hora minutos segundos y milisegundos separados
+	string_append(&tiempo,arrayTiempo[0]);//Agrego horas
+	string_append(&tiempo,arrayTiempo[1]);//Agrego minutos
+	string_append(&tiempo,arrayTiempo[2]);//Agrego segundos
+	string_append(&tiempo,arrayTiempo[3]);//Agrego milisegundos
+	string_append(&nombreNuevoMap,tiempo); //Concateno la fecha en formato hhmmssmmmm al nombre map
+	string_append(&nombreNuevoMap,".sh"); //agrego la extensión
+	string_append(&pathNuevoMap,config_get_string_value(configurador,"PATHMAPPERS"));
+	string_append(&pathNuevoMap,"/");
+	string_append(&pathNuevoMap,nombreNuevoMap);
+	//Genero nombre para el resultado temporal (luego a este se debera aplicar sort)
+	string_append(&resultadoTemporal,datosParaElMap.nomArchTemp);
+	//string_append(&resultadoTemporal,tiempo);
+	string_append(&resultadoTemporal,".tmp");
+
+	//Meto al nombre map final el ddirectorio temporal
+
+	printf("Nombre del map temporal(antes del sort):%s\n",resultadoTemporal);
+	printf("Nombre del map ordenado(luego del sort):%s\n",datosParaElMap.nomArchTemp);
+
+
+	if((scriptMap=fopen(pathNuevoMap,"w+"))==NULL){ //path donde guardara el script
+		perror("fopen");
+		log_error(logger,"Fallo al crear el script del mapper");
+		pthread_exit((void*)0);
+	}
+	if(fputs(datosParaElMap.rutinaMap,scriptMap)==EOF){
+		perror("fputs");
+		log_error(logger,"Fallo el fputs en una rutina map");
+		pthread_exit((void*)0);
+	}
+
+	// agrego permisos de ejecucion
+	if(chmod(pathNuevoMap,S_IRWXU|S_IRWXG|S_IROTH|S_IXOTH)==-1){
+		perror("chmod");
+		log_error(logger,"Fallo el cambio de permisos para el script de map");
+		pthread_exit((void*)0);
+	}
+	fclose(scriptMap); //cierro el file
+
+
+	pthread_mutex_lock(&mutexMap);
+
+	ejecutarMapper(nombreNuevoMap,datosParaElMap.bloque,resultadoTemporal);
+	ordenarMapper(resultadoTemporal,datosParaElMap.nomArchTemp);
+
+	pthread_mutex_unlock(&mutexMap);
+
+	resultado=0;
+
+	if(send(*sckMap,&resultado,sizeof(int),MSG_WAITALL)==-1){
+		perror("send");
+		log_error(logger,"Fallo el envío del resultado al map");
+		pthread_exit((void*)0);
+	}
+
+	printf("Se envío el resultado:%d \n",0);
+
+	free(arrayTiempo);
+	free(resultadoTemporal);
+	free(nombreNuevoMap);
+	free(tiempo);
+	free(pathNuevoMap);
+
+	pthread_exit((void*)0);
+
+}
 
 void* rutinaReduce (int* sckReduce){
 	pthread_detach(pthread_self());
@@ -1221,7 +1044,6 @@ void* rutinaReduce (int* sckReduce){
 		pthread_exit((void*)0);
 	}
 	fclose(scriptReduce); //cierro el file
-	sleep(2);
 
 	if(recv(*sckReduce,&cantidadArchivos,sizeof(int),MSG_WAITALL)==-1){
 		perror("recv");
@@ -1246,7 +1068,6 @@ void* rutinaReduce (int* sckReduce){
 		archivoParaReduce->puerto_nodo=archivoQueRecibo.puerto_nodo;
 		strcpy(archivoParaReduce->archivoAAplicarReduce,archivoQueRecibo.archivoAAplicarReduce);
 
-		printf("Me llego el archivo %s\n",archivoQueRecibo.archivoAAplicarReduce);
 		list_add(listaArchivosReduce,archivoParaReduce);
 	}
 
@@ -1356,7 +1177,7 @@ void* rutinaReduce (int* sckReduce){
 //				perror("send");
 //				log_error(logger,"Fallo el envío de identificación nodo-nodo");
 //			}
-			printf("Agrego el archivo remoto %s\n",unArchivoReduce->archivoAAplicarReduce);
+//			printf("Agrego el archivo remoto %s\n",nombreArchivo);
 			nuevoArchivoEnApareo->archivo=NULL;
 			memset(nuevoArchivoEnApareo->buffer,'\0',512);
 			memset(nuevoArchivoEnApareo->nombreArchivo,'\0',TAM_NOMFINAL);
@@ -1405,24 +1226,22 @@ void ejecutarReduce(t_list* archivosApareando,char* script,char* resultado, int*
 	strcpy(dameRenglones,"Dame renglones");
 	//Leer una linea de cada uno, guardar en el buffer
 	int outfd[2];
-//	int bak;
-	int pid,archivo_resultado;
-//	bak=0;
+	int bak,pid,archivo_resultado;
+	bak=0;
 	char *path;
 //	sem_t terminoElReduce;
 	t_respuestaNodoReduce respuestaNR;
 	memset(respuestaNR.ip_nodoFallido,'\0',20);
 //	sem_init(&terminoElReduce,0,1);
-	archivo_resultado=open(resultado,O_RDWR|O_CREAT,S_IRWXU|S_IRWXG); //abro file resultado, si no esta lo crea, asigno permisos
-
 	pipe(outfd); /* Donde escribe el padre */
 	if((pid=fork())==-1){
 		perror("fork reduce");
 	}
 	else if(pid==0)
 	{
-		//fflush(stdout);
-		//bak=dup(STDOUT_FILENO);
+		archivo_resultado=open(resultado,O_RDWR|O_CREAT,S_IRWXU|S_IRWXG); //abro file resultado, si no esta lo crea, asigno permisos
+		fflush(stdout);
+		bak=dup(STDOUT_FILENO);
 		dup2(archivo_resultado,STDOUT_FILENO); //STDOUT de este proceso se grabara en el file resultado
 		close(archivo_resultado);
 		close(STDIN_FILENO);
@@ -1620,7 +1439,7 @@ void ejecutarReduce(t_list* archivosApareando,char* script,char* resultado, int*
 		}
 		close(outfd[1]);
 		waitpid(pid,NULL,0);
-		//dup2(bak,STDOUT_FILENO);
+		dup2(bak,STDOUT_FILENO);
 //		sem_wait(&terminoElReduce);
 	}
 
@@ -1925,3 +1744,4 @@ int no_llego_a_eof(t_archivoEnApareo* archivo){
 //	fprintf(archivoFalso,"%s",bloqueAMediasFalso);
 //	fclose(archivoFalso);
 //}
+
