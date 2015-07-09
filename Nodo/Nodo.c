@@ -46,7 +46,7 @@ int nroReduce; //Reduce totales
 pthread_mutex_t mutexReduce=PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutexNroMap=PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutexNroReduce=PTHREAD_MUTEX_INITIALIZER;
-
+//sem_t multiejecucionMap;
 
 
 
@@ -88,7 +88,7 @@ int main(int argc , char *argv[]){
 //	for(semBloque=0;semBloque<*bloquesTotales;semBloque++){
 //		sem_init(&semBloques[semBloque],0,1);
 //	}
-
+//	sem_init(&multiejecucionMap,0,4);
 
 	//Estructura para conexion con FS
 	filesystem.sin_family = AF_INET;
@@ -650,47 +650,132 @@ void ordenarMapper(char* nombreMapperTemporal, char* nombreMapperOrdenado){
 
 
 void ejecutarMapper(char *script,int bloque,char *resultado){
-	int outfd[2];
-	int bak,pid,archivo_resultado;
-	bak=0;
-	char *path;
+	int pipein[2];
+	int pipeout[2];
+	pid_t pidHijo1;
+//	pid_t pidHijo2;
+//	char *path;
+//	int archivo_resultado;
 	char *bloqueAMapear;
-	path=string_new();
-	string_append(&path,config_get_string_value(configurador,"PATHMAPPERS"));
-	string_append(&path,"/");
-	string_append(&path,script);
-	char *ejecucion []={path,script,NULL};
-	archivo_resultado=open(resultado,O_RDWR|O_CREAT,S_IRWXU|S_IRWXG); //abro file resultado, si no esta lo crea, asigno permisos
-	pipe(outfd); /* Donde escribe el padre */
-	if((pid=fork())==-1){
-		perror("fork mapper");
-	}
-	else if(pid==0)
-	{
-		//fflush(stdout);
-		bak=dup(STDOUT_FILENO);
-		dup2(archivo_resultado,STDOUT_FILENO); //STDOUT de este proceso se grabara en el file resultado
-		close(archivo_resultado);
-		close(STDIN_FILENO);
-		dup2(outfd[0], STDIN_FILENO); //STDIN de este proceso será STDOUT del proceso padre
-		close(outfd[0]); /* innecesarios para el hijo */
-		close(outfd[1]);
-		if(execvp(ejecucion[0],ejecucion)==-1){
-			perror("Ejecucion map:");
-			log_error(logger,"Error en la ejecucion de un map");
+//	char * path=string_new();
+//	string_append(&path,config_get_string_value(configurador,"PATHMAPPERS"));
+//	string_append(&path,"/");
+//	string_append(&path,script);
+//	char * ejecucionMap[]={path,script,NULL};
+
+	pipe(pipein);
+	pidHijo1 = fork();
+	if (pidHijo1==0) {
+		pipe(pipeout);
+		pid_t pidHijo2 = fork();
+		if(pidHijo2==0){
+			//HIJO 2: SORT
+			close(pipein[1]);
+			close(pipein[0]);
+			close(pipeout[1]);
+			dup2(pipeout[0],0);
+			close(pipeout[0]);
+			FILE *fdtmp;
+			if (resultado != NULL) {
+				if((fdtmp = fopen(resultado,"w+"))==NULL){
+					perror("fopen map");
+				}
+				dup2(fileno(fdtmp),1);
+			}
+			execl("/usr/bin/sort", "sort", NULL);
+			fclose(fdtmp);
 		}
-	}
-	else
-	{
+		else{
+			//HIJO 1: MAPPER
+			close(pipein[1]);
+			close(pipeout[0]);
+			dup2(pipein[0],0);
+			close(pipein[0]);
+			dup2(pipeout[1],1);
+			close(pipeout[1]);
+			execve(script,NULL,NULL);
+		}
+	}else{
+		close(pipein[0]);
 		bloqueAMapear=getBloque(bloque);
-
-		write(outfd[1],bloqueAMapear,strlen(bloqueAMapear));/* Escribe en el stdin del hijo el contenido del bloque*/
-
-		close(outfd[0]); /* Estan siendo usados por el hijo */
-		close(outfd[1]);
-		waitpid(pid,NULL,0);
-		dup2(bak,STDOUT_FILENO);
+		int len = strlen(bloqueAMapear);
+		write(pipein[1],bloqueAMapear,len);
+		close(pipein[1]);
+		wait(NULL);
 	}
+
+//	archivo_resultado=open(resultado,O_RDWR|O_CREAT,S_IRWXU|S_IRWXG); //abro file resultado, si no esta lo crea, asigno permisos
+//		if (pipe(outfd) == -1)
+//	{
+//		printf("Error al abrir pipe 1\n");
+//		//exit(1);
+//	}
+//	if (pipe(outfdHijo1) == -1)
+//	{
+//		printf("Error al abrir pipe 2\n");
+//		//exit(1);
+//	}
+//
+//	//printf("pipes abiertos\n");
+//
+//
+//	if((pidHijo1=fork())==-1){
+//		perror("fork mapper");
+//	}
+//	else if(pidHijo1==0)
+//	{
+//		//Hijo 1 --> Recibe el bloque , hace map, tira al sort
+//		//fflush(stdout);
+//		//bak=dup(STDOUT_FILENO);
+//		dup2(outfdHijo1[1],STDOUT_FILENO); //STDOUT de este proceso se grabara en STDIN de proceso hijo
+//		//close(archivo_resultado);
+//		close(STDIN_FILENO);
+//		dup2(outfd[0], STDIN_FILENO); //STDIN de este proceso será STDOUT del proceso padre
+//		close(outfd[0]); /* innecesarios para el hijo */
+//		close(outfd[1]);
+//		close(outfdHijo1[0]);
+//		close(outfdHijo1[1]);
+//		if(execvp(ejecucionMap[0],ejecucionMap)==-1){
+//			perror("Ejecucion map:");
+//			log_error(logger,"Error en la ejecucion de un map");
+//		}
+//	}
+//	else
+//	{
+//		if((pidHijo2=fork())==-1){
+//			perror("fork mapper");
+//		}
+//		else if(pidHijo2==0){
+//			//Hijo 2 --> Recibe el map, sort, tira al archivo
+//			//bak=dup(STDOUT_FILENO);
+//			dup2(archivo_resultado,STDOUT_FILENO); //STDOUT de este proceso se grabara en STDIN de proceso hijo
+//			close(archivo_resultado);
+//			close(STDIN_FILENO);
+//			dup2(outfdHijo1[0], STDIN_FILENO); //STDIN de este proceso será STDOUT del proceso padre
+//			close(outfd[0]); /* innecesarios para el hijo */
+//			close(outfd[1]);
+//			close(outfdHijo1[0]);
+//			close(outfdHijo1[1]);
+//			//waitpid(pidHijo1,NULL,0);
+//			if(system("sort")<=0){
+//				log_error(logger,"Fallo el sort");
+//			}
+////			if(execlp("/usr/bin/sort","sort",NULL)==-1){
+////				perror("Sort del map");
+////				log_error(logger,"Error en la ejecucion de un sort");
+////			}
+//		}
+//		bloqueAMapear=getBloque(bloque);
+//
+//		write(outfd[1],bloqueAMapear,strlen(bloqueAMapear));/* Escribe en el stdin del hijo el contenido del bloque*/
+//
+//		close(outfd[0]); /* Estan siendo usados por el hijo */
+//		close(outfd[1]);
+//		close(outfdHijo1[0]);
+//		close(outfdHijo1[1]);
+//		waitpid(pidHijo2,NULL,0);
+//		//dup2(bak,STDOUT_FILENO);
+//	}
 
 }
 
@@ -847,7 +932,6 @@ char* mapearFileDeDatos(){
 void* rutinaMap(int* sckMap){
 	pthread_detach(pthread_self());
 	char** arrayTiempo;
-	int resultado=1;
 	t_datosMap datosParaElMap;
 
 	char *resultadoTemporal=string_new();
@@ -890,14 +974,14 @@ void* rutinaMap(int* sckMap){
 	//Genero nombre para el resultado temporal (luego a este se debera aplicar sort)
 	string_append(&resultadoTemporal,datosParaElMap.nomArchTemp);
 	//string_append(&resultadoTemporal,tiempo);
-	string_append(&resultadoTemporal,".tmp");
+//	string_append(&resultadoTemporal,".tmp");
 
 	//Meto al nombre map final el ddirectorio temporal
 
 //	printf("Nombre del map temporal(antes del sort):%s\n",resultadoTemporal);
 //	printf("Nombre del map ordenado(luego del sort):%s\n",datosParaElMap.nomArchTemp);
 
-	log_info(logger,"Hilo map %s bajando rutina reduce enviada por el Job",stringNroMap);
+	log_info(logger,"Hilo map %s bajando rutina map enviada por el Job",stringNroMap);
 	if((scriptMap=fopen(pathNuevoMap,"w+"))==NULL){ //path donde guardara el script
 		perror("fopen");
 		log_error(logger,"Fallo al crear el script del mapper");
@@ -920,21 +1004,20 @@ void* rutinaMap(int* sckMap){
 	sleep(2);
 	log_info(logger,"Hilo map %s ejecutando el script mapper",stringNroMap);
 
-	ejecutarMapper(nombreNuevoMap,datosParaElMap.bloque,resultadoTemporal);
+//	sem_wait(&multiejecucionMap);
+	//pthread_mutex_lock(&mutexMap);
+	ejecutarMapper(pathNuevoMap,datosParaElMap.bloque,resultadoTemporal);
+	//pthread_mutex_unlock(&mutexMap);
+//	sem_post(&multiejecucionMap);
 
+//	log_info(logger,"Hilo map %s ejecutando el sort",stringNroMap);
+//	char * nombreMapperTemporal=string_new();
+//	char ** pathMapperSeparado=string_split(resultadoTemporal,"/");
+//	string_append(&nombreMapperTemporal,pathMapperSeparado[1]); // le agrega al nombre mapper lo que hay dps de /tmp
+//
+//	ordenarMapper(nombreMapperTemporal,datosParaElMap.nomArchTemp);
 
-	log_info(logger,"Hilo map %s ejecutando el sort",stringNroMap);
-	char * nombreMapperTemporal=string_new();
-	char ** pathMapperSeparado=string_split(resultadoTemporal,"/");
-	string_append(&nombreMapperTemporal,pathMapperSeparado[1]); // le agrega al nombre mapper lo que hay dps de /tmp
-
-	ordenarMapper(nombreMapperTemporal,datosParaElMap.nomArchTemp);
-
-
-
-	resultado=0;
-
-	if(send(*sckMap,&resultado,sizeof(int),MSG_WAITALL)==-1){
+	if(send(*sckMap,0,sizeof(int),MSG_WAITALL)==-1){
 		perror("send");
 		log_error(logger,"Fallo el envío del resultado al map");
 		pthread_exit((void*)0);
@@ -1218,22 +1301,24 @@ void ejecutarReduce(t_list* archivosApareando,char* script,char* resultado, int*
 	strcpy(dameRenglones,"Dame renglones");
 	//Leer una linea de cada uno, guardar en el buffer
 	int outfd[2];
-	int bak,pid,archivo_resultado;
-	bak=0;
+//	int bak;
+	int pid,archivo_resultado;
+//	bak=0;
 	char *path;
 //	sem_t terminoElReduce;
 	t_respuestaNodoReduce respuestaNR;
 	memset(respuestaNR.ip_nodoFallido,'\0',20);
 //	sem_init(&terminoElReduce,0,1);
+	archivo_resultado=open(resultado,O_RDWR|O_CREAT,S_IRWXU|S_IRWXG); //abro file resultado, si no esta lo crea, asigno permisos
+
 	pipe(outfd); /* Donde escribe el padre */
 	if((pid=fork())==-1){
 		perror("fork reduce");
 	}
 	else if(pid==0)
 	{
-		archivo_resultado=open(resultado,O_RDWR|O_CREAT,S_IRWXU|S_IRWXG); //abro file resultado, si no esta lo crea, asigno permisos
-		fflush(stdout);
-		bak=dup(STDOUT_FILENO);
+		//fflush(stdout);
+		//bak=dup(STDOUT_FILENO);
 		dup2(archivo_resultado,STDOUT_FILENO); //STDOUT de este proceso se grabara en el file resultado
 		close(archivo_resultado);
 		close(STDIN_FILENO);
@@ -1431,7 +1516,7 @@ void ejecutarReduce(t_list* archivosApareando,char* script,char* resultado, int*
 		}
 		close(outfd[1]);
 		waitpid(pid,NULL,0);
-		dup2(bak,STDOUT_FILENO);
+		//dup2(bak,STDOUT_FILENO);
 //		sem_wait(&terminoElReduce);
 	}
 
