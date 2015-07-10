@@ -30,7 +30,7 @@ t_config* configurador;
 t_log* logger; //log en pantalla y archivo de log
 t_log* logger_archivo; //log solo en archivo de log
 char* fileDeDatos;
-long sizeFileDatos;
+unsigned int sizeFileDatos;
 fd_set master; // conjunto maestro de descriptores de fichero
 fd_set read_fds; // conjunto temporal de descriptores de fichero para select()
 int fdmax;//Numero maximo de descriptores de fichero
