@@ -864,7 +864,7 @@ void* rutinaMap(int* sckMap){
 	char** arrayTiempo;
 	int resultado=1;
 	t_datosMap datosParaElMap;
-
+	int nroAMostrar;
 	char *resultadoTemporal=string_new();
 	char *nombreNuevoMap=string_new(); //será el nombre del nuevo map
 	char *tiempo=string_new(); //string que tendrá la hora
@@ -872,7 +872,7 @@ void* rutinaMap(int* sckMap){
 	FILE* scriptMap;
 
 	pthread_mutex_lock(&mutexNroMap);
-	char * stringNroMap=string_itoa(nroMap);
+	nroAMostrar= nroMap;
 	nroMap++;
 	pthread_mutex_unlock(&mutexNroMap);
 
@@ -883,7 +883,8 @@ void* rutinaMap(int* sckMap){
 		pthread_exit((void*)0);
 	}
 
-	log_info(logger,"Hilo Map %s: \"%s\" iniciando ejecución",stringNroMap,datosParaElMap.nomArchTemp);
+
+	log_info(logger,"Hilo Map %d: \"%s\" iniciando ejecución",nroAMostrar,datosParaElMap.nomArchTemp);
 	//printf("Se aplicará la rutina mapper en el bloque %d\n",datosParaElMap.bloque);
 
 	//printf("Se guardará el resultado del mapper en el archivo temporal %s\n",datosParaElMap.nomArchTemp);
@@ -892,7 +893,8 @@ void* rutinaMap(int* sckMap){
 
 	//Creo el archivo que guarda la rutina de map enviada por el Job
 	//Generar un nombre para este script Map
-	string_append(&nombreNuevoMap,stringNroMap);
+
+	string_append(&nombreNuevoMap,string_itoa(nroAMostrar));
 	string_append(&nombreNuevoMap,"mapJob");
 	arrayTiempo=string_split(temporal_get_string_time(),":"); //creo array con hora minutos segundos y milisegundos separados
 	string_append(&tiempo,arrayTiempo[0]);//Agrego horas
@@ -914,7 +916,7 @@ void* rutinaMap(int* sckMap){
 //	printf("Nombre del map temporal(antes del sort):%s\n",resultadoTemporal);
 //	printf("Nombre del map ordenado(luego del sort):%s\n",datosParaElMap.nomArchTemp);
 
-	log_info(logger,"Hilo Map %s: Bajando la rutina Map enviada por el Job",stringNroMap);
+	log_info(logger,"Hilo Map %d: Bajando la rutina Map enviada por el Job",nroAMostrar);
 
 	if((scriptMap=fopen(pathNuevoMap,"w+"))==NULL){ //path donde guardara el script
 		perror("fopen");
@@ -935,7 +937,7 @@ void* rutinaMap(int* sckMap){
 	}
 	fclose(scriptMap); //cierro el file
 
-	log_info(logger,"Hilo Map %s: Ejecutando script",stringNroMap);
+	log_info(logger,"Hilo Map %d: Ejecutando script",nroAMostrar);
 	pthread_mutex_lock(&mutexMap);
 
 	ejecutarMapper(nombreNuevoMap,datosParaElMap.bloque,resultadoTemporal);
@@ -951,7 +953,7 @@ void* rutinaMap(int* sckMap){
 		pthread_exit((void*)0);
 	}
 
-	log_info(logger,"Hilo Map %s: Finalizado con éxito",stringNroMap);
+	log_info(logger,"Hilo Map %d: Finalizado con éxito",nroAMostrar);
 
 	free(arrayTiempo);
 	free(resultadoTemporal);
@@ -970,6 +972,7 @@ void* rutinaReduce (int* sckReduce){
 	int cantidadArchivos;
 	int posicionEnListaArchivos=0;
 	int indice=0;
+	int nroAMostrar;
 	FILE* scriptReduce;
 	t_respuestaNodoReduce respuestaParaJob;
 	t_list* listaArchivosReduce;
@@ -985,10 +988,12 @@ void* rutinaReduce (int* sckReduce){
 	memset(respuestaParaJob.ip_nodoFallido,'\0',20);
 
 	pthread_mutex_lock(&mutexNroReduce);
-	char * stringNroReduce=string_itoa(nroReduce);
+	nroAMostrar=nroReduce;
 	nroReduce++;
 	pthread_mutex_unlock(&mutexNroReduce);
 
+
+	log_info(logger,"Hilo reduce %d: \"%s\" iniciando ejecución",nroAMostrar,nombreFinalReduce);
 
 	if(recv(*sckReduce,&nombreFinalReduce,TAM_NOMFINAL,MSG_WAITALL)==-1){
 		perror("recv");
@@ -996,7 +1001,7 @@ void* rutinaReduce (int* sckReduce){
 		pthread_exit((void*)0);
 	}
 
-	log_info(logger,"Hilo reduce %s: \"%s\" iniciando ejecución",stringNroReduce,nombreFinalReduce);
+
 
 	if(recv(*sckReduce,rutinaReduce,sizeof(rutinaReduce),MSG_WAITALL)==-1){
 		perror("recv");
@@ -1005,7 +1010,7 @@ void* rutinaReduce (int* sckReduce){
 	}
 
 	//printf("Se recibio la rutina reduce:%s\n",rutinaReduce);
-	string_append(&nombreNuevoReduce,stringNroReduce);
+	string_append(&nombreNuevoReduce,string_itoa(nroAMostrar));
 	string_append(&nombreNuevoReduce,"reduceJob");
 	arrayTiempo=string_split(temporal_get_string_time(),":"); //creo array con hora minutos segundos y milisegundos separados
 	string_append(&tiempo,arrayTiempo[0]);//Agrego horas
@@ -1019,7 +1024,7 @@ void* rutinaReduce (int* sckReduce){
 	string_append(&pathNuevoReduce,nombreNuevoReduce);
 
 
-	log_info(logger,"Hilo Reduce %s: Bajando la rutina Reduce enviada por el Job",stringNroReduce);
+	log_info(logger,"Hilo Reduce %d: Bajando la rutina Reduce enviada por el Job",nroAMostrar);
 	if((scriptReduce=fopen(pathNuevoReduce,"w+"))==NULL){ //path donde guardara el script
 		perror("fopen");
 		log_error(logger,"Fallo al crear el script del mapper");
@@ -1118,7 +1123,7 @@ void* rutinaReduce (int* sckReduce){
 			memset(nuevoArchivoEnApareo->ip_nodo,'\0',20);
 			strcpy(nuevoArchivoEnApareo->ip_nodo,config_get_string_value(configurador,"IP_NODO"));
 			nuevoArchivoEnApareo->puerto_nodo=config_get_int_value(configurador,"PUERTO_NODO");
-			log_info(logger,"Hilo Reduce %s: Agrego el archivo local %s",stringNroReduce,unArchivoReduce->archivoAAplicarReduce);
+			log_info(logger,"Hilo Reduce %d: Agrego el archivo local %s",nroAMostrar,unArchivoReduce->archivoAAplicarReduce);
 			list_add(archivosEnApareo,nuevoArchivoEnApareo);
 		}
 
@@ -1182,7 +1187,7 @@ void* rutinaReduce (int* sckReduce){
 //				perror("send");
 //				log_error(logger,"Fallo el envío de identificación nodo-nodo");
 //			}
-			log_info(logger,"Hilo Reduce %s: Agrego el archivo remoto %s",stringNroReduce,unArchivoReduce->archivoAAplicarReduce);
+			log_info(logger,"Hilo Reduce %d: Agrego el archivo remoto %s",nroAMostrar,unArchivoReduce->archivoAAplicarReduce);
 			nuevoArchivoEnApareo->archivo=NULL;
 			memset(nuevoArchivoEnApareo->buffer,'\0',512);
 			memset(nuevoArchivoEnApareo->nombreArchivo,'\0',TAM_NOMFINAL);
@@ -1199,7 +1204,7 @@ void* rutinaReduce (int* sckReduce){
 	}
 
 
-	log_info(logger,"Hilo Reduce %s: Ejecutando script",stringNroReduce);
+	log_info(logger,"Hilo Reduce %d: Ejecutando script",nroAMostrar);
 	pthread_mutex_lock(&mutexReduce);
 	ejecutarReduce(archivosEnApareo,nombreNuevoReduce,nombreFinalReduce,sckReduce);
 	pthread_mutex_unlock(&mutexReduce);
@@ -1215,7 +1220,7 @@ void* rutinaReduce (int* sckReduce){
 		pthread_exit((void*)0);
 	}
 
-	log_info(logger,"Hilo Reduce %s: Finalizado con éxito",stringNroReduce);
+	log_info(logger,"Hilo Reduce %d: Finalizado con éxito",nroAMostrar);
 
 	pthread_exit((void*)0);
 }
