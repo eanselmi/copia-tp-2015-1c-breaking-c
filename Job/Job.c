@@ -320,11 +320,9 @@ void* hilo_reduce(t_hiloReduce* reduceStruct){
 	struct sockaddr_in nodo_addr;
 	int nodo_sock;
 	char identificacion[BUF_SIZE];
-	char rutinaReduce[REDUCE_SIZE];
 	t_respuestaReduce respuestaParaMarta;
 	t_respuestaNodoReduce respuestaNodo;
 	memset(identificacion,'\0',BUF_SIZE);
-	memset(rutinaReduce,'\0',REDUCE_SIZE);
 	int ind;
 	int cantidadArchivos=list_size(reduceStruct->listaNodos);
 
