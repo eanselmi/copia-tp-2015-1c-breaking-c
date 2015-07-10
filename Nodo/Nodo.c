@@ -402,7 +402,7 @@ void *manejador_de_escuchas(){
 									log_error(logger,"Se desconecto un nodo");
 								}
 							}
-//							log_info(logger_archivo,"Leído el archivo temporal %s",ruta_local);
+							log_info(logger_archivo,"Leído el archivo temporal %s",ruta_local);
 							log_info(logger,"Archivo resultado %s enviado correctamente al FS",ruta_local);
 							fclose(archivo_resultado);
 						}
@@ -964,7 +964,7 @@ void* rutinaMap(int* sckMap){
 	}
 
 	log_info(logger,"Hilo map %s: finalizado con ÉXITO",stringNroMap);
-	sleep(1);
+	sleep(2);
 //	printf("Se envío el resultado:%d \n",0);
 
 	free(arrayTiempo);
