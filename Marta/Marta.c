@@ -1527,6 +1527,7 @@ void *atenderJob (int *socketJob) {
 				pthread_mutex_unlock(&mutexModNodo);
 
 			}
+			estadoNodos();
 		}
 
 		if(map->resultado==0){
