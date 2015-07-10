@@ -25,6 +25,7 @@ t_datos_y_bloque combo;
 fd_set master; // conjunto maestro de descriptores de fichero
 fd_set read_fds; // conjunto temporal de descriptores de fichero para select()
 t_log* logger;
+t_log * log_nodos;
 t_list *nodos; //lista de nodos conectados al fs
 t_list* archivos; //lista de archivos del FS
 t_list* directorios; //lista de directorios del FS
@@ -74,6 +75,7 @@ int main(int argc, char *argv[]) {
 	int yes = 1; // para setsockopt() SO_REUSEADDR, más abajo
 	configurador = config_create("resources/fsConfig.conf"); //se asigna el archivo de configuración especificado en la ruta
 	logger = log_create("fsLog.log", "FileSystem", false, LOG_LEVEL_INFO);
+	log_nodos = log_create("fsLog_nodos.log", "FileSystem", false, LOG_LEVEL_INFO);
 	FD_ZERO(&master); // borra los conjuntos maestro y temporal
 	FD_ZERO(&read_fds);
 
@@ -154,6 +156,7 @@ int main(int argc, char *argv[]) {
 					list_add(nodos,agregar_nodo_a_lista(nodo_id, newfd, 0, 1,inet_ntoa(remote_client.sin_addr),remote_client.sin_port,*puerto_escucha_nodo, *bloquesTotales,*bloquesTotales));
 					printf("Se conectó el %s desde %s con %d bloques disponibles\n",nodo_id,inet_ntoa(remote_client.sin_addr), *bloquesTotales);
 					log_info(logger,"Se conectó el nodo: %s desde %s con %d bloques disponibles",nodo_id,inet_ntoa(remote_client.sin_addr), *bloquesTotales);
+					loguear_estado_de_los_nodos(nodos);
 				} else {
 					printf("Ya existe un nodo con el mismo id o direccion ip\n");
 					log_info(logger,"Se conecto el %s con identidad duplicada, ya existe un nodo con ese id conectado al FileSystem\n",nodo_id);
@@ -182,6 +185,7 @@ int main(int argc, char *argv[]) {
 	}
 	Menu();
 	log_destroy(logger);
+	log_destroy(log_nodos);
 
 	return 0;
 }
@@ -258,7 +262,7 @@ int Menu(void) {
 			
 		//case 17: printf("Eligió Salir\n"); break;
 		case 17: listar_nodos_conectados(nodos); break;
-		//case 17: listar_archivos_subidos(archivos); break;
+		//case 17: listar_archivos_subidos_usuario(archivos); break;
 		//case 17: listarDirectoriosCreados();break;
 		//case 17: listar_directorios(); break;
 		//case 17: eliminar_listas(archivos,directorios,nodos); break;  //SALIDA NORMAL, LIBERA Y NO PERSISTE
@@ -911,12 +915,6 @@ void actualizar_persistencia_copiar_bloque(char* nodoId,int bloque,char* nodoId_
 
 }
 
-
-
-
-
-
-
 void listar_directorios(){
 	t_dir *dir;
 	int i;
@@ -1137,33 +1135,53 @@ void listar_nodos_conectados(t_list *nodos) {
 	exit(0);
 }
 
-/*
-void listar_archivos_subidos(t_list *archivos) {
+void loguear_estado_de_los_nodos(t_list *lista_nodos) {
+	int i,j;
+	t_nodo *nodo;
+	log_info(log_nodos,"============== ESTADO DE LOS NODOS ================");
+	for (i=0;i<list_size(lista_nodos);i++){
+		nodo=list_get(lista_nodos,i);
+		log_info(log_nodos,"Nombre %s",nodo->nodo_id);
+		log_info(log_nodos,".....Bloques Totales: %d",nodo->bloques_totales);
+		log_info(log_nodos,".....Bloques Libres: %d",nodo->bloques_libres);
+		log_info(log_nodos,".....Estado (0 deshabilitado / 1 habilitado): %d",nodo->estado);
+		log_info(log_nodos,".....Estado de red del (0 desconectado / 1 conectado): %d",nodo->estado_red);
+		log_info(log_nodos,".....Direccion IP del: %s",nodo->ip);
+		log_info(log_nodos,".....Puerto de Escucha: %d",nodo->puerto_escucha_nodo);
+	}
+}
+
+
+
+void loguear_lista_de_bloques_de_archivo(char* nombre, uint32_t padre) {
 	int i,j,k,cantidad_archivos,cantidad_bloques,cantidad_copias;
 	t_archivo *elemento;
 	t_bloque *bloque;
 	t_copias *copia;
 	cantidad_archivos = list_size(archivos);
+	log_info(logger,"Bloques del archivo %s",nombre);
 	if (cantidad_archivos!=0){
 		for (i = 0; i < cantidad_archivos; i++) {
 			elemento = list_get(archivos, i);
-			printf("\n\n");
-			printf("Archivo: %s Padre: %d Bloques: %d\n",elemento->nombre,elemento->padre,list_size(elemento->bloques));
-			cantidad_bloques=list_size(elemento->bloques);
-			for (j = 0; j < cantidad_bloques; j++){
-				bloque=list_get(elemento->bloques,j);
-				printf ("----- Bloque: %d\n",j);
-				cantidad_copias=list_size(bloque->copias);
-				for (k=0;k<cantidad_copias;k++){
-					copia=list_get(bloque->copias,k);
-					printf ("---------- Copia %d",k);
-					printf (" Nodo: %s Bloque: %d\n",copia->nodo,copia->bloqueNodo);
+			if (elemento->padre==padre && strcmp(elemento->nombre,nombre)==0){
+				log_info(logger,"\n\n");
+				log_info(logger,"Archivo: %s Padre: %d Bloques: %d\n",elemento->nombre,elemento->padre,list_size(elemento->bloques));
+				cantidad_bloques=list_size(elemento->bloques);
+				for (j = 0; j < cantidad_bloques; j++){
+					bloque=list_get(elemento->bloques,j);
+					log_info(logger,"----- Bloque: %d\n",j);
+					cantidad_copias=list_size(bloque->copias);
+					for (k=0;k<cantidad_copias;k++){
+						copia=list_get(bloque->copias,k);
+						log_info(logger,"---------- Copia %d",k);
+						log_info(logger," Nodo: %s Bloque: %d\n",copia->nodo,copia->bloqueNodo);
+					}
 				}
 			}
 		}
-	}else printf ("No hay archivos cargados en MDFS\n");
+	}
 }
-*/
+
 
 
 
@@ -1376,6 +1394,7 @@ void *connection_handler_escucha(void) {
 										list_add(nodos,agregar_nodo_a_lista(nodo_id,newfd, 0, 1,inet_ntoa(remote_client.sin_addr),remote_client.sin_port,*puerto_escucha_nodo,*bloquesTotales,*bloquesTotales));
 										printf("\nSe conectó el %s desde %s con %d bloques disponibles\n",nodo_id,inet_ntoa(remote_client.sin_addr), *bloquesTotales);
 										log_info(logger,"Se conectó el %s desde %s con %d bloques disponibles",nodo_id,inet_ntoa(remote_client.sin_addr), *bloquesTotales);
+										loguear_estado_de_los_nodos(nodos);
 
 										if(marta_presente == 1){
 											char identificacion_marta[BUF_SIZE];
@@ -1438,6 +1457,7 @@ void *connection_handler_escucha(void) {
 									}
 									printf("Se reconectó el %s desde la ip: %s con %d bloques libres\n",nodo_id,inet_ntoa(remote_client.sin_addr),bloques_libres_del_reconectado);
 									log_info(logger, "Se reconectó el %s desde la ip: %s con %d bloques libres\n",nodo_id,inet_ntoa(remote_client.sin_addr),bloques_libres_del_reconectado);
+									loguear_estado_de_los_nodos(nodos);
 								} else {
 									printf("Se reconecto un nodo con datos alterados, se lo desconecta\n");
 									log_info(logger,"Se reconecto el Nodo: %s con identidad alterada\n",nodo_id);
@@ -1586,6 +1606,7 @@ void *connection_handler_escucha(void) {
 									modificar_estado_nodo(nodo_id, i,remote_client.sin_port, 0, 0);
 									printf("Se desconecto el nodo %s, %d\n",inet_ntoa(remote_client.sin_addr),remote_client.sin_port);
 									log_info(logger, "Se desconecto el Nodo: %s del FileSystem\n",nodo_id);
+									loguear_estado_de_los_nodos(nodos);
 									close(i); // ¡Hasta luego!
 									FD_CLR(i, &master); // eliminar del conjunto maestro
 
@@ -1784,6 +1805,7 @@ void FormatearFilesystem() {
 		for (k = 0; k < unNodo->bloques_totales; k++)
 			bitarray_clean_bit(unNodo->bloques_del_nodo, k);   //MARCO EN TODOS LOS BITS DEL BITARRAY QUE LOS BLOQUES ESTAN DISPONIBLES
 	}
+	loguear_estado_de_los_nodos(nodos);
 
 	//=====================================================================
 	//======================= FORMATEO PARTE 3 ============================
@@ -1923,6 +1945,7 @@ void EliminarArchivo() {
 			return;
 		}
 		archivo = list_get(archivos, posArchivo);
+		loguear_lista_de_bloques_de_archivo(archivo->nombre, archivo->padre);
 		strcpy(nombreArchivo,archivo->nombre);
 		strcpy(nombre_para_marta,archivo->nombre);
 		padre_para_marta=archivo->padre;
@@ -1948,6 +1971,7 @@ void EliminarArchivo() {
 		list_remove_and_destroy_element(archivos,posArchivo,(void*)eliminar_lista_de_archivos);
 		printf ("Archivo eliminado exitosamente\n");
 		log_info(logger,"Se elimino correctamente el archivo %s",path);
+		loguear_estado_de_los_nodos(nodos);
 		actualizar_persistencia_archivo_eliminado(nombreArchivo,idPadre);
 		//Actualizo a Marta
 		if(marta_presente == 1){
@@ -2021,6 +2045,7 @@ void RenombrarArchivo() {
 		}
 		int posArchivo = BuscarArchivoPorNombre(path, idPadre);
 		archivo = list_get(archivos, posArchivo);
+		loguear_lista_de_bloques_de_archivo(archivo->nombre, archivo->padre);
 		printf("Ingrese el nuevo nombre \n");
 		scanf("%s", nuevoNombre);
 		strcpy(viejoNombre,archivo->nombre);
@@ -2111,6 +2136,7 @@ void MoverArchivo() {
 			return;
 		}
 		archivo = list_get(archivos, posArchivo);
+		loguear_lista_de_bloques_de_archivo(archivo->nombre, archivo->padre);
 
 		printf("Ingrese el nuevo path \n");
 		memset(nuevoPath,'\0',200);
@@ -2278,6 +2304,7 @@ void eliminar_listas(t_list *archivos_l, t_list *directorios_l, t_list *nodos_l)
 
 	if (nodos_l!=NULL){
 		list_destroy_and_destroy_elements(nodos_l,(void*)eliminar_lista_de_nodos);
+		loguear_estado_de_los_nodos(nodos);
 	}
 	//=====================================================================
 	//======================= FORMATEO PARTE 3 ============================
@@ -2287,10 +2314,10 @@ void eliminar_listas(t_list *archivos_l, t_list *directorios_l, t_list *nodos_l)
 	if (directorios_l!=NULL){
 		list_destroy_and_destroy_elements(directorios_l,(void*)eliminar_lista_de_directorio);
 	}
-
 	//Salida corresta del FS
 	if (archivos_l!=NULL && directorios_l!=NULL && nodos_l!=NULL){
 		printf ("Adios!\n");
+		log_info(logger,"Se sale correctamente del Filesystem y se borra toda persistencia");
 
 		//Abro los archivos directorios y archivos en modo w para borrarlos
 		dir=fopen("directorios","w");
@@ -2947,7 +2974,7 @@ int CopiarArchivoAMDFS(int flag, char* archvo_local, char* archivo_mdfs){
     			}
     		}
     	}
-
+    	loguear_estado_de_los_nodos(nodos);
     	persistir_archivo(archivo_temporal);
     	printf ("Pasa persistencia\n");
     	//Si llego hasta aca salio tod0 bien, actualizo la lista real de nodos
@@ -3050,6 +3077,7 @@ int CopiarArchivoDelMDFS(int flag, char*unArchivo) {
 			return -1;
 		}
 		archivo = list_get(archivos, posArchivo);
+		loguear_lista_de_bloques_de_archivo(archivo->nombre,archivo->padre);
 		copiaLocal = fopen(ruta_local, "w");
 		for (j=0;j<list_size(archivo->bloques);j++){
 			bloque=list_get(archivo->bloques,j);
@@ -3218,6 +3246,7 @@ void BorrarBloque() {
 		}
 		printf("Se ha borrado el bloque correctamente\n");
 		log_info(logger,"El bloque %d del nodo %s fue eliminado correctamente",bloque,nodoId);
+		loguear_estado_de_los_nodos(nodos);
 
 		//actualizar persistencia
 		actualizar_persistencia_eliminar_bloque(nodoId,bloque);
@@ -3438,6 +3467,7 @@ void CopiarBloque() {
 		}
 		printf ("Bloque copiado exitosamente\n");
 		log_info(logger, "La operacion de copiar bloque termino exitosamente");
+		loguear_estado_de_los_nodos(nodos);
 	}
 }
 
@@ -3485,6 +3515,7 @@ void AgregarNodo(){
 				exit(-1);
 			}
 		}
+		loguear_estado_de_los_nodos(nodos);
 	}
 	else{
 		printf("El nodo ingresado no se puede agregar\n");
@@ -3537,8 +3568,7 @@ void EliminarNodo(){
 				exit(-1);
 			}
 		}
-
-
+		loguear_estado_de_los_nodos(nodos);
 	}
 	else{
 		printf("El nodo ingresado no se puede eliminar\n");
