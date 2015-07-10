@@ -303,7 +303,7 @@ void *manejador_de_escuchas(){
 						log_error(logger,"Falló el receive");
 						exit(-1);
 					}
-					printf ("Recibi del handshake %d\n",nbytes);
+//					printf ("Recibi del handshake %d\n",nbytes);
 					if(nbytes==0){ //se desconectó
 						close(conectorFS);
 						FD_CLR(conectorFS,&master);
@@ -321,7 +321,7 @@ void *manejador_de_escuchas(){
 								exit(-1);
 							}
 							//printf ("Recibi: %d\n",read_size);
-							log_info(logger,"Me mandaron un datos para setear el bloque %d",combo.n_bloque);
+							log_info(logger,"Me mandaron datos de un archivo para setear el bloque %d",combo.n_bloque);
 							setBloque(combo.n_bloque,combo.buf_20mb); //esto deberia devolver algo que identifique si salio bien o no para informar al fs si fallo o fue exitosa la copai del bloque en el mdfs
 						}
 						if(strncmp(mensaje,"obtener bloque", 14) == 0){
