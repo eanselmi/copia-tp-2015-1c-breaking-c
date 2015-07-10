@@ -79,6 +79,7 @@ int obtenerEstadoDelBloque(char *nodo,int bloqueNodo);
 void listar_directorios(void);
 void loguear_lista_de_bloques_de_archivo(char* nombre, uint32_t padre);
 void loguear_estado_de_los_nodos(t_list *lista_nodos);
+void loguear_espacio_del_sistema(t_list *lista_nodos);
 void persistir_archivo(t_archivo *archivo);
 void actualizar_nodo_persistencia(t_nodo *nodo);
 int obtenerEstadoDelNodo(char* nodo);
