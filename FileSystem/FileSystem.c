@@ -111,7 +111,7 @@ int main(int argc, char *argv[]) {
 	fdmax = listener; // por ahora es éste el ultimo socket
 	addrlen = sizeof(struct sockaddr_in);
 	nodos = list_create(); //Crea la lista de que va a manejar la lista de nodos
-	printf("Esperando las conexiones de los nodos iniciales\n");
+	printf("Esperando las conexiones de los nodos iniciales\n\n");
 	log_info(logger, "Esperando las conexiones de los nodos iniciales");
 	while (cantidad_nodos!= config_get_int_value(configurador, "CANTIDAD_NODOS")) {
 		if ((newfd = accept(listener, (struct sockaddr*) &remote_client,(socklen_t*) &addrlen)) == -1) {
@@ -152,11 +152,11 @@ int main(int argc, char *argv[]) {
 						fdmax = newfd;
 					}
 					list_add(nodos,agregar_nodo_a_lista(nodo_id, newfd, 0, 1,inet_ntoa(remote_client.sin_addr),remote_client.sin_port,*puerto_escucha_nodo, *bloquesTotales,*bloquesTotales));
-					printf("\nSe conectó el nodo: %s desde %s con %d bloques disponibles",nodo_id,inet_ntoa(remote_client.sin_addr), *bloquesTotales);
+					printf("Se conectó el %s desde %s con %d bloques disponibles\n",nodo_id,inet_ntoa(remote_client.sin_addr), *bloquesTotales);
 					log_info(logger,"Se conectó el nodo: %s desde %s con %d bloques disponibles",nodo_id,inet_ntoa(remote_client.sin_addr), *bloquesTotales);
 				} else {
 					printf("Ya existe un nodo con el mismo id o direccion ip\n");
-					log_info(logger,"Se conecto el Nodo: %s con identidad duplicada, ya existe un nodo con ese id conectado al FileSystem\n",nodo_id);
+					log_info(logger,"Se conecto el %s con identidad duplicada, ya existe un nodo con ese id conectado al FileSystem\n",nodo_id);
 					close(newfd);
 				}
 			}
@@ -165,7 +165,7 @@ int main(int argc, char *argv[]) {
 			free(puerto_escucha_nodo);
 		} else {
 			close(newfd);
-			printf("\nSe conecto algo pero no se que fue, lo rechazo\n");
+			printf("Se conecto algo pero no se que fue, lo rechazo\n");
 			log_info(logger,"Se intento conectar un proceso al FileSystem que no es un Nodo antes de que el sistema este disponible");
 		}
 	}
@@ -1374,8 +1374,8 @@ void *connection_handler_escucha(void) {
 											fdmax = newfd;
 										}
 										list_add(nodos,agregar_nodo_a_lista(nodo_id,newfd, 0, 1,inet_ntoa(remote_client.sin_addr),remote_client.sin_port,*puerto_escucha_nodo,*bloquesTotales,*bloquesTotales));
-										printf("\nSe conectó el nodo: %s desde %s con %d bloques disponibles",nodo_id,inet_ntoa(remote_client.sin_addr), *bloquesTotales);
-										log_info(logger,"Se conectó el nodo: %s desde %s con %d bloques disponibles",nodo_id,inet_ntoa(remote_client.sin_addr), *bloquesTotales);
+										printf("\nSe conectó el %s desde %s con %d bloques disponibles\n",nodo_id,inet_ntoa(remote_client.sin_addr), *bloquesTotales);
+										log_info(logger,"Se conectó el %s desde %s con %d bloques disponibles",nodo_id,inet_ntoa(remote_client.sin_addr), *bloquesTotales);
 
 										if(marta_presente == 1){
 											char identificacion_marta[BUF_SIZE];
@@ -1436,8 +1436,8 @@ void *connection_handler_escucha(void) {
 										miNodo=list_get(nodos,h);
 										if (strcmp(miNodo->nodo_id,nodo_id)==0) bloques_libres_del_reconectado=miNodo->bloques_libres;
 									}
-									printf("Se reconectó el Nodo: %s desde la ip: %s con %d bloques libres\n",nodo_id,inet_ntoa(remote_client.sin_addr),bloques_libres_del_reconectado);
-									log_info(logger, "Se reconectó el Nodo: %s desde la ip: %s con %d bloques libres\n",nodo_id,inet_ntoa(remote_client.sin_addr),bloques_libres_del_reconectado);
+									printf("Se reconectó el %s desde la ip: %s con %d bloques libres\n",nodo_id,inet_ntoa(remote_client.sin_addr),bloques_libres_del_reconectado);
+									log_info(logger, "Se reconectó el %s desde la ip: %s con %d bloques libres\n",nodo_id,inet_ntoa(remote_client.sin_addr),bloques_libres_del_reconectado);
 								} else {
 									printf("Se reconecto un nodo con datos alterados, se lo desconecta\n");
 									log_info(logger,"Se reconecto el Nodo: %s con identidad alterada\n",nodo_id);
@@ -1461,7 +1461,7 @@ void *connection_handler_escucha(void) {
 								marta_presente = 0;
 								close(i); // ¡Hasta luego!
 								FD_CLR(i, &master); // eliminar del conjunto maestro
-								printf("Marta se desconecto\n");
+								printf("El proceso Marta se Desconecto del FileSystem\n");
 								log_info(logger, "El proceso Marta se Desconecto del FileSystem\n");
 							}else{
 								// el recv dio -1 , osea, error
