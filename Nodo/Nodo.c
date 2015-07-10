@@ -218,7 +218,8 @@ void *manejador_de_escuchas(){
 	int* socketReducer; //para identificar los que son reducers conectados
 	int* bloqueParaFS;
 
-	log_info(logger,"Nodo en la espera de conexiones/solicitudes del FS");
+
+	printf("Nodo en la espera de conexiones/solicitudes del FS\n");
 	while(1) {
 		read_fds = master;
 		if (select(fdmax+1, &read_fds, NULL, NULL, NULL) == -1) {
@@ -303,7 +304,7 @@ void *manejador_de_escuchas(){
 						log_error(logger,"Falló el receive");
 						exit(-1);
 					}
-//					printf ("Recibi del handshake %d\n",nbytes);
+					printf ("Recibi del handshake %d\n",nbytes);
 					if(nbytes==0){ //se desconectó
 						close(conectorFS);
 						FD_CLR(conectorFS,&master);
@@ -314,14 +315,14 @@ void *manejador_de_escuchas(){
 						/* -- el filesystem envío un mensaje a tratar -- */
 						if(strncmp(mensaje,"copiar_archivo",14)==0){
 							mensaje[14]=0;
-							//printf ("Handshake: %s\n",mensaje);
+							printf ("Handshake: %s\n",mensaje);
 							if ((read_size = recv(conectorFS, &combo, sizeof(combo),MSG_WAITALL)) <= 0) {
 								perror("recv");
 								log_error(logger, "FALLO el Recv de bloque");
 								exit(-1);
 							}
-							//printf ("Recibi: %d\n",read_size);
-							log_info(logger,"Me mandaron datos de un archivo para setear el bloque %d",combo.n_bloque);
+							printf ("Recibi: %d\n",read_size);
+							printf ("Me mandaron un coso de 20MB para el bloque %d\n",combo.n_bloque);
 							setBloque(combo.n_bloque,combo.buf_20mb); //esto deberia devolver algo que identifique si salio bien o no para informar al fs si fallo o fue exitosa la copai del bloque en el mdfs
 						}
 						if(strncmp(mensaje,"obtener bloque", 14) == 0){
@@ -333,7 +334,7 @@ void *manejador_de_escuchas(){
 								log_error(logger, "FALLO el Recv de bloque");
 								exit(-1);
 							}
-							log_info(logger,"Voy a obtener el bloque %d y enviarselo al FileSystem",*bloqueParaFS);
+							printf("Voy a obtener el bloque:%d\n",*bloqueParaFS);
 
 							// Envio el contenido del bloque que me pidio el FS
 							if (send(conectorFS, getBloque(*bloqueParaFS),BLOCK_SIZE, 0) == -1) {
@@ -401,7 +402,7 @@ void *manejador_de_escuchas(){
 									log_error(logger,"Se desconecto un nodo");
 								}
 							}
-							log_info(logger,"Archivo resultado %s enviado correctamente",ruta_local);
+							printf("Archivo resultado enviado correctamente\n");
 							fclose(archivo_resultado);
 						}
 					}
@@ -436,14 +437,13 @@ void *manejador_de_escuchas(){
 								perror("recv");
 								log_error(logger,"Se desconectó un nodo");
 							}
-
+							printf("Me pidio renglones del archivo %s\n",archivoAPasar);
 
 							if((archivoPedido=estaEnListaArchivosAbiertos(archivoAPasar))==NULL){ //Si el archivo no está ya abierto, lo abro y leo un renglon
 								t_archivoAbierto* archAbiertoNuevo=malloc(sizeof(t_archivoAbierto));
 								memset(archAbiertoNuevo->nombreArchivo,'\0',TAM_NOMFINAL);
 								FILE* archParaPasar;
 
-								log_info(logger,"Me van a pedir renglones del archivo %s",archivoAPasar);
 								//Abro el nuevo archivo
 								archParaPasar=fopen(archivoAPasar,"r");
 								//Agrego al nuevo archivo abierto a la lista de archivos abiertos
@@ -623,10 +623,7 @@ void ordenarMapper(char* pathMapperTemporal, char* nombreMapperOrdenado){
 	}
 	else if(pid==0)
 	{
-		if((archivo_resultado=open(nombreMapperOrdenado,O_RDWR|O_CREAT,S_IRWXU|S_IRWXG))==-1){ //abro file resultado, si no esta lo crea, asigno permisos
-			perror("open sort");
-			log_error(logger,"Fallo el open para el sort");
-		}
+		archivo_resultado=open(nombreMapperOrdenado,O_RDWR|O_CREAT,S_IRWXU|S_IRWXG); //abro file resultado, si no esta lo crea, asigno permisos
 		fflush(stdout);
 		bak=dup(STDOUT_FILENO);
 		dup2(archivo_resultado,STDOUT_FILENO); //STDOUT de este proceso se grabara en el file resultado
@@ -669,10 +666,8 @@ void ejecutarMapper(char *script,int bloque,char *resultado){
 	}
 	else if(pid==0)
 	{
-	if((archivo_resultado=open(resultado,O_RDWR|O_CREAT,S_IRWXU|S_IRWXG))==-1){ //abro file resultado, si no esta lo crea, asigno permisos
-		perror("open map");
-		log_error(logger,"Fallo al abrir el archivo resultado del map");
-	}
+
+	archivo_resultado=open(resultado,O_RDWR|O_CREAT,S_IRWXU|S_IRWXG); //abro file resultado, si no esta lo crea, asigno permisos
 	fflush(stdout);
 	bak=dup(STDOUT_FILENO);
 	dup2(archivo_resultado,STDOUT_FILENO); //STDOUT de este proceso se grabara en el file resultado
@@ -867,9 +862,9 @@ char* mapearFileDeDatos(){
 void* rutinaMap(int* sckMap){
 	pthread_detach(pthread_self());
 	char** arrayTiempo;
-	int resultado=0;
+	int resultado=1;
 	t_datosMap datosParaElMap;
-	int nroAMostrar;
+
 	char *resultadoTemporal=string_new();
 	char *nombreNuevoMap=string_new(); //será el nombre del nuevo map
 	char *tiempo=string_new(); //string que tendrá la hora
@@ -877,10 +872,9 @@ void* rutinaMap(int* sckMap){
 	FILE* scriptMap;
 
 	pthread_mutex_lock(&mutexNroMap);
-	nroAMostrar= nroMap;
+	char * stringNroMap=string_itoa(nroMap);
 	nroMap++;
 	pthread_mutex_unlock(&mutexNroMap);
-
 
 	if(recv(*sckMap,&datosParaElMap,sizeof(t_datosMap),MSG_WAITALL)==-1){
 		perror("recv");
@@ -888,9 +882,7 @@ void* rutinaMap(int* sckMap){
 		pthread_exit((void*)0);
 	}
 
-
-	log_info(logger,"Hilo Map %d: \"%s\" iniciando ejecución",nroAMostrar,datosParaElMap.nomArchTemp);
-	//printf("Se aplicará la rutina mapper en el bloque %d\n",datosParaElMap.bloque);
+	printf("Se aplicará la rutina mapper en el bloque %d\n",datosParaElMap.bloque);
 
 	//printf("Se guardará el resultado del mapper en el archivo temporal %s\n",datosParaElMap.nomArchTemp);
 
@@ -898,8 +890,7 @@ void* rutinaMap(int* sckMap){
 
 	//Creo el archivo que guarda la rutina de map enviada por el Job
 	//Generar un nombre para este script Map
-
-	string_append(&nombreNuevoMap,string_itoa(nroAMostrar));
+	string_append(&nombreNuevoMap,stringNroMap);
 	string_append(&nombreNuevoMap,"mapJob");
 	arrayTiempo=string_split(temporal_get_string_time(),":"); //creo array con hora minutos segundos y milisegundos separados
 	string_append(&tiempo,arrayTiempo[0]);//Agrego horas
@@ -918,10 +909,9 @@ void* rutinaMap(int* sckMap){
 
 	//Meto al nombre map final el ddirectorio temporal
 
-//	printf("Nombre del map temporal(antes del sort):%s\n",resultadoTemporal);
-//	printf("Nombre del map ordenado(luego del sort):%s\n",datosParaElMap.nomArchTemp);
+	printf("Nombre del map temporal(antes del sort):%s\n",resultadoTemporal);
+	printf("Nombre del map ordenado(luego del sort):%s\n",datosParaElMap.nomArchTemp);
 
-	log_info(logger,"Hilo Map %d: Bajando la rutina Map enviada por el Job",nroAMostrar);
 
 	if((scriptMap=fopen(pathNuevoMap,"w+"))==NULL){ //path donde guardara el script
 		perror("fopen");
@@ -942,7 +932,7 @@ void* rutinaMap(int* sckMap){
 	}
 	fclose(scriptMap); //cierro el file
 
-	log_info(logger,"Hilo Map %d: Ejecutando script",nroAMostrar);
+
 	pthread_mutex_lock(&mutexMap);
 
 	ejecutarMapper(nombreNuevoMap,datosParaElMap.bloque,resultadoTemporal);
@@ -950,13 +940,15 @@ void* rutinaMap(int* sckMap){
 
 	pthread_mutex_unlock(&mutexMap);
 
+	resultado=0;
+
 	if(send(*sckMap,&resultado,sizeof(int),MSG_WAITALL)==-1){
 		perror("send");
 		log_error(logger,"Fallo el envío del resultado al map");
 		pthread_exit((void*)0);
 	}
 
-	log_info(logger,"Hilo Map %d: Finalizado con éxito",nroAMostrar);
+	printf("Se envío el resultado:%d \n",0);
 
 	free(arrayTiempo);
 	free(resultadoTemporal);
@@ -975,7 +967,6 @@ void* rutinaReduce (int* sckReduce){
 	int cantidadArchivos;
 	int posicionEnListaArchivos=0;
 	int indice=0;
-	int nroAMostrar;
 	FILE* scriptReduce;
 	t_respuestaNodoReduce respuestaParaJob;
 	t_list* listaArchivosReduce;
@@ -991,12 +982,10 @@ void* rutinaReduce (int* sckReduce){
 	memset(respuestaParaJob.ip_nodoFallido,'\0',20);
 
 	pthread_mutex_lock(&mutexNroReduce);
-	nroAMostrar=nroReduce;
+	char * stringNroReduce=string_itoa(nroReduce);
 	nroReduce++;
 	pthread_mutex_unlock(&mutexNroReduce);
 
-
-	log_info(logger,"Hilo reduce %d: \"%s\" iniciando ejecución",nroAMostrar,nombreFinalReduce);
 
 	if(recv(*sckReduce,&nombreFinalReduce,TAM_NOMFINAL,MSG_WAITALL)==-1){
 		perror("recv");
@@ -1004,7 +993,7 @@ void* rutinaReduce (int* sckReduce){
 		pthread_exit((void*)0);
 	}
 
-
+	printf("El resultado del reduce se guardará en: %s\n",nombreFinalReduce);
 
 	if(recv(*sckReduce,rutinaReduce,sizeof(rutinaReduce),MSG_WAITALL)==-1){
 		perror("recv");
@@ -1013,7 +1002,7 @@ void* rutinaReduce (int* sckReduce){
 	}
 
 	//printf("Se recibio la rutina reduce:%s\n",rutinaReduce);
-	string_append(&nombreNuevoReduce,string_itoa(nroAMostrar));
+	string_append(&nombreNuevoReduce,stringNroReduce);
 	string_append(&nombreNuevoReduce,"reduceJob");
 	arrayTiempo=string_split(temporal_get_string_time(),":"); //creo array con hora minutos segundos y milisegundos separados
 	string_append(&tiempo,arrayTiempo[0]);//Agrego horas
@@ -1026,8 +1015,6 @@ void* rutinaReduce (int* sckReduce){
 	string_append(&pathNuevoReduce,"/");
 	string_append(&pathNuevoReduce,nombreNuevoReduce);
 
-
-	log_info(logger,"Hilo Reduce %d: Bajando la rutina Reduce enviada por el Job",nroAMostrar);
 	if((scriptReduce=fopen(pathNuevoReduce,"w+"))==NULL){ //path donde guardara el script
 		perror("fopen");
 		log_error(logger,"Fallo al crear el script del mapper");
@@ -1042,7 +1029,7 @@ void* rutinaReduce (int* sckReduce){
 	}
 	fputs(rutinaReduce,scriptReduce);
 
-	//printf("Nombre del nuevo reduce: %s\n",nombreNuevoReduce);
+	printf("Nombre del nuevo reduce: %s\n",nombreNuevoReduce);
 	// agrego permisos de ejecucion
 	if(chmod(pathNuevoReduce,S_IRWXU|S_IRWXG|S_IROTH|S_IXOTH)==-1){
 		perror("chmod");
@@ -1064,7 +1051,7 @@ void* rutinaReduce (int* sckReduce){
 		pthread_exit((void*)0);
 	}
 
-	//printf("Se debe aplicar reduce en %d archivos\n",cantidadArchivos);
+	printf("Se debe aplicar reduce en %d archivos\n",cantidadArchivos);
 
 	for(indice=0;indice<cantidadArchivos;indice++){
 		t_archivosReduce archivoQueRecibo;
@@ -1126,7 +1113,7 @@ void* rutinaReduce (int* sckReduce){
 			memset(nuevoArchivoEnApareo->ip_nodo,'\0',20);
 			strcpy(nuevoArchivoEnApareo->ip_nodo,config_get_string_value(configurador,"IP_NODO"));
 			nuevoArchivoEnApareo->puerto_nodo=config_get_int_value(configurador,"PUERTO_NODO");
-			log_info(logger,"Hilo Reduce %d: Agrego el archivo local %s",nroAMostrar,unArchivoReduce->archivoAAplicarReduce);
+			printf("Agrego el archivo local %s\n",unArchivoReduce->archivoAAplicarReduce);
 			list_add(archivosEnApareo,nuevoArchivoEnApareo);
 		}
 
@@ -1190,7 +1177,7 @@ void* rutinaReduce (int* sckReduce){
 //				perror("send");
 //				log_error(logger,"Fallo el envío de identificación nodo-nodo");
 //			}
-			log_info(logger,"Hilo Reduce %d: Agrego el archivo remoto %s",nroAMostrar,unArchivoReduce->archivoAAplicarReduce);
+//			printf("Agrego el archivo remoto %s\n",nombreArchivo);
 			nuevoArchivoEnApareo->archivo=NULL;
 			memset(nuevoArchivoEnApareo->buffer,'\0',512);
 			memset(nuevoArchivoEnApareo->nombreArchivo,'\0',TAM_NOMFINAL);
@@ -1207,7 +1194,7 @@ void* rutinaReduce (int* sckReduce){
 	}
 
 
-	log_info(logger,"Hilo Reduce %d: Ejecutando script",nroAMostrar);
+
 	pthread_mutex_lock(&mutexReduce);
 	ejecutarReduce(archivosEnApareo,nombreNuevoReduce,nombreFinalReduce,sckReduce);
 	pthread_mutex_unlock(&mutexReduce);
@@ -1222,8 +1209,6 @@ void* rutinaReduce (int* sckReduce){
 		log_error(logger,"Fallo el envio de la respuesta OK al hilo reduce");
 		pthread_exit((void*)0);
 	}
-
-	log_info(logger,"Hilo Reduce %d: Finalizado con éxito",nroAMostrar);
 
 	pthread_exit((void*)0);
 }
@@ -1458,9 +1443,304 @@ void ejecutarReduce(t_list* archivosApareando,char* script,char* resultado, int*
 //		sem_wait(&terminoElReduce);
 	}
 
+
+	printf("Llegaron todos al EOF - Termino el reduce \n");
+
+
 }
 
 int no_llego_a_eof(t_archivoEnApareo* archivo){
 	return (archivo->endOfFile==0);
 }
 
+
+
+//char* crearBloqueFalso(){
+//	int posi,j;
+//	posi=0;
+//	j=0;
+//	char* bloqueRetorno;
+//	bloqueRetorno=malloc(BLOCK_SIZE);
+//	for(j=0;j<262144;j++){ // Mete 262144 veces 80 caracteres , 80 B --> 80*262144 = 20971520 = 20MB
+//		//metera lineas separadas de :
+//		//Man,Hola,Prueba,H,H,H,H,H,H,H,H,H,Map,H\n
+//		//Van,Esta,Antess,H,H,H,H,H,H,H,H,H,Sor,H\n
+//		bufFalso[posi]='M';posi++;
+//		bufFalso[posi]='a';posi++;
+//		bufFalso[posi]='n';posi++;
+//		bufFalso[posi]=',';posi++;
+//		bufFalso[posi]='H';posi++;
+//		bufFalso[posi]='o';posi++;
+//		bufFalso[posi]='l';posi++;
+//		bufFalso[posi]='a';posi++;
+//		bufFalso[posi]=',';posi++;
+//		bufFalso[posi]='P';posi++;
+//		bufFalso[posi]='r';posi++;
+//		bufFalso[posi]='u';posi++;
+//		bufFalso[posi]='e';posi++;
+//		bufFalso[posi]='b';posi++;
+//		bufFalso[posi]='a';posi++;
+//		bufFalso[posi]=',';posi++;
+//		bufFalso[posi]='H';posi++;
+//		bufFalso[posi]=',';posi++;
+//		bufFalso[posi]='H';posi++;
+//		bufFalso[posi]=',';posi++;
+//		bufFalso[posi]='H';posi++;
+//		bufFalso[posi]=',';posi++;
+//		bufFalso[posi]='H';posi++;
+//		bufFalso[posi]=',';posi++;
+//		bufFalso[posi]='H';posi++;
+//		bufFalso[posi]=',';posi++;
+//		bufFalso[posi]='H';posi++;
+//		bufFalso[posi]=',';posi++;
+//		bufFalso[posi]='H';posi++;
+//		bufFalso[posi]=',';posi++;
+//		bufFalso[posi]='H';posi++;
+//		bufFalso[posi]=',';posi++;
+//		bufFalso[posi]='H';posi++;
+//		bufFalso[posi]=',';posi++;
+//		bufFalso[posi]='M';posi++;
+//		bufFalso[posi]='a';posi++;
+//		bufFalso[posi]='p';posi++;
+//		bufFalso[posi]=',';posi++;
+//		bufFalso[posi]='H';posi++;
+//		bufFalso[posi]='\n';posi++;
+//		bufFalso[posi]='V';posi++;
+//		bufFalso[posi]='a';posi++;
+//		bufFalso[posi]='n';posi++;
+//		bufFalso[posi]=',';posi++;
+//		bufFalso[posi]='E';posi++;
+//		bufFalso[posi]='s';posi++;
+//		bufFalso[posi]='t';posi++;
+//		bufFalso[posi]='a';posi++;
+//		bufFalso[posi]=',';posi++;
+//		bufFalso[posi]='A';posi++;
+//		bufFalso[posi]='n';posi++;
+//		bufFalso[posi]='t';posi++;
+//		bufFalso[posi]='e';posi++;
+//		bufFalso[posi]='s';posi++;
+//		bufFalso[posi]='s';posi++;
+//		bufFalso[posi]=',';posi++;
+//		bufFalso[posi]='H';posi++;
+//		bufFalso[posi]=',';posi++;
+//		bufFalso[posi]='H';posi++;
+//		bufFalso[posi]=',';posi++;
+//		bufFalso[posi]='H';posi++;
+//		bufFalso[posi]=',';posi++;
+//		bufFalso[posi]='H';posi++;
+//		bufFalso[posi]=',';posi++;
+//		bufFalso[posi]='H';posi++;
+//		bufFalso[posi]=',';posi++;
+//		bufFalso[posi]='H';posi++;
+//		bufFalso[posi]=',';posi++;
+//		bufFalso[posi]='H';posi++;
+//		bufFalso[posi]=',';posi++;
+//		bufFalso[posi]='H';posi++;
+//		bufFalso[posi]=',';posi++;
+//		bufFalso[posi]='H';posi++;
+//		bufFalso[posi]=',';posi++;
+//		bufFalso[posi]='S';posi++;
+//		bufFalso[posi]='o';posi++;
+//		bufFalso[posi]='r';posi++;
+//		bufFalso[posi]=',';posi++;
+//		bufFalso[posi]='H';posi++;
+//		bufFalso[posi]='\n';posi++;
+//	}
+//	//pongo los ultimos 40 bytes con \0 (saco la ultima linea)
+//	bufFalso[20971480]='\0';posi++;
+//	bufFalso[20971481]='\0';posi++;
+//	bufFalso[20971482]='\0';posi++;
+//	bufFalso[20971483]='\0';posi++;
+//	bufFalso[20971484]='\0';posi++;
+//	bufFalso[20971485]='\0';posi++;
+//	bufFalso[20971486]='\0';posi++;
+//	bufFalso[20971487]='\0';posi++;
+//	bufFalso[20971488]='\0';posi++;
+//	bufFalso[20971489]='\0';posi++;
+//	bufFalso[20971490]='\0';posi++;
+//	bufFalso[20971491]='\0';posi++;
+//	bufFalso[20971492]='\0';posi++;
+//	bufFalso[20971493]='\0';posi++;
+//	bufFalso[20971494]='\0';posi++;
+//	bufFalso[20971495]='\0';posi++;
+//	bufFalso[20971496]='\0';posi++;
+//	bufFalso[20971497]='\0';posi++;
+//	bufFalso[20971498]='\0';posi++;
+//	bufFalso[20971499]='\0';posi++;
+//	bufFalso[20971500]='\0';posi++;
+//	bufFalso[20971501]='\0';posi++;
+//	bufFalso[20971502]='\0';posi++;
+//	bufFalso[20971503]='\0';posi++;
+//	bufFalso[20971504]='\0';posi++;
+//	bufFalso[20971505]='\0';posi++;
+//	bufFalso[20971506]='\0';posi++;
+//	bufFalso[20971507]='\0';posi++;
+//	bufFalso[20971508]='\0';posi++;
+//	bufFalso[20971509]='\0';posi++;
+//	bufFalso[20971510]='\0';posi++;
+//	bufFalso[20971511]='\0';posi++;
+//	bufFalso[20971512]='\0';posi++;
+//	bufFalso[20971513]='\0';posi++;
+//	bufFalso[20971514]='\0';posi++;
+//	bufFalso[20971515]='\0';posi++;
+//	bufFalso[20971516]='\0';posi++;
+//	bufFalso[20971517]='\0';posi++;
+//	bufFalso[20971518]='\0';posi++;
+//	bufFalso[20971519]='\0';posi++;
+//	strcpy(bloqueRetorno,bufFalso);
+//	return bloqueRetorno;
+//}
+//
+//char* crearBloqueAMediasFalso(){
+//	int posi,j;
+//	posi=0;
+//	j=0;
+//	char* bloqueRetorno;
+//	bloqueRetorno=malloc(BLOCK_SIZE/2);
+//	for(j=0;j<131072;j++){ // Mete 131072 veces 80 caracteres , 80 B --> 80*131072 = 20971520 = 10MB
+//		//metera lineas separadas de :
+//		//Man,Hola,Prueba,H,H,H,H,H,H,H,H,H,Map,H\n
+//		//Van,Esta,Antess,H,H,H,H,H,H,H,H,H,Sor,H\n
+//		bufAMediasFalso[posi]='M';posi++;
+//		bufAMediasFalso[posi]='a';posi++;
+//		bufAMediasFalso[posi]='n';posi++;
+//		bufAMediasFalso[posi]=',';posi++;
+//		bufAMediasFalso[posi]='H';posi++;
+//		bufAMediasFalso[posi]='o';posi++;
+//		bufAMediasFalso[posi]='l';posi++;
+//		bufAMediasFalso[posi]='a';posi++;
+//		bufAMediasFalso[posi]=',';posi++;
+//		bufAMediasFalso[posi]='P';posi++;
+//		bufAMediasFalso[posi]='r';posi++;
+//		bufAMediasFalso[posi]='u';posi++;
+//		bufAMediasFalso[posi]='e';posi++;
+//		bufAMediasFalso[posi]='b';posi++;
+//		bufAMediasFalso[posi]='a';posi++;
+//		bufAMediasFalso[posi]=',';posi++;
+//		bufAMediasFalso[posi]='H';posi++;
+//		bufAMediasFalso[posi]=',';posi++;
+//		bufAMediasFalso[posi]='H';posi++;
+//		bufAMediasFalso[posi]=',';posi++;
+//		bufAMediasFalso[posi]='H';posi++;
+//		bufAMediasFalso[posi]=',';posi++;
+//		bufAMediasFalso[posi]='H';posi++;
+//		bufAMediasFalso[posi]=',';posi++;
+//		bufAMediasFalso[posi]='H';posi++;
+//		bufAMediasFalso[posi]=',';posi++;
+//		bufAMediasFalso[posi]='H';posi++;
+//		bufAMediasFalso[posi]=',';posi++;
+//		bufAMediasFalso[posi]='H';posi++;
+//		bufAMediasFalso[posi]=',';posi++;
+//		bufAMediasFalso[posi]='H';posi++;
+//		bufAMediasFalso[posi]=',';posi++;
+//		bufAMediasFalso[posi]='H';posi++;
+//		bufAMediasFalso[posi]=',';posi++;
+//		bufAMediasFalso[posi]='M';posi++;
+//		bufAMediasFalso[posi]='a';posi++;
+//		bufAMediasFalso[posi]='p';posi++;
+//		bufAMediasFalso[posi]=',';posi++;
+//		bufAMediasFalso[posi]='H';posi++;
+//		bufAMediasFalso[posi]='\n';posi++;
+//		bufAMediasFalso[posi]='V';posi++;
+//		bufAMediasFalso[posi]='a';posi++;
+//		bufAMediasFalso[posi]='n';posi++;
+//		bufAMediasFalso[posi]=',';posi++;
+//		bufAMediasFalso[posi]='E';posi++;
+//		bufAMediasFalso[posi]='s';posi++;
+//		bufAMediasFalso[posi]='t';posi++;
+//		bufAMediasFalso[posi]='a';posi++;
+//		bufAMediasFalso[posi]=',';posi++;
+//		bufAMediasFalso[posi]='A';posi++;
+//		bufAMediasFalso[posi]='n';posi++;
+//		bufAMediasFalso[posi]='t';posi++;
+//		bufAMediasFalso[posi]='e';posi++;
+//		bufAMediasFalso[posi]='s';posi++;
+//		bufAMediasFalso[posi]='s';posi++;
+//		bufAMediasFalso[posi]=',';posi++;
+//		bufAMediasFalso[posi]='H';posi++;
+//		bufAMediasFalso[posi]=',';posi++;
+//		bufAMediasFalso[posi]='H';posi++;
+//		bufAMediasFalso[posi]=',';posi++;
+//		bufAMediasFalso[posi]='H';posi++;
+//		bufAMediasFalso[posi]=',';posi++;
+//		bufAMediasFalso[posi]='H';posi++;
+//		bufAMediasFalso[posi]=',';posi++;
+//		bufAMediasFalso[posi]='H';posi++;
+//		bufAMediasFalso[posi]=',';posi++;
+//		bufAMediasFalso[posi]='H';posi++;
+//		bufAMediasFalso[posi]=',';posi++;
+//		bufAMediasFalso[posi]='H';posi++;
+//		bufAMediasFalso[posi]=',';posi++;
+//		bufAMediasFalso[posi]='H';posi++;
+//		bufAMediasFalso[posi]=',';posi++;
+//		bufAMediasFalso[posi]='H';posi++;
+//		bufAMediasFalso[posi]=',';posi++;
+//		bufAMediasFalso[posi]='S';posi++;
+//		bufAMediasFalso[posi]='o';posi++;
+//		bufAMediasFalso[posi]='r';posi++;
+//		bufAMediasFalso[posi]=',';posi++;
+//		bufAMediasFalso[posi]='H';posi++;
+//		bufAMediasFalso[posi]='\n';posi++;
+//	}
+//	//pongo los ultimos 40 bytes con \0 (saco la ultima linea)
+//	bufAMediasFalso[20971480]='\0';posi++;
+//	bufAMediasFalso[20971481]='\0';posi++;
+//	bufAMediasFalso[20971482]='\0';posi++;
+//	bufAMediasFalso[20971483]='\0';posi++;
+//	bufAMediasFalso[20971484]='\0';posi++;
+//	bufAMediasFalso[20971485]='\0';posi++;
+//	bufAMediasFalso[20971486]='\0';posi++;
+//	bufAMediasFalso[20971487]='\0';posi++;
+//	bufAMediasFalso[20971488]='\0';posi++;
+//	bufAMediasFalso[20971489]='\0';posi++;
+//	bufAMediasFalso[20971490]='\0';posi++;
+//	bufAMediasFalso[20971491]='\0';posi++;
+//	bufAMediasFalso[20971492]='\0';posi++;
+//	bufAMediasFalso[20971493]='\0';posi++;
+//	bufAMediasFalso[20971494]='\0';posi++;
+//	bufAMediasFalso[20971495]='\0';posi++;
+//	bufAMediasFalso[20971496]='\0';posi++;
+//	bufAMediasFalso[20971497]='\0';posi++;
+//	bufAMediasFalso[20971498]='\0';posi++;
+//	bufAMediasFalso[20971499]='\0';posi++;
+//	bufAMediasFalso[20971500]='\0';posi++;
+//	bufAMediasFalso[20971501]='\0';posi++;
+//	bufAMediasFalso[20971502]='\0';posi++;
+//	bufAMediasFalso[20971503]='\0';posi++;
+//	bufAMediasFalso[20971504]='\0';posi++;
+//	bufAMediasFalso[20971505]='\0';posi++;
+//	bufAMediasFalso[20971506]='\0';posi++;
+//	bufAMediasFalso[20971507]='\0';posi++;
+//	bufAMediasFalso[20971508]='\0';posi++;
+//	bufAMediasFalso[20971509]='\0';posi++;
+//	bufAMediasFalso[20971510]='\0';posi++;
+//	bufAMediasFalso[20971511]='\0';posi++;
+//	bufAMediasFalso[20971512]='\0';posi++;
+//	bufAMediasFalso[20971513]='\0';posi++;
+//	bufAMediasFalso[20971514]='\0';posi++;
+//	bufAMediasFalso[20971515]='\0';posi++;
+//	bufAMediasFalso[20971516]='\0';posi++;
+//	bufAMediasFalso[20971517]='\0';posi++;
+//	bufAMediasFalso[20971518]='\0';posi++;
+//	bufAMediasFalso[20971519]='\0';posi++;
+//	strcpy(bloqueRetorno,bufAMediasFalso);
+//	return bloqueRetorno;
+//}
+//
+//void crearArchivoFalso(){
+//	FILE* archivoFalso;
+//	char* path;
+//	char* bloqueFalso;
+//	char* bloqueAMediasFalso;
+//	bloqueFalso=malloc(BLOCK_SIZE);
+//	bloqueAMediasFalso=malloc((BLOCK_SIZE/2));
+//	path=string_new();
+//	string_append(&path,"/tmp/archivoFalso.txt");
+//	archivoFalso=fopen(path,"w+");
+//	bloqueFalso=crearBloqueFalso();
+//	bloqueAMediasFalso=crearBloqueAMediasFalso();
+//	fprintf(archivoFalso,"%s",bloqueFalso);
+//	fprintf(archivoFalso,"%s",bloqueFalso);
+//	fprintf(archivoFalso,"%s",bloqueAMediasFalso);
+//	fclose(archivoFalso);
+//}
