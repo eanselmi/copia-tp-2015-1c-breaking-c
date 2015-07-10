@@ -257,11 +257,11 @@ int Menu(void) {
 			EliminarNodo();	break;
 			
 		//case 17: printf("Eligió Salir\n"); break;
-		//case 17: listar_nodos_conectados(nodos); break;
+		case 17: listar_nodos_conectados(nodos); break;
 		//case 17: listar_archivos_subidos(archivos); break;
 		//case 17: listarDirectoriosCreados();break;
 		//case 17: listar_directorios(); break;
-		case 17: eliminar_listas(archivos,directorios,nodos); break;  //SALIDA NORMAL, LIBERA Y NO PERSISTE
+		//case 17: eliminar_listas(archivos,directorios,nodos); break;  //SALIDA NORMAL, LIBERA Y NO PERSISTE
 		default: printf("Opción incorrecta. Por favor ingrese una opción del 1 al 17\n"); break;
 		}
 	}
@@ -3556,27 +3556,33 @@ int VerBloque() {
 	cantNodos= list_size(nodos);
 	for (i=0;i<cantNodos;i++){
 		nodoAEvaluar = list_get(nodos,i);
-		if(strcmp(nodoAEvaluar->nodo_id,nodo_id) && nodoAEvaluar->estado_red == 1 && nodoAEvaluar->estado == 1){
-			if(bitarray_test_bit(nodoAEvaluar->bloques_del_nodo, nroBloque)== 0){
-				log_error(logger,"Esta queriendo ver un bloque vacio");
-				printf("Esta queriendo ver un bloque vacio");
-				return -1;
-			}
+		if(strcmp(nodoAEvaluar->nodo_id,nodo_id)==0){
+			if (nodoAEvaluar->estado_red == 1 && nodoAEvaluar->estado == 1){
+				if(bitarray_test_bit(nodoAEvaluar->bloques_del_nodo, nroBloque)== 0){
+					log_error(logger,"Esta queriendo ver un bloque vacio");
+					printf("Esta queriendo ver un bloque vacio\n");
+					return -1;
+				}
 
-			socket_nodo =obtener_socket_de_nodo_con_id(nodo_id);
-			if (socket_nodo == -1){
-				log_error(logger, "El nodo ingresado no es valido o no esta disponible\n");
-				printf("El nodo ingresado no es valido o no esta disponible\n");
+				socket_nodo =obtener_socket_de_nodo_con_id(nodo_id);
+				if (socket_nodo == -1){
+					log_error(logger, "El nodo ingresado no es valido o no esta disponible\n");
+					printf("El nodo ingresado no es valido o no esta disponible\n");
+					return -1;
+				}
+				enviarNumeroDeBloqueANodo(socket_nodo, nroBloque);
+				bloqueParaVer = recibirBloque(socket_nodo);
+				archivoParaVerPath = fopen("./archBloqueParaVer.txt", "w");
+				fprintf(archivoParaVerPath, "%s", bloqueParaVer);
+				printf("El bloque se copio en el archivo: ./archBloqueParaVer.txt\n");
+				fclose(archivoParaVerPath);
+				free(bloqueParaVer);
+				break;
+			}else{
+				log_error(logger, "El nodo donde esta el bloque que quiere ver no esta disponible\n");
+				printf("El nodo donde esta el bloque que quiere ver no esta disponible\n");
 				return -1;
 			}
-			enviarNumeroDeBloqueANodo(socket_nodo, nroBloque);
-			bloqueParaVer = recibirBloque(socket_nodo);
-			archivoParaVerPath = fopen("./archBloqueParaVer.txt", "w");
-			fprintf(archivoParaVerPath, "%s", bloqueParaVer);
-			printf("El bloque se copio en el archivo: ./archBloqueParaVer.txt\n");
-			fclose(archivoParaVerPath);
-			free(bloqueParaVer);
-			break;
 		}
 	}
 	return 0;
