@@ -1023,7 +1023,15 @@ void *atenderJob (int *socketJob) {
 
 		//Validacion si existe el archivo
 		if(padre==-1){
-			log_warning(logger,"El archivo %s no existe en el MDFS\n",archivoAPedirPadre);
+                        char msjJob[BUF_SIZE];
+                        memset(msjJob,'\0',BUF_SIZE);
+                        strcpy(msjJob,"arch no disp");
+                        log_warning(logger,"El archivo %s no existe en el MDFS",archivoAPedirPadre);
+                        if(send(*socketJob,msjJob,sizeof(msjJob),MSG_WAITALL)==-1){
+                        	perror("Send");
+                                log_error(logger,"Fallo el envio del mensaje \"archivo no disponible\" al job");
+                        }
+                        close(*socketJob);
 			pthread_exit((void*)0);
 		}
 
