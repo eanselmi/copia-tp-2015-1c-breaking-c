@@ -1,4 +1,4 @@
-#define _FILE_OFFSET_BITS 64
+//#define _FILE_OFFSET_BITS 64
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -623,7 +623,10 @@ void ordenarMapper(char* pathMapperTemporal, char* nombreMapperOrdenado){
 	}
 	else if(pid==0)
 	{
-		archivo_resultado=open(nombreMapperOrdenado,O_RDWR|O_CREAT,S_IRWXU|S_IRWXG); //abro file resultado, si no esta lo crea, asigno permisos
+		if((archivo_resultado=open(nombreMapperOrdenado,O_RDWR|O_CREAT,S_IRWXU|S_IRWXG))==-1){
+			perror("sort map"); //abro file resultado, si no esta lo crea, asigno permisos
+			log_error(logger,"Fallo el open del resultado de un map");
+		}
 		fflush(stdout);
 		bak=dup(STDOUT_FILENO);
 		dup2(archivo_resultado,STDOUT_FILENO); //STDOUT de este proceso se grabara en el file resultado
@@ -667,7 +670,10 @@ void ejecutarMapper(char *script,int bloque,char *resultado){
 	else if(pid==0)
 	{
 
-	archivo_resultado=open(resultado,O_RDWR|O_CREAT,S_IRWXU|S_IRWXG); //abro file resultado, si no esta lo crea, asigno permisos
+	if((archivo_resultado=open(resultado,O_RDWR|O_CREAT,S_IRWXU|S_IRWXG))==-1){
+		perror("open map"); //abro file resultado, si no esta lo crea, asigno permisos
+		log_error(logger,"Fallo al abrir una rutina map que envia el job");
+	}
 	fflush(stdout);
 	bak=dup(STDOUT_FILENO);
 	dup2(archivo_resultado,STDOUT_FILENO); //STDOUT de este proceso se grabara en el file resultado
@@ -1239,7 +1245,10 @@ void ejecutarReduce(t_list* archivosApareando,char* script,char* resultado, int*
 	}
 	else if(pid==0)
 	{
-		archivo_resultado=open(resultado,O_RDWR|O_CREAT,S_IRWXU|S_IRWXG); //abro file resultado, si no esta lo crea, asigno permisos
+		if((archivo_resultado=open(resultado,O_RDWR|O_CREAT,S_IRWXU|S_IRWXG))==-1){
+			perror("open reduce"); //abro file resultado, si no esta lo crea, asigno permisos
+			log_error(logger,"Fallo al abrir el arch resultado del reduce");
+		}
 		fflush(stdout);
 		bak=dup(STDOUT_FILENO);
 		dup2(archivo_resultado,STDOUT_FILENO); //STDOUT de este proceso se grabara en el file resultado
