@@ -1021,6 +1021,12 @@ void *atenderJob (int *socketJob) {
 			//exit(-1);
 		}
 
+		//Validacion si existe el archivo
+		if(padre==-1){
+			log_warning(logger,"El archivo %s no existe en el MDFS\n",archivoAPedirPadre);
+			pthread_exit((void*)0);
+		}
+
 		//De cada archivo que nos manda el Job buscamos y nos traemos los bloques
 
 		bloques=buscarBloques(nombreArchivo,padre);
