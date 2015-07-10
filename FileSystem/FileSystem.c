@@ -3184,6 +3184,7 @@ void BorrarBloque() {
 	printf("Ingrese el número de bloque que desea borrar:\n");
 	scanf("%d", &bloque);
 	i = 0;
+	log_info(logger,"Selecciono borrar el bloque %d del nodo %s",bloque,nodoId);
 	while (i < cantNodos && nodoEncontrado == 0) {
 		nodoBuscado = list_get(nodos, i);
 		if (strcmp(nodoBuscado->nodo_id, nodoId)==0 && bitarray_test_bit(nodoBuscado->bloques_del_nodo,bloque)==1) {
@@ -3216,6 +3217,7 @@ void BorrarBloque() {
 			if (bloque_encontrado==1) break;
 		}
 		printf("Se ha borrado el bloque correctamente\n");
+		log_info(logger,"El bloque %d del nodo %s fue eliminado correctamente",bloque,nodoId);
 
 		//actualizar persistencia
 		actualizar_persistencia_eliminar_bloque(nodoId,bloque);
@@ -3254,6 +3256,7 @@ void BorrarBloque() {
 	}
 	else{
 		printf("No se puede eliminar el bloque, el nodo no existe o el bloque esta vacio\n");
+		log_info(logger,"No se pudo eliminar el bloque %d del nodo %s",bloque,nodoId);
 		}
 }
 
@@ -3284,10 +3287,12 @@ void CopiarBloque() {
 
 	if(!obtenerEstadoDelNodo(nodo_origen)){
 		printf ("El nodo seleccionado como origen no esta disponible o no existe\n");
+		log_info(logger,"No se puede copiar el bloque - El nodo seleccionado como origen no esta disponible o no existe");
 		return;
 	}
 	if(!obtenerEstadoDelNodo(nodo_destino)){
 		printf ("El nodo seleccionado como destino no esta disponible o no existe\n");
+		log_info(logger,"No se puede copiar el bloque - El nodo seleccionado como destino no esta disponible o no existe");
 		return;
 	}
 	for (i=0;i<list_size(nodos);i++){
@@ -3296,6 +3301,7 @@ void CopiarBloque() {
 			if (origen->estado==1 && origen->estado_red==1) origen_encontrado=1;
 			if (!bitarray_test_bit(origen->bloques_del_nodo,bloque_origen)){
 				printf ("El bloque %d del nodo %s esta vacio, no hay nada que copiar\n",bloque_origen,nodo_origen);
+				log_info(logger,"No se puede copiar el bloque - El bloque de origen esta vacio");
 				return;
 			}
 			break;
@@ -3308,6 +3314,7 @@ void CopiarBloque() {
 			if (destino->estado==1 && destino->estado_red==1) destino_encontrado=1;
 			if (bitarray_test_bit(destino->bloques_del_nodo,bloque_destino)){
 				printf ("El bloque %d del nodo %s esta ocupado, no se puede copiar\n",bloque_destino,nodo_destino);
+				log_info(logger,"No se puede copiar el bloque - El bloque de destino no esta vacio");
 				return;
 			}
 			break;
@@ -3315,17 +3322,19 @@ void CopiarBloque() {
 	}
 	if (origen_encontrado==0){
 		printf ("El nodo origen no existe o no esta disponible\n");
+		log_info(logger,"No se puede copiar el bloque - El nodo de origen no esta disponible");
 		return;
 	}
 	if (destino_encontrado==0){
 		printf ("El nodo destino no existe o no esta disponible\n");
+		log_info(logger,"No se puede copiar el bloque - El nodo de destino no esta disponible");
 		return;
 	}
 	//obtener primero el bloque del nodo original
 	socket_nodo = obtener_socket_de_nodo_con_id(nodo_origen);
 	if (socket_nodo == -1){
-		log_error(logger, "El nodo ingresado no es valido o no esta disponible\n");
-		printf("El nodo ingresado no es valido o no esta disponible\n");
+		log_error(logger, "El nodo ingresado como origen no es valido o no esta disponible\n");
+		printf("El nodo ingresado como origen no es valido o no esta disponible\n");
 		return;
 	}
 	enviarNumeroDeBloqueANodo(socket_nodo, bloque_origen);
@@ -3338,6 +3347,11 @@ void CopiarBloque() {
 	//no voy a usar copias de estructuras ya que previamente valido todos
 
 	socket_nodo = obtener_socket_de_nodo_con_id(nodo_destino);
+	if (socket_nodo == -1){
+		log_error(logger, "El nodo ingresado como destino no es valido o no esta disponible\n");
+		printf("El nodo ingresado como destino no es valido o no esta disponible\n");
+		return;
+	}
 	if (send(socket_nodo, handshake, sizeof(handshake), MSG_WAITALL) == -1) {
 		perror("send handshake en funcion copiar bloque");
 		log_error(logger, "FALLO el envio del aviso de obtener bloque ");
@@ -3422,7 +3436,8 @@ void CopiarBloque() {
 			}
 
 		}
-
+		printf ("Bloque copiado exitosamente\n");
+		log_info(logger, "La operacion de copiar bloque termino exitosamente");
 	}
 }
 
@@ -3553,6 +3568,7 @@ int VerBloque() {
 	scanf("%s", nodo_id);
 	printf("Numero de Bloque que desea ver: ");
 	scanf("%d", &nroBloque);
+	log_error(logger, "Selecciono la opcion ver el bloque %d del nodo %s",nroBloque,nodo_id);
 	cantNodos= list_size(nodos);
 	for (i=0;i<cantNodos;i++){
 		nodoAEvaluar = list_get(nodos,i);
@@ -3575,6 +3591,7 @@ int VerBloque() {
 				archivoParaVerPath = fopen("./archBloqueParaVer.txt", "w");
 				fprintf(archivoParaVerPath, "%s", bloqueParaVer);
 				printf("El bloque se copio en el archivo: ./archBloqueParaVer.txt\n");
+				log_error(logger, "La operacion ver el bloque %d del nodo %s termino correctamente",nroBloque,nodo_id);
 				fclose(archivoParaVerPath);
 				free(bloqueParaVer);
 				break;
