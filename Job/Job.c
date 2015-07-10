@@ -133,7 +133,7 @@ int main(void){
 	}
 
 	//Queda a la espera de instrucciones de marta
-	printf("Job en la espera de solicitudes de maps o reduce de parte de Marta\n");
+	log_info(logger,"Job en la espera de solicitudes de maps o reduce de parte de Marta");
 
 	while(finalizoJob!=1){
 		if (select(fdmax+1, &read_fds, NULL, NULL, NULL) == -1) {
@@ -163,7 +163,7 @@ int main(void){
 
 						if(strncmp(accion,"ejecuta map",11)==0){
 
-							printf("Marta me dijo %s\n",accion);
+							//printf("Marta me dijo %s\n",accion);
 							log_info(logger_archivo,"Marta me dijo %s",accion);
 
 
@@ -201,7 +201,7 @@ int main(void){
 
 						if(strncmp(accion,"ejecuta reduce",14)==0){
 							//recibe un ejecuta reduce
-							printf("Marta me dijo %s\n",accion);
+							//printf("Marta me dijo %s\n",accion);
 							log_info(logger_archivo,"Marta me dijo %s",accion);
 
 
@@ -370,8 +370,8 @@ void* hilo_reduce(t_hiloReduce* reduceStruct){
 			perror("send");
 			log_error(logger,"Fallo el envío de la respuesta fallida a Marta");
 		}
-		printf("NO PUDE CONECTARME AL NODO PRINCIPAL %s %d\n",reduceStruct->ip_nodoPpal,reduceStruct->puerto_nodoPpal);
-		log_error(logger,"Finalizó un hilo REDUCE.\n\tResultado: fallido\n\tNombre archivo resultado que tendría: %s",reduceStruct->nombreArchivoFinal);
+//		printf("NO PUDE CONECTARME AL NODO PRINCIPAL %s %d\n",reduceStruct->ip_nodoPpal,reduceStruct->puerto_nodoPpal);
+		log_error(logger,"Finalizó un hilo REDUCE.\n\tResultado: fallido\n\tNombre archivo resultado que tendría: %s\n\tMotivo falla: se desconectó el nodo principal ip %s",reduceStruct->nombreArchivoFinal,reduceStruct->ip_nodoPpal);
 		pthread_exit((void*)0);
 	}
 
@@ -386,9 +386,9 @@ void* hilo_reduce(t_hiloReduce* reduceStruct){
 			perror("send");
 			log_error(logger,"Fallo el envío de la respuesta fallida a Marta");
 		}
-		printf("SE DESCONECTO EL NODO PRINCIPAL %s %d\n",reduceStruct->ip_nodoPpal,reduceStruct->puerto_nodoPpal);
+//		printf("SE DESCONECTO EL NODO PRINCIPAL %s %d\n",reduceStruct->ip_nodoPpal,reduceStruct->puerto_nodoPpal);
 
-		log_error(logger,"Finalizó un hilo REDUCE.\n\tResultado: fallido\n\tNombre archivo resultado que tendría: %s",reduceStruct->nombreArchivoFinal);
+		log_error(logger,"Finalizó un hilo REDUCE.\n\tResultado: fallido\n\tNombre archivo resultado que tendría: %s\n\tMotivo falla: se desconectó el nodo principal ip %s",reduceStruct->nombreArchivoFinal,reduceStruct->ip_nodoPpal);
 		pthread_exit((void*)0);
 	}
 	/*Conexión reduce-nodo establecida*/
@@ -405,9 +405,9 @@ void* hilo_reduce(t_hiloReduce* reduceStruct){
 			perror("send");
 			log_error(logger,"Fallo el envío de la respuesta fallida a Marta");
 		}
-		printf("SE DESCONECTO EL NODO PRINCIPAL %s %d\n",reduceStruct->ip_nodoPpal,reduceStruct->puerto_nodoPpal);
+//		printf("SE DESCONECTO EL NODO PRINCIPAL %s %d\n",reduceStruct->ip_nodoPpal,reduceStruct->puerto_nodoPpal);
 
-		log_error(logger,"Finalizó un hilo REDUCE.\n\tResultado: fallido\n\tNombre archivo resultado que tendría: %s",reduceStruct->nombreArchivoFinal);
+		log_error(logger,"Finalizó un hilo REDUCE.\n\tResultado: fallido\n\tNombre archivo resultado que tendría: %s\n\tMotivo falla: se desconectó el nodo principal ip %s",reduceStruct->nombreArchivoFinal,reduceStruct->ip_nodoPpal);
 		pthread_exit((void*)0);
 	}
 
@@ -424,9 +424,9 @@ void* hilo_reduce(t_hiloReduce* reduceStruct){
 			perror("send");
 			log_error(logger,"Fallo el envío de la respuesta fallida a Marta");
 		}
-		printf("SE DESCONECTO EL NODO PRINCIPAL %s %d\n",reduceStruct->ip_nodoPpal,reduceStruct->puerto_nodoPpal);
+//		printf("SE DESCONECTO EL NODO PRINCIPAL %s %d\n",reduceStruct->ip_nodoPpal,reduceStruct->puerto_nodoPpal);
 
-		log_error(logger,"Finalizó un hilo REDUCE.\n\tResultado: fallido\n\tNombre archivo resultado que tendría: %s",reduceStruct->nombreArchivoFinal);
+		log_error(logger,"Finalizó un hilo REDUCE.\n\tResultado: fallido\n\tNombre archivo resultado que tendría: %s\n\tMotivo falla: se desconectó el nodo principal ip %s",reduceStruct->nombreArchivoFinal,reduceStruct->ip_nodoPpal);
 		pthread_exit((void*)0);
 	}
 
@@ -440,9 +440,9 @@ void* hilo_reduce(t_hiloReduce* reduceStruct){
 			perror("send");
 			log_error(logger,"Fallo el envío de la respuesta fallida a Marta");
 		}
-		printf("SE DESCONECTO EL NODO PRINCIPAL %s %d\n",reduceStruct->ip_nodoPpal,reduceStruct->puerto_nodoPpal);
+//		printf("SE DESCONECTO EL NODO PRINCIPAL %s %d\n",reduceStruct->ip_nodoPpal,reduceStruct->puerto_nodoPpal);
 
-		log_error(logger,"Finalizó un hilo REDUCE.\n\tResultado: fallido\n\tNombre archivo resultado que tendría: %s",reduceStruct->nombreArchivoFinal);
+		log_error(logger,"Finalizó un hilo REDUCE.\n\tResultado: fallido\n\tNombre archivo resultado que tendría: %s\n\tMotivo falla: se desconectó el nodo principal ip %s",reduceStruct->nombreArchivoFinal,reduceStruct->ip_nodoPpal);
 		pthread_exit((void*)0);
 	}
 
@@ -458,9 +458,9 @@ void* hilo_reduce(t_hiloReduce* reduceStruct){
 				perror("send");
 				log_error(logger,"Fallo el envío de la respuesta fallida a Marta");
 			}
-			printf("SE DESCONECTO EL NODO PRINCIPAL %s %d\n",reduceStruct->ip_nodoPpal,reduceStruct->puerto_nodoPpal);
+//			printf("SE DESCONECTO EL NODO PRINCIPAL %s %d\n",reduceStruct->ip_nodoPpal,reduceStruct->puerto_nodoPpal);
 
-			log_error(logger,"Finalizó un hilo REDUCE.\n\tResultado: fallido\n\tNombre archivo resultado que tendría: %s",reduceStruct->nombreArchivoFinal);
+			log_error(logger,"Finalizó un hilo REDUCE.\n\tResultado: fallido\n\tNombre archivo resultado que tendría: %s\n\tMotivo falla: se desconecto el nodo principal ip %s",reduceStruct->nombreArchivoFinal,reduceStruct->ip_nodoPpal);
 			pthread_exit((void*)0);
 		}
 	}
@@ -476,9 +476,9 @@ void* hilo_reduce(t_hiloReduce* reduceStruct){
 			perror("send");
 			log_error(logger,"Fallo el envío de la respuesta fallida a Marta");
 		}
-		printf("SE DESCONECTO EL NODO PRINCIPAL %s %d\n",reduceStruct->ip_nodoPpal,reduceStruct->puerto_nodoPpal);
+//		printf("SE DESCONECTO EL NODO PRINCIPAL %s %d\n",reduceStruct->ip_nodoPpal,reduceStruct->puerto_nodoPpal);
 
-		log_error(logger,"Finalizó un hilo REDUCE.\n\tResultado: fallido\n\tNombre archivo resultado que tendría: %s",reduceStruct->nombreArchivoFinal);
+		log_error(logger,"Finalizó un hilo REDUCE.\n\tResultado: fallido\n\tNombre archivo resultado que tendría: %s\n\tMotivo falla: se desconectó el nodo principal ip %s",reduceStruct->nombreArchivoFinal,reduceStruct->ip_nodoPpal);
 		pthread_exit((void*)0);
 	}
 
@@ -497,9 +497,9 @@ void* hilo_reduce(t_hiloReduce* reduceStruct){
 			log_error(logger,"Finalizó un hilo REDUCE.\n\tResultado: fallido\n\tNombre archivo resultado que tendría: %s",reduceStruct->nombreArchivoFinal);
 			pthread_exit((void*)0);
 		}
-		printf("SE DESCONECTO UNO DE LOS NODOS DEL REDUCE %s %d\n",respuestaNodo.ip_nodoFallido,respuestaNodo.puerto_nodoFallido);
+//		printf("SE DESCONECTO UNO DE LOS NODOS DEL REDUCE %s %d\n",respuestaNodo.ip_nodoFallido,respuestaNodo.puerto_nodoFallido);
 
-		log_error(logger,"Finalizó un hilo REDUCE.\n\tResultado: fallido\n\tNombre archivo resultado que tendría: %s",reduceStruct->nombreArchivoFinal);
+		log_error(logger,"Finalizó un hilo REDUCE.\n\tResultado: fallido\n\tNombre archivo resultado que tendría: %s\n\tMotivo falla: se desconectó uno de los nodos del reduce: ip %s puerto %d",reduceStruct->nombreArchivoFinal,respuestaNodo.ip_nodoFallido,respuestaNodo.puerto_nodoFallido);
 		pthread_exit((void*)0);
 	}
 
