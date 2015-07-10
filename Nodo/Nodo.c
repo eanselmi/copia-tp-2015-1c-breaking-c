@@ -1,5 +1,4 @@
 #define _FILE_OFFSET_BITS 64
-#define _LARGEFILE64_SOURCE 1
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -855,7 +854,7 @@ char* mapearFileDeDatos(){
 	lectura escritura y ejecucion, los cambios en las direcciones de memoria a donde apunta se verán reflejados
 	 en el archivo*/
 
-	fileDatos=mmap(0,sizeFileDatos,PROT_WRITE|PROT_READ,MAP_SHARED|MAP_NORESERVE,fileDescriptor,0);
+	fileDatos=mmap(0,sizeFileDatos,(PROT_WRITE|PROT_READ|PROT_EXEC),MAP_SHARED,fileDescriptor,0);
 	/*Chequeo de mmap exitoso*/
 		if (fileDatos==MAP_FAILED){
 			perror("mmap");
