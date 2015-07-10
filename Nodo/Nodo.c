@@ -623,7 +623,10 @@ void ordenarMapper(char* pathMapperTemporal, char* nombreMapperOrdenado){
 	}
 	else if(pid==0)
 	{
-		archivo_resultado=open(nombreMapperOrdenado,O_RDWR|O_CREAT,S_IRWXU|S_IRWXG); //abro file resultado, si no esta lo crea, asigno permisos
+		if((archivo_resultado=open(nombreMapperOrdenado,O_RDWR|O_CREAT,S_IRWXU|S_IRWXG))==-1){ //abro file resultado, si no esta lo crea, asigno permisos
+			perror("open sort");
+			log_error(logger,"Fallo el open para el sort");
+		}
 		fflush(stdout);
 		bak=dup(STDOUT_FILENO);
 		dup2(archivo_resultado,STDOUT_FILENO); //STDOUT de este proceso se grabara en el file resultado
@@ -666,8 +669,10 @@ void ejecutarMapper(char *script,int bloque,char *resultado){
 	}
 	else if(pid==0)
 	{
-
-	archivo_resultado=open(resultado,O_RDWR|O_CREAT,S_IRWXU|S_IRWXG); //abro file resultado, si no esta lo crea, asigno permisos
+	if((archivo_resultado=open(resultado,O_RDWR|O_CREAT,S_IRWXU|S_IRWXG))==-1){ //abro file resultado, si no esta lo crea, asigno permisos
+		perror("open map");
+		log_error(logger,"Fallo al abrir el archivo resultado del map");
+	}
 	fflush(stdout);
 	bak=dup(STDOUT_FILENO);
 	dup2(archivo_resultado,STDOUT_FILENO); //STDOUT de este proceso se grabara en el file resultado
@@ -862,7 +867,7 @@ char* mapearFileDeDatos(){
 void* rutinaMap(int* sckMap){
 	pthread_detach(pthread_self());
 	char** arrayTiempo;
-	int resultado=1;
+	int resultado=0;
 	t_datosMap datosParaElMap;
 	int nroAMostrar;
 	char *resultadoTemporal=string_new();
@@ -944,8 +949,6 @@ void* rutinaMap(int* sckMap){
 	ordenarMapper(resultadoTemporal,datosParaElMap.nomArchTemp);
 
 	pthread_mutex_unlock(&mutexMap);
-
-	resultado=0;
 
 	if(send(*sckMap,&resultado,sizeof(int),MSG_WAITALL)==-1){
 		perror("send");
