@@ -1391,10 +1391,11 @@ void *atenderJob (int *socketJob) {
 			int posMapp;
 			t_list *nodosQueFallaron;
 			nodosQueFallaron=list_create();
+			list_add(nodosQueFallaron,map);
 			for(posMapp=0; posMapp<list_size(listaMappers);posMapp++){
 				t_replanificarMap *mapcito;
 				mapcito = list_get(listaMappers,posMapp);
-				if(strcmp(map->nodoId,mapcito->nodoId)==0){
+				if((strcmp(map->nodoId,mapcito->nodoId)==0)&&(mapcito->resultado==0)){
 					mapcito->resultado = 1;
 					list_add(nodosQueFallaron,mapcito);
 				}
