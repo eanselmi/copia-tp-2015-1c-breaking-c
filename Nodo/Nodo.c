@@ -1,4 +1,5 @@
-//#define _FILE_OFFSET_BITS 64
+#define _FILE_OFFSET_BITS 64
+#define _LARGEFILE64_SOURCE 1
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -29,7 +30,7 @@ t_config* configurador;
 t_log* logger; //log en pantalla y archivo de log
 t_log* logger_archivo; //log solo en archivo de log
 char* fileDeDatos;
-unsigned int sizeFileDatos;
+long sizeFileDatos;
 fd_set master; // conjunto maestro de descriptores de fichero
 fd_set read_fds; // conjunto temporal de descriptores de fichero para select()
 int fdmax;//Numero maximo de descriptores de fichero
@@ -854,7 +855,7 @@ char* mapearFileDeDatos(){
 	lectura escritura y ejecucion, los cambios en las direcciones de memoria a donde apunta se verán reflejados
 	 en el archivo*/
 
-	fileDatos=mmap(0,sizeFileDatos,(PROT_WRITE|PROT_READ|PROT_EXEC),MAP_SHARED,fileDescriptor,0);
+	fileDatos=mmap(0,sizeFileDatos,PROT_WRITE|PROT_READ,MAP_SHARED|MAP_NORESERVE,fileDescriptor,0);
 	/*Chequeo de mmap exitoso*/
 		if (fileDatos==MAP_FAILED){
 			perror("mmap");
