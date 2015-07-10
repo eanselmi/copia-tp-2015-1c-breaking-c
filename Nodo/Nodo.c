@@ -1245,10 +1245,7 @@ void ejecutarReduce(t_list* archivosApareando,char* script,char* resultado, int*
 	}
 	else if(pid==0)
 	{
-		if((archivo_resultado=open(resultado,O_RDWR|O_CREAT,S_IRWXU|S_IRWXG))==-1){
-			perror("open reduce"); //abro file resultado, si no esta lo crea, asigno permisos
-			log_error(logger,"Fallo al abrir el arch resultado del reduce");
-		}
+		archivo_resultado=open(resultado,O_RDWR|O_CREAT,S_IRWXU|S_IRWXG); //abro file resultado, si no esta lo crea, asigno permisos
 		fflush(stdout);
 		bak=dup(STDOUT_FILENO);
 		dup2(archivo_resultado,STDOUT_FILENO); //STDOUT de este proceso se grabara en el file resultado
