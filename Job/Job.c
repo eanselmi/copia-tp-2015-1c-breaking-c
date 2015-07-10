@@ -26,7 +26,8 @@ t_log* logger_archivo;
 char bufGetArchivo[MAPPER_SIZE];
 sem_t obtenerRutinaMap;
 int marta_sock; //socket de conexión a MaRTA
-
+char rutinaMap[MAPPER_SIZE];
+char rutinaReduce[REDUCE_SIZE];
 
 int main(void){
 	configurador= config_create("resources/jobConfig.conf"); //se asigna el archivo de configuración especificado en la ruta
@@ -53,11 +54,21 @@ int main(void){
 	t_mapper* punteroMapper;
 	t_reduce datosReduce;
 	t_hiloReduce* hiloReduce;
-
+	char * contReduce;
+	char * contMapper;
+	memset(rutinaMap,'\0',MAPPER_SIZE);
+	memset(rutinaReduce,'\0',REDUCE_SIZE);
 	sem_init(&obtenerRutinaMap,0,1);
 	memset(handshake,'\0', BUF_SIZE);
 	FD_ZERO(&read_fds);
 	memset(archivoResultado,'\0',200);
+
+	contReduce=getFileContent(config_get_string_value(configurador,"REDUCE"));
+	contMapper=getFileContent(config_get_string_value(configurador,"MAPPER"));
+
+
+	strcpy(rutinaMap,contMapper);
+	strcpy(rutinaReduce,contReduce);
 
 	/* Se conecta a MaRTA */
 	if((marta_sock=socket(AF_INET,SOCK_STREAM,0))==-1){ //si función socket devuelve -1 es error
@@ -312,7 +323,6 @@ void* hilo_reduce(t_hiloReduce* reduceStruct){
 	char rutinaReduce[REDUCE_SIZE];
 	t_respuestaReduce respuestaParaMarta;
 	t_respuestaNodoReduce respuestaNodo;
-	char * contReduce;
 	memset(identificacion,'\0',BUF_SIZE);
 	memset(rutinaReduce,'\0',REDUCE_SIZE);
 	int ind;
@@ -405,8 +415,7 @@ void* hilo_reduce(t_hiloReduce* reduceStruct){
 	}
 
 	//envio el contenido de la rutina reduce al nodo
-	contReduce=getFileContent(config_get_string_value(configurador,"REDUCE"));
-	strcpy(rutinaReduce,contReduce);
+
 	if(send(nodo_sock,rutinaReduce,sizeof(rutinaReduce),MSG_WAITALL)==-1){
 		perror("send");
 		log_error(logger,"Fallo el envío de la rutina reduce al nodo");
@@ -535,7 +544,7 @@ void* hilo_mapper(t_mapper* mapperStruct){
 
 	datosParaNodo.bloque=mapperStruct->bloque;
 	strcpy(datosParaNodo.nomArchTemp,mapperStruct->archivoResultadoMap);
-	strcpy(datosParaNodo.rutinaMap,getFileContent(config_get_string_value(configurador,"MAPPER")));
+	strcpy(datosParaNodo.rutinaMap,rutinaMap);
 
 	if((nodo_sock=socket(AF_INET,SOCK_STREAM,0))==-1){ //si función socket devuelve -1 es error
 		perror("socket");
