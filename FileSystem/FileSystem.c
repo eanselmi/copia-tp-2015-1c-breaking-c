@@ -2161,7 +2161,7 @@ void MoverArchivo() {
 		}
 		archivo = list_get(archivos, posArchivo);
 		loguear_lista_de_bloques_de_archivo(archivo->nombre, archivo->padre);
-
+		listarDirectoriosCreados();
 		printf("Ingrese el nuevo path \n");
 		memset(nuevoPath,'\0',200);
 		scanf("%s", nuevoPath);
@@ -2713,6 +2713,7 @@ int CopiarArchivoAMDFS(int flag, char* archvo_local, char* archivo_mdfs){
 
 
 	if (flag!=99){
+		listarDirectoriosCreados();
 		printf("Ingrese el path del archivo destino desde raíz, por ejemplo /tmp/nombreArchivo \n");
 		scanf("%s", pathMDFS);
 		log_info(logger,"El destino seleccionado en MDFS es: %s",pathMDFS);
