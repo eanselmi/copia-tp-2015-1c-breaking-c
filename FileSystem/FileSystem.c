@@ -159,12 +159,12 @@ int main(int argc, char *argv[]) {
 						fdmax = newfd;
 					}
 					list_add(nodos,agregar_nodo_a_lista(nodo_id, newfd, 0, 1,inet_ntoa(remote_client.sin_addr),remote_client.sin_port,*puerto_escucha_nodo, *bloquesTotales,*bloquesTotales));
-					printf("Se conectó el %s desde %s con %d bloques disponibles\n",nodo_id,inet_ntoa(remote_client.sin_addr), *bloquesTotales);
+					//printf("Se conectó el %s desde %s con %d bloques disponibles\n",nodo_id,inet_ntoa(remote_client.sin_addr), *bloquesTotales);
 					log_info(logger,"Se conectó el nodo: %s desde %s con %d bloques disponibles",nodo_id,inet_ntoa(remote_client.sin_addr), *bloquesTotales);
 					loguear_estado_de_los_nodos(nodos);
 					loguear_espacio_del_sistema(nodos);
 				} else {
-					printf("Ya existe un nodo con el mismo id o direccion ip\n");
+					//printf("Ya existe un nodo con el mismo id o direccion ip\n");
 					log_info(logger,"Se conecto el %s con identidad duplicada, ya existe un nodo con ese id conectado al FileSystem\n",nodo_id);
 					close(newfd);
 				}
@@ -174,7 +174,7 @@ int main(int argc, char *argv[]) {
 			free(puerto_escucha_nodo);
 		} else {
 			close(newfd);
-			printf("Se conecto algo pero no se que fue, lo rechazo\n");
+			//printf("Se conecto algo pero no se que fue, lo rechazo\n");
 			log_info(logger,"Se intento conectar un proceso al FileSystem que no es un Nodo antes de que el sistema este disponible");
 		}
 	}
@@ -267,11 +267,11 @@ int Menu(void) {
 			EliminarNodo();	break;
 			
 		//case 17: printf("Eligió Salir\n"); break;
-		case 17: listar_nodos_conectados(nodos); break;
+		//case 17: listar_nodos_conectados(nodos); break;
 		//case 17: listar_archivos_subidos_usuario(archivos); break;
 		//case 17: listarDirectoriosCreados();break;
 		//case 17: listar_directorios(); break;
-		//case 17: eliminar_listas(archivos,directorios,nodos); break;  //SALIDA NORMAL, LIBERA Y NO PERSISTE
+		case 17: eliminar_listas(archivos,directorios,nodos); break;  //SALIDA NORMAL, LIBERA Y NO PERSISTE
 		default: printf("Opción incorrecta. Por favor ingrese una opción del 1 al 17\n"); break;
 		}
 	}
@@ -1282,7 +1282,7 @@ void *connection_handler_escucha(void) {
 										log_error(logger, "FALLO el envio del ok a Marta");
 										exit(-1);
 									}
-									printf("\nSe conectó el proceso Marta desde la ip %s\n",inet_ntoa(remote_client.sin_addr));
+									//printf("\nSe conectó el proceso Marta desde la ip %s\n",inet_ntoa(remote_client.sin_addr));
 									log_info(logger,"Se conectó el proceso Marta desde la ip %s",inet_ntoa(remote_client.sin_addr));
 
 
@@ -1378,7 +1378,7 @@ void *connection_handler_escucha(void) {
 									}
 
 								} else {
-									printf("Ya existe un proceso marta conectado, no puede haber más de 1\n");
+									//printf("Ya existe un proceso marta conectado, no puede haber más de 1\n");
 									log_warning(logger,"Ya existe un proceso marta conectado, no puede haber más de 1");
 									close(newfd);
 								}
@@ -1411,7 +1411,7 @@ void *connection_handler_escucha(void) {
 											fdmax = newfd;
 										}
 										list_add(nodos,agregar_nodo_a_lista(nodo_id,newfd, 0, 1,inet_ntoa(remote_client.sin_addr),remote_client.sin_port,*puerto_escucha_nodo,*bloquesTotales,*bloquesTotales));
-										printf("\nSe conectó el %s desde %s con %d bloques disponibles\n",nodo_id,inet_ntoa(remote_client.sin_addr), *bloquesTotales);
+										//printf("\nSe conectó el %s desde %s con %d bloques disponibles\n",nodo_id,inet_ntoa(remote_client.sin_addr), *bloquesTotales);
 										log_info(logger,"Se conectó el %s desde %s con %d bloques disponibles",nodo_id,inet_ntoa(remote_client.sin_addr), *bloquesTotales);
 										loguear_estado_de_los_nodos(nodos);
 										loguear_espacio_del_sistema(nodos);
@@ -1449,7 +1449,7 @@ void *connection_handler_escucha(void) {
 										}
 
 									} else {
-										printf("Ya existe un nodo con el mismo id o direccion ip\n");
+										//printf("Ya existe un nodo con el mismo id o direccion ip\n");
 										log_info(logger,"Se conecto el Nodo: %s con identidad duplicada, ya existe un nodo con ese id conectado al FileSystem\n",nodo_id);
 										close(newfd);
 									}
@@ -1475,12 +1475,12 @@ void *connection_handler_escucha(void) {
 										miNodo=list_get(nodos,h);
 										if (strcmp(miNodo->nodo_id,nodo_id)==0) bloques_libres_del_reconectado=miNodo->bloques_libres;
 									}
-									printf("Se reconectó el %s desde la ip: %s con %d bloques libres\n",nodo_id,inet_ntoa(remote_client.sin_addr),bloques_libres_del_reconectado);
+									//printf("Se reconectó el %s desde la ip: %s con %d bloques libres\n",nodo_id,inet_ntoa(remote_client.sin_addr),bloques_libres_del_reconectado);
 									log_info(logger, "Se reconectó el %s desde la ip: %s con %d bloques libres\n",nodo_id,inet_ntoa(remote_client.sin_addr),bloques_libres_del_reconectado);
 									loguear_estado_de_los_nodos(nodos);
 									loguear_espacio_del_sistema(nodos);
 								} else {
-									printf("Se reconecto un nodo con datos alterados, se lo desconecta\n");
+									//printf("Se reconecto un nodo con datos alterados, se lo desconecta\n");
 									log_info(logger,"Se reconecto el Nodo: %s con identidad alterada\n",nodo_id);
 									close(newfd);
 								}
@@ -1502,7 +1502,7 @@ void *connection_handler_escucha(void) {
 								marta_presente = 0;
 								close(i); // ¡Hasta luego!
 								FD_CLR(i, &master); // eliminar del conjunto maestro
-								printf("El proceso Marta se Desconecto del FileSystem\n");
+								//printf("El proceso Marta se Desconecto del FileSystem\n");
 								log_info(logger, "El proceso Marta se Desconecto del FileSystem\n");
 							}else{
 								// el recv dio -1 , osea, error
@@ -1603,10 +1603,10 @@ void *connection_handler_escucha(void) {
 
 								fclose(archivo_resultado);
 
-								printf ("Termino de recibir el archivo\n");
+								//printf ("Termino de recibir el archivo\n");
 								//Ahora envio el archivo al mdfs
 								CopiarArchivoAMDFS(99,ruta_local,path_mdfs);
-								printf ("Archivo resultado copiado exitosamente\n");
+								//printf ("Archivo resultado copiado exitosamente\n");
 							}
 						}
 					}else{
@@ -1625,7 +1625,7 @@ void *connection_handler_escucha(void) {
 								if (id_temporal != NULL) {
 									strcpy(nodo_id, id_temporal);
 									modificar_estado_nodo(nodo_id, i,remote_client.sin_port, 0, 0);
-									printf("Se desconecto el nodo %s, %d\n",inet_ntoa(remote_client.sin_addr),remote_client.sin_port);
+									//printf("Se desconecto el nodo %s, %d\n",inet_ntoa(remote_client.sin_addr),remote_client.sin_port);
 									log_info(logger, "Se desconecto el Nodo: %s del FileSystem\n",nodo_id);
 									loguear_estado_de_los_nodos(nodos);
 									loguear_espacio_del_sistema(nodos);
@@ -1651,7 +1651,7 @@ void *connection_handler_escucha(void) {
 
 
 								} else {
-									printf("ALGO SALIO MUY MAL\n");
+									//printf("ALGO SALIO MUY MAL\n");
 									exit(-1);
 								}
 							}else{
@@ -1813,7 +1813,7 @@ void FormatearFilesystem() {
 	//=====================================================================
 	list_destroy_and_destroy_elements(archivos, (void*) eliminar_lista_de_archivos2);
 	archivos=list_create(); //queda la lista vacía
-	printf("Cantidad de archivos en MDFS: %d\n", list_size(archivos));
+	//printf("Cantidad de archivos en MDFS: %d\n", list_size(archivos));
 	//=====================================================================
 	//======================= FORMATEO PARTE 2 ============================
 	//================= VACIO LOS NODOS PARA QUEDE 0KM ====================
@@ -2787,7 +2787,7 @@ int CopiarArchivoAMDFS(int flag, char* archvo_local, char* archivo_mdfs){
 							log_info(logger,"Error al copiar el archivo %s al MDFS",path);
 							return -1;
 						}
-						printf ("voy a mandar al nodo %s la copia %d del bloque %d y la guardara en el bloque %d\n",nodo_temporal->nodo_id,indice+1,n_copia,combo.n_bloque);
+						//printf ("voy a mandar al nodo %s la copia %d del bloque %d y la guardara en el bloque %d\n",nodo_temporal->nodo_id,indice+1,n_copia,combo.n_bloque);
 						if (send(nodo_temporal->socket, &combo, sizeof(combo), 0) == -1) {
 							perror("send buffer en subir archivo");
 							log_error(logger, "FALLO el envio del aviso de obtener bloque ");
@@ -2831,7 +2831,7 @@ int CopiarArchivoAMDFS(int flag, char* archvo_local, char* archivo_mdfs){
     						log_error(logger, "FALLO el envio del aviso de obtener bloque ");
     						exit(-1);
     					}
-    					printf ("Lo que mande del handshake: %d\n",total_enviado);
+    					//printf ("Lo que mande del handshake: %d\n",total_enviado);
     					corte=0;
     					for(combo.n_bloque=0;combo.n_bloque<nodo_temporal->bloques_totales;combo.n_bloque++){
     						if (!bitarray_test_bit(nodo_temporal->bloques_del_nodo,combo.n_bloque)){
@@ -2844,13 +2844,13 @@ int CopiarArchivoAMDFS(int flag, char* archvo_local, char* archivo_mdfs){
     						log_info(logger,"Error al copiar el archivo %s al MDFS",path);
     						return -1;
     					}
-    					printf ("voy a mandar al nodo %s la copia %d del bloque %d y la guardara en el bloque %d\n",nodo_temporal->nodo_id,indice+1,n_copia,combo.n_bloque);
+    					//printf ("voy a mandar al nodo %s la copia %d del bloque %d y la guardara en el bloque %d\n",nodo_temporal->nodo_id,indice+1,n_copia,combo.n_bloque);
     					if ((total_enviado=send(nodo_temporal->socket, &combo, sizeof(combo), 0)) == -1) {
     						perror("send buffer en subir archivo");
     						log_error(logger, "FALLO el envio del aviso de obtener bloque ");
     						exit(-1);
     					}
-    					printf ("Quiero enviar %d y envie %d\n",sizeof(combo),total_enviado);
+    					//printf ("Quiero enviar %d y envie %d\n",sizeof(combo),total_enviado);
     					nodo_temporal->bloques_libres--;
     					bitarray_set_bit(nodo_temporal->bloques_del_nodo,combo.n_bloque);
 
@@ -2895,7 +2895,7 @@ int CopiarArchivoAMDFS(int flag, char* archvo_local, char* archivo_mdfs){
     					log_error(logger, "FALLO el envio del aviso de obtener bloque ");
     					exit(-1);
     				}
-    				printf ("Lo que mande del handshake: %d\n",total_enviado);
+    				//printf ("Lo que mande del handshake: %d\n",total_enviado);
     				corte=0;
     				for(combo.n_bloque=0;combo.n_bloque<nodo_temporal->bloques_totales;combo.n_bloque++){
     					if (!bitarray_test_bit(nodo_temporal->bloques_del_nodo,combo.n_bloque)){
@@ -2908,13 +2908,13 @@ int CopiarArchivoAMDFS(int flag, char* archvo_local, char* archivo_mdfs){
     					log_info(logger,"Error al copiar el archivo %s al MDFS",path);
     					return -1;
     				}
-    				printf ("voy a mandar al nodo %s la copia %d del bloque %d y la guardara en el bloque %d\n",nodo_temporal->nodo_id,indice+1,n_copia,combo.n_bloque);
+    				//printf ("voy a mandar al nodo %s la copia %d del bloque %d y la guardara en el bloque %d\n",nodo_temporal->nodo_id,indice+1,n_copia,combo.n_bloque);
     				if ((total_enviado=send(nodo_temporal->socket, &combo, sizeof(combo), 0)) == -1) {
     					perror("send buffer en subir archivo");
     					log_error(logger, "FALLO el envio del aviso de obtener bloque ");
     					exit(-1);
     				}
-    				printf ("Esto es lo que quedo, Quiero enviar %d y envie %d\n",sizeof(combo),total_enviado);
+    				//printf ("Esto es lo que quedo, Quiero enviar %d y envie %d\n",sizeof(combo),total_enviado);
     				nodo_temporal->bloques_libres--;
     				bitarray_set_bit(nodo_temporal->bloques_del_nodo,combo.n_bloque);
 
@@ -2998,7 +2998,7 @@ int CopiarArchivoAMDFS(int flag, char* archvo_local, char* archivo_mdfs){
     		}
     	}
     	persistir_archivo(archivo_temporal);
-    	printf ("Pasa persistencia\n");
+    	//printf ("Pasa persistencia\n");
     	//Si llego hasta aca salio tod0 bien, actualizo la lista real de nodos
     	eliminar_listas(NULL,NULL,nodos);
     	nodos=list_create();
@@ -3006,9 +3006,9 @@ int CopiarArchivoAMDFS(int flag, char* archvo_local, char* archivo_mdfs){
     		printf ("No se pudo crear la copia de la lista de nodos\n");
     		return -1;
     	}
-    	printf ("Copia lista de nodos\n");
+    	//printf ("Copia lista de nodos\n");
     	eliminar_listas(NULL,NULL,nodos_temporales);
-    	printf ("Pasa eliminar lista nodos\n");
+    	//printf ("Pasa eliminar lista nodos\n");
 
 
     	//Si llego aca es porque tod0 salio bien y actualizo la lista de archivos
@@ -3019,7 +3019,7 @@ int CopiarArchivoAMDFS(int flag, char* archvo_local, char* archivo_mdfs){
     		printf ("No se pudo crear la copia de la lista de archivos\n");
     		return -1;
     	}
-    	printf ("Pasa copia lista archivos\n");
+    	//printf ("Pasa copia lista archivos\n");
     	eliminar_listas(archivos_temporales,NULL,NULL);
     	log_info(logger,"El archivo %s se copio correctamente al al MDFS",path);
     	loguear_estado_de_los_nodos(nodos);
@@ -3212,7 +3212,7 @@ void MD5DeArchivo() {
 		}
 		wait(NULL);
 		read(fd[0], result, sizeof(result));
-		printf("%s",result);
+		printf("%s\n",result);
 		log_info(logger,"El MD5 del archivo %s Del MDFS se calculo correctamente %s",path,result);
 	}else printf ("No hay archivos cargados en MDFS\n");
 
