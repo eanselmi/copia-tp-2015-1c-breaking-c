@@ -3022,10 +3022,10 @@ int CopiarArchivoAMDFS(int flag, char* archvo_local, char* archivo_mdfs){
     	}
     	//printf ("Pasa copia lista archivos\n");
     	eliminar_listas(archivos_temporales,NULL,NULL);
-    	log_info(logger,"El archivo %s se copio correctamente al al MDFS",path);
+    	log_info(logger,"El archivo %s se copio correctamente al MDFS",path);
     	loguear_estado_de_los_nodos(nodos);
     	loguear_espacio_del_sistema(nodos);
-    	printf ("El archivo %s se copio correctamente al al MDFS\n",path);
+    	printf ("El archivo %s se copio correctamente al MDFS\n",path);
     	return 0;
 }
 int CopiarArchivoDelMDFS(int flag, char*unArchivo) {
