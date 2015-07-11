@@ -2326,11 +2326,9 @@ void eliminar_listas(t_list *archivos_l, t_list *directorios_l, t_list *nodos_l)
 	//====================== LIBERO LOS NODOS =============================
 	//=====================================================================
 
-	if (nodos_l!=NULL){
+	if (nodos_l!=NULL)
 		list_destroy_and_destroy_elements(nodos_l,(void*)eliminar_lista_de_nodos);
-		loguear_estado_de_los_nodos(nodos);
-		loguear_espacio_del_sistema(nodos);
-	}
+
 	//=====================================================================
 	//======================= FORMATEO PARTE 3 ============================
 	//==================ELIMINO LA LISTA DE DIRECTORIOS====================
@@ -2999,8 +2997,6 @@ int CopiarArchivoAMDFS(int flag, char* archvo_local, char* archivo_mdfs){
     			}
     		}
     	}
-    	loguear_estado_de_los_nodos(nodos);
-    	loguear_espacio_del_sistema(nodos);
     	persistir_archivo(archivo_temporal);
     	printf ("Pasa persistencia\n");
     	//Si llego hasta aca salio tod0 bien, actualizo la lista real de nodos
@@ -3026,6 +3022,8 @@ int CopiarArchivoAMDFS(int flag, char* archvo_local, char* archivo_mdfs){
     	printf ("Pasa copia lista archivos\n");
     	eliminar_listas(archivos_temporales,NULL,NULL);
     	log_info(logger,"El archivo %s se copio correctamente al al MDFS",path);
+    	loguear_estado_de_los_nodos(nodos);
+    	loguear_espacio_del_sistema(nodos);
     	return 0;
 }
 int CopiarArchivoDelMDFS(int flag, char*unArchivo) {
