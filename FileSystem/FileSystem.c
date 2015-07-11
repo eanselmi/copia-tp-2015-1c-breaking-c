@@ -216,7 +216,10 @@ void DibujarMenu(void) {
 	printf("# 14) Copiar un bloque                                         #\n");
 	printf("# 15) Agregar un nodo de datos                                 #\n");
 	printf("# 16) Eliminar un nodo de datos                                #\n");
-	printf("# 17) Salir                                                    #\n");
+	printf("# 17) Listar archivos cargados en MDFS                         #\n");
+	printf("# 18) Listar directorios creados en MDFS                       #\n");
+	printf("# 19) Listar Nodos                                             #\n");
+	printf("# 20) Salir                                                    #\n");
 	printf("################################################################\n");
 }
 
@@ -224,7 +227,7 @@ int Menu(void) {
 	char opchar[2];
 	memset(opchar, '\0', 2);
 	int opcion = 0;
-	while (opcion != 17) {
+	while (opcion != 20) {
 		sleep(1);
 		opcion = 0;
 		memset(opchar, '\0', 2);
@@ -265,14 +268,22 @@ int Menu(void) {
 			AgregarNodo(); break;
 		case 16:
 			EliminarNodo();	break;
-			
-		//case 17: printf("Eligió Salir\n"); break;
-		//case 17: listar_nodos_conectados(nodos); break;
-		//case 17: listar_archivos_subidos_usuario(archivos); break;
-		//case 17: listarDirectoriosCreados();break;
-		//case 17: listar_directorios(); break;
-		case 17: eliminar_listas(archivos,directorios,nodos); break;  //SALIDA NORMAL, LIBERA Y NO PERSISTE
-		default: printf("Opción incorrecta. Por favor ingrese una opción del 1 al 17\n"); break;
+		case 17:
+			listar_archivos_subidos(archivos); break;
+		case 18:
+			listarDirectoriosCreados();break;
+		case 19:
+			listar_nodos_conectados(nodos); break;
+
+			//case 20: printf("Eligió Salir\n"); break;
+			//case 20: listar_nodos_conectados(nodos); break;
+			//case 20: listar_archivos_subidos_usuario(archivos); break;
+			//case 20: listarDirectoriosCreados();break;
+			//case 20: listar_directorios(); break;
+
+		case 20: eliminar_listas(archivos,directorios,nodos); break;  //SALIDA NORMAL, LIBERA Y NO PERSISTE
+
+		default: printf("Opción incorrecta. Por favor ingrese una opción del 1 al 20\n"); break;
 		}
 	}
 	return 0;
@@ -1137,8 +1148,9 @@ void listar_nodos_conectados(t_list *nodos) {
 		printf("\n");
 		for (j = 0; j < elemento->bloques_totales; j++)
 			printf("%d", bitarray_test_bit(elemento->bloques_del_nodo, j));
+		printf ("\n\n");
 	}
-	exit(0);
+	return;
 }
 
 void loguear_estado_de_los_nodos(t_list *lista_nodos) {
@@ -1201,9 +1213,6 @@ void loguear_lista_de_bloques_de_archivo(char* nombre, uint32_t padre) {
 	}
 }
 
-
-
-
 void listar_archivos_subidos(t_list *archivos) {    //VERSION COMPLETA NO APTA PARA USUARIOS
 	int i,j,k,cantidad_archivos,cantidad_bloques,cantidad_copias;
 	t_archivo *elemento;
@@ -1212,7 +1221,7 @@ void listar_archivos_subidos(t_list *archivos) {    //VERSION COMPLETA NO APTA P
 	cantidad_archivos = list_size(archivos);
 	if (cantidad_archivos==0){
 		printf ("No hay archivos cargados en MDFS\n");
-		exit(1);
+		return;
 	}
 	for (i = 0; i < cantidad_archivos; i++) {
 		elemento = list_get(archivos, i);
