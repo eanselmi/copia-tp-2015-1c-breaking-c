@@ -2756,6 +2756,7 @@ int CopiarArchivoAMDFS(int flag, char* archvo_local, char* archivo_mdfs){
     memset(combo.buf_20mb,'\0',BLOCK_SIZE);
     archivo_temporal=malloc(sizeof(t_archivo));
     archivo_temporal->bloques=list_create();
+    printf ("Copiando archivo al MDFS, esta operacion puede tardar varios minutos\n");
     while (fread(&combo.buf_20mb,sizeof(char),sizeof(combo.buf_20mb),archivoLocal) == BLOCK_SIZE){
     		cantBytes+=BLOCK_SIZE;
     		n_copia++;
@@ -3024,6 +3025,7 @@ int CopiarArchivoAMDFS(int flag, char* archvo_local, char* archivo_mdfs){
     	log_info(logger,"El archivo %s se copio correctamente al al MDFS",path);
     	loguear_estado_de_los_nodos(nodos);
     	loguear_espacio_del_sistema(nodos);
+    	printf ("El archivo %s se copio correctamente al al MDFS\n",path);
     	return 0;
 }
 int CopiarArchivoDelMDFS(int flag, char*unArchivo) {
