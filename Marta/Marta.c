@@ -29,13 +29,14 @@ struct sockaddr_in filesystem; // dirección del servidor
 struct sockaddr_in remote_job; // dirección del cliente
 char mensaje[MENSAJE_SIZE];
 int read_size;
-t_list* jobs;
+t_list* listaJobs;
 t_list* listaNodos; //lista de nodos conectados al FS
 t_list* listaArchivos; //lista de archivos del FS
 char identificacion[BUF_SIZE]; //para el mensaje que envie al conectarse para identificarse, puede cambiar
 int nroJob; //Variable global utilizada por cada hilo Job para diferenciar el nombre de un resultado Map/Reduce
 pthread_mutex_t mutexNroJob=PTHREAD_MUTEX_INITIALIZER; //Para que cada Job tenga su numero diferente utilizaran este mutex
 pthread_mutex_t mutexModNodo=PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutexJobs=PTHREAD_MUTEX_INITIALIZER;
 
 int main(int argc, char**argv){
 
@@ -44,7 +45,7 @@ int main(int argc, char**argv){
 	logger = log_create("./martaLog.log", "Marta", true, LOG_LEVEL_INFO);
 	FD_ZERO(&master); // borra los conjuntos maestro y temporal
 	FD_ZERO(&read_fds);
-	printf("%s\n", config_get_string_value(configurador,"IP_FS"));
+//	printf("%s\n", config_get_string_value(configurador,"IP_FS"));
 	filesystem.sin_family = AF_INET;
 	filesystem.sin_addr.s_addr = inet_addr(config_get_string_value(configurador,"IP_FS"));
 	filesystem.sin_port = htons(config_get_int_value(configurador,"PUERTO_FS"));
@@ -68,7 +69,7 @@ int main(int argc, char**argv){
 	int cantidadCopiasArchivo;
 	listaNodos = list_create(); //creo la lista para los nodos que me pasa el FS
 	listaArchivos = list_create(); //creo la lista para los archivos que me pasa el FS
-	jobs=list_create(); //creo la lista de jobs
+	listaJobs=list_create(); //creo la lista de jobs
 
 
 //====================== CONEXION CON FS =================================
@@ -153,20 +154,21 @@ int main(int argc, char**argv){
 
 	//VOY A LISTAR LA LISTA DE NODOS PARA VER SI LLEGO BIEN
 
-	printf ("\n\nLista de nodos recibida");
-	printf ("\n=======================\n\n");
-	int iii, n_nodos;
-	t_nodo *elemento=malloc(sizeof(t_nodo));
-	n_nodos = list_size(listaNodos);
-	for (iii = 0; iii < n_nodos; iii++) {
-		elemento = list_get(listaNodos, iii);
-		printf("\n\n");
-		printf("Nodo_ID: %s\nEstado: %d\nIP: %s\nPuerto de Escucha: %d\n",elemento->nodo_id, elemento->estado, elemento->ip,elemento->puerto_escucha_nodo);
-		printf("Cantidad de mappers:%d\n",elemento->cantMappers);
-		printf("Cantidad de reducers:%d\n",elemento->cantReducers);
-		printf("\n");
-	}
+//	printf ("\n\nLista de nodos recibida");
+//	printf ("\n=======================\n\n");
+//	int iii, n_nodos;
+//	t_nodo *elemento=malloc(sizeof(t_nodo));
+//	n_nodos = list_size(listaNodos);
+//	for (iii = 0; iii < n_nodos; iii++) {
+//		elemento = list_get(listaNodos, iii);
+//		printf("\n\n");
+//		printf("Nodo_ID: %s\nEstado: %d\nIP: %s\nPuerto de Escucha: %d\n",elemento->nodo_id, elemento->estado, elemento->ip,elemento->puerto_escucha_nodo);
+//		printf("Cantidad de mappers:%d\n",elemento->cantMappers);
+//		printf("Cantidad de reducers:%d\n",elemento->cantReducers);
+//		printf("\n");
+//	}
 
+	estadoMarta();
 //================================== FIN DEL ENVIO DE LA LISTA DE NODOS DEL FS =================================================
 
 
@@ -178,7 +180,7 @@ int main(int argc, char**argv){
 		log_error(logger,"FALLO el Recv de cantidad de archivos");
 		exit(-1);
 	}
-	printf ("Cantidad de archivos a recibir: %d\n",cantArchivos);
+	//printf ("Cantidad de archivos a recibir: %d\n",cantArchivos);
 	j=0;
 	while (j < cantArchivos){
 		//primero los datos de t_archivo, la lista de archivos
@@ -189,14 +191,14 @@ int main(int argc, char**argv){
 			log_error(logger,"FALLO el Recv del nombre del archivo");
 			exit(-1);
 		}
-		printf ("...Nombre Archivo: %s\n",nombreArchivo);
+		//printf ("...Nombre Archivo: %s\n",nombreArchivo);
 		//pathArchivo=string_new(); //no enviamos path por ahora
 		if ((nbytes = recv(socket_fs, &padreArchivo, sizeof(uint32_t), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
 			perror("recv");
 			log_error(logger,"FALLO el Recv del padre del archivo");
 			exit(-1);
 		}
-		printf ("...Padre del archivo: %d\n",padreArchivo);
+		//printf ("...Padre del archivo: %d\n",padreArchivo);
 		strcpy(archivoTemporal->nombre, nombreArchivo);
 		//strcpy(archivoTemporal->path, pathArchivo);
 		archivoTemporal->padre = padreArchivo;
@@ -206,7 +208,7 @@ int main(int argc, char**argv){
 			log_error(logger,"FALLO el Recv de cantidad de bloques del archivo");
 			exit(-1);
 		}
-		printf ("...Cantidad de bloques del archivo: %d\n",cantidadBloquesArchivo);
+		//printf ("...Cantidad de bloques del archivo: %d\n",cantidadBloquesArchivo);
 		archivoTemporal->bloques = list_create();
 		k=0;
 		while (k < cantidadBloquesArchivo){
@@ -217,7 +219,7 @@ int main(int argc, char**argv){
 				log_error(logger,"FALLO el Recv de cantidad de copias del bloque del archivo");
 				exit(-1);
 			}
-			printf ("... ...Cantidad de copias del bloque:%d\n",cantidadCopiasArchivo);
+		//	printf ("... ...Cantidad de copias del bloque:%d\n",cantidadCopiasArchivo);
 			l=0;
 			while (l < cantidadCopiasArchivo){
 				t_copias* copiaBloqueTemporal = malloc(sizeof(t_copias));
@@ -227,13 +229,13 @@ int main(int argc, char**argv){
 					log_error(logger,"FALLO el Recv del nodo de la copia del archivo");
 					exit(-1);
 				}
-				printf ("... ... ...Nodo ID: %s\n",nodoIdArchivo);
+			//	printf ("... ... ...Nodo ID: %s\n",nodoIdArchivo);
 				if ((nbytes = recv(socket_fs, &bloqueNodoArchivo, sizeof(int), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
 					perror("recv");
 					log_error(logger,"FALLO el Recv del bloque del nodo donde está el archivo");
 					exit(-1);
 				}
-				printf ("... ... ...Bloque Nodo: %d\n",bloqueNodoArchivo);
+			//	printf ("... ... ...Bloque Nodo: %d\n",bloqueNodoArchivo);
 				copiaBloqueTemporal->nodo=string_new();
 				strcpy(copiaBloqueTemporal->nodo, nodoIdArchivo);
 				copiaBloqueTemporal->bloqueNodo =bloqueNodoArchivo;
@@ -248,33 +250,33 @@ int main(int argc, char**argv){
 	}
 
 	//VOY A LISTAR LA LISTA DE ARCHIVOS PARA VER SI LLEGO BIEN
-
-	int ii,jj,kk,cant_archivos,cant_bloques,cant_copias;
-		t_archivo *archi;
-		t_bloque *bloque;
-		t_copias *copia;
-		cant_archivos = list_size(listaArchivos);
-		if (cant_archivos==0){
-			printf ("No hay archivos cargados en MDFS\n");
-		}
-		for (ii = 0; ii < cant_archivos; ii++) {
-			archi = list_get(listaArchivos, ii);
-			printf("\n\n");
-			printf("Archivo: %s\nPadre: %d\n",archi->nombre,archi->padre);
-			printf("\n");
-			cant_bloques=list_size(archi->bloques);
-			for (jj = 0; jj < cant_bloques; jj++){
-				bloque=list_get(archi->bloques,jj);
-				printf ("Numero de bloque: %d\n",jj);
-				cant_copias=list_size(bloque->copias);
-				for (kk=0;kk<cant_copias;kk++){
-					copia=list_get(bloque->copias,kk);
-					printf ("Copia %d del bloque %d\n",kk,jj);
-					printf ("----------------------\n");
-					printf ("	Nodo: %s\n	Bloque: %d\n\n",copia->nodo,copia->bloqueNodo);
-				}
-			}
-		}
+//
+//	int ii,jj,kk,cant_archivos,cant_bloques,cant_copias;
+//		t_archivo *archi;
+//		t_bloque *bloque;
+//		t_copias *copia;
+//		cant_archivos = list_size(listaArchivos);
+//		if (cant_archivos==0){
+//			printf ("No hay archivos cargados en MDFS\n");
+//		}
+//		for (ii = 0; ii < cant_archivos; ii++) {
+//			archi = list_get(listaArchivos, ii);
+//			printf("\n\n");
+//			printf("Archivo: %s\nPadre: %d\n",archi->nombre,archi->padre);
+//			printf("\n");
+//			cant_bloques=list_size(archi->bloques);
+//			for (jj = 0; jj < cant_bloques; jj++){
+//				bloque=list_get(archi->bloques,jj);
+//				printf ("Numero de bloque: %d\n",jj);
+//				cant_copias=list_size(bloque->copias);
+//				for (kk=0;kk<cant_copias;kk++){
+//					copia=list_get(bloque->copias,kk);
+//					printf ("Copia %d del bloque %d\n",kk,jj);
+//					printf ("----------------------\n");
+//					printf ("	Nodo: %s\n	Bloque: %d\n\n",copia->nodo,copia->bloqueNodo);
+//				}
+//			}
+//		}
 
 
 //================================= FIN DEL ENVIO DE LA LISTA DE ARCHIVOS DEL FS ================================================
@@ -478,12 +480,12 @@ void *connection_handler_jobs(){
 							}
 						}
 						//UPDATES DE MARTA, novedades que envia el FS
-						printf ("%s\n",identificacion);
+//						printf ("%s\n",identificacion);
 						if (strcmp(identificacion,"marta_formatea")==0){
-							printf ("Voy a formatear las estructuras por pedido del FS\n");
-							int cantArchi;
-							cantArchi=list_size(listaArchivos);
-							printf("Cantidad de archivos antes de formatear: %d\n", cantArchi);
+							//printf ("Voy a formatear las estructuras por pedido del FS\n");
+//							int cantArchi;
+//							cantArchi=list_size(listaArchivos);
+							//printf("Cantidad de archivos antes de formatear: %d\n", cantArchi);
 							//Se borra la lista de archivos
 							list_destroy_and_destroy_elements(listaArchivos, (void*) eliminarListaArchivos2);
 							//Se pasan a estado no disponible los nodos que haya conectados
@@ -493,36 +495,36 @@ void *connection_handler_jobs(){
 								unNodoF=list_get(listaNodos,u);
 								unNodoF->estado=0;
 							}
-							int cantArchi2;
-							cantArchi2=list_size(listaArchivos);
-							printf("Cantidad de archivos en MDFS luego de formatear: %d\n", cantArchi2);
+//							int cantArchi2;
+//							cantArchi2=list_size(listaArchivos);
+					//		printf("Cantidad de archivos en MDFS luego de formatear: %d\n", cantArchi2);
 							//listo para ver comprobar que los cambio de estado
-							t_nodo* nodoL;
-							int v, w;
-							v= list_size(listaNodos);
-							printf("Nodos en la lista: %d \n", v);
-							for (w=0;w<v;w++){
-								nodoL = list_get(listaNodos,w);
-								printf ("Nodo_ID:%s Estado: %d\n", nodoL->nodo_id, nodoL->estado );
-							}
+//							t_nodo* nodoL;
+//							int v, w;
+//							v= list_size(listaNodos);
+//							//printf("Nodos en la lista: %d \n", v);
+//							for (w=0;w<v;w++){
+//								nodoL = list_get(listaNodos,w);
+//							//	printf ("Nodo_ID:%s Estado: %d\n", nodoL->nodo_id, nodoL->estado );
+//							}
 
 						}
 						//fin de update FormatearFileSystem
 						if (strcmp(identificacion,"elim_arch")==0){
-							printf ("Voy a borrar un archivo de las estructuras\n");
+							//printf ("Voy a borrar un archivo de las estructuras\n");
 							memset(nombreArchivoNovedad, '\0',200);
 							if ((nbytes = recv(socket_fs, nombreArchivoNovedad,	sizeof(nombreArchivoNovedad), MSG_WAITALL))	< 0) { //si entra aca es porque hubo un error
 								perror("recv");
 								log_error(logger,"FALLO el Recv del nombre del archivo a eliminar");
 								exit(-1);
 							}
-							printf("...Nombre Archivo a eliminar: %s\n", nombreArchivoNovedad);
+							//printf("...Nombre Archivo a eliminar: %s\n", nombreArchivoNovedad);
 							if ((nbytes = recv(socket_fs, &padreArchivoNovedad, sizeof(uint32_t), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
 								perror("recv");
 								log_error(logger,"FALLO el Recv del padre del archivo a eliminar");
 								exit(-1);
 							}
-							printf ("...Padre del archivo a eliminar: %d\n",padreArchivoNovedad);
+						//	printf ("...Padre del archivo a eliminar: %d\n",padreArchivoNovedad);
 							t_archivo* archivoAux;
 							t_bloque* bloqueAux;
 							int posArchivoAux;
@@ -542,7 +544,7 @@ void *connection_handler_jobs(){
 						}
 						//fin update de EliminarArchivo
 						if (strcmp(identificacion,"renom_arch")==0){
-							printf ("Voy a renombrar un archivo de las estructuras\n");
+						//	printf ("Voy a renombrar un archivo de las estructuras\n");
 							memset(nombreArchivoNovedad, '\0',200);
 							memset(nuevoNombreArchivoNovedad, '\0',200);
 							if ((nbytes = recv(socket_fs, nombreArchivoNovedad,	sizeof(nombreArchivoNovedad), MSG_WAITALL))	< 0) { //si entra aca es porque hubo un error
@@ -550,56 +552,56 @@ void *connection_handler_jobs(){
 								log_error(logger,"FALLO el Recv del nombre viejo del archivo a renombrar");
 								exit(-1);
 							}
-							printf("...Nombre Archivo a renombrar: %s\n", nombreArchivoNovedad);
+						//	printf("...Nombre Archivo a renombrar: %s\n", nombreArchivoNovedad);
 							if ((nbytes = recv(socket_fs, &padreArchivoNovedad, sizeof(uint32_t), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
 								perror("recv");
 								log_error(logger,"FALLO el Recv del padre del archivo a renombrar");
 								exit(-1);
 							}
-							printf ("...Padre del archivo a renombrar: %d\n",padreArchivoNovedad);
+						//	printf ("...Padre del archivo a renombrar: %d\n",padreArchivoNovedad);
 							if ((nbytes = recv(socket_fs, nuevoNombreArchivoNovedad,	sizeof(nuevoNombreArchivoNovedad), MSG_WAITALL))	< 0) { //si entra aca es porque hubo un error
 								perror("recv");
 								log_error(logger,"FALLO el Recv del nombre del archivo a renombrar");
 								exit(-1);
 							}
-							printf("...Nombre nuevo de archivo a renombrado: %s\n", nuevoNombreArchivoNovedad);
+						//	printf("...Nombre nuevo de archivo a renombrado: %s\n", nuevoNombreArchivoNovedad);
 							t_archivo* archivoAux;
 							archivoAux = buscarArchivo(nombreArchivoNovedad, padreArchivoNovedad);
 							strcpy(archivoAux->nombre, nuevoNombreArchivoNovedad);
-							printf("archivo renombrado a: %s\n", archivoAux->nombre);
-							printf("padre de archivo renombrado: %d\n", archivoAux->padre);
+//							printf("archivo renombrado a: %s\n", archivoAux->nombre);
+//							printf("padre de archivo renombrado: %d\n", archivoAux->padre);
 						}
 						//fin update de RenombrarArchivo
 						if (strcmp(identificacion,"mov_arch")==0){
-							printf ("Voy a mover un archivo de las estructuras\n");
+//							printf ("Voy a mover un archivo de las estructuras\n");
 							memset(nombreArchivoNovedad, '\0',200);
 							if ((nbytes = recv(socket_fs, nombreArchivoNovedad,	sizeof(nombreArchivoNovedad), MSG_WAITALL))	< 0) { //si entra aca es porque hubo un error
 								perror("recv");
 								log_error(logger,"FALLO el Recv del nombre del archivo a mover");
 								exit(-1);
 							}
-							printf("...Nombre Archivo a mover: %s\n", nombreArchivoNovedad);
+//							printf("...Nombre Archivo a mover: %s\n", nombreArchivoNovedad);
 							if ((nbytes = recv(socket_fs, &padreArchivoNovedad, sizeof(uint32_t), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
 								perror("recv");
 								log_error(logger,"FALLO el Recv del viejo padre del archivo");
 								exit(-1);
 							}
-							printf("...Viejo padre del archivo: %d\n", padreArchivoNovedad);
+//							printf("...Viejo padre del archivo: %d\n", padreArchivoNovedad);
 							if ((nbytes = recv(socket_fs, &nuevoPadreArchivoNovedad, sizeof(uint32_t), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
 								perror("recv");
 								log_error(logger,"FALLO el Recv del nuevo padre del archivo");
 								exit(-1);
 							}
-							printf("...Nuevo padre del archivo: %d\n", nuevoPadreArchivoNovedad);
+//							printf("...Nuevo padre del archivo: %d\n", nuevoPadreArchivoNovedad);
 							t_archivo* archivoAux;
 							archivoAux = buscarArchivo(nombreArchivoNovedad, padreArchivoNovedad);
 							archivoAux->padre= nuevoPadreArchivoNovedad;
-							printf("archivo movido a: %s\n", archivoAux->nombre);
-							printf("padre nuevo: %d\n", archivoAux->padre);
+//							printf("archivo movido a: %s\n", archivoAux->nombre);
+//							printf("padre nuevo: %d\n", archivoAux->padre);
 						}
 						//fin update de mover archivo
 						if (strcmp(identificacion,"nuevo_arch")==0){
-							printf ("Voy a agregar un nuevo archivo a las estructuras\n");
+//							printf ("Voy a agregar un nuevo archivo a las estructuras\n");
 							t_archivo* nuevoArchivo = malloc(sizeof(t_archivo));
 							memset(nombreArchivoNovedad,'\0',200);
 							if ((nbytes = recv(socket_fs, nombreArchivoNovedad, sizeof(nombreArchivoNovedad), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
@@ -607,13 +609,13 @@ void *connection_handler_jobs(){
 								log_error(logger,"FALLO el Recv del nombre del archivo novedad");
 								exit(-1);
 							}
-							printf ("...Nombre Archivo: %s\n",nombreArchivoNovedad);
+//							printf ("...Nombre Archivo: %s\n",nombreArchivoNovedad);
 							if ((nbytes = recv(socket_fs, &padreArchivoNovedad, sizeof(uint32_t), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
 								perror("recv");
 								log_error(logger,"FALLO el Recv del padre del archivo");
 								exit(-1);
 							}
-							printf ("...Padre del archivo: %d\n",padreArchivoNovedad);
+//							printf ("...Padre del archivo: %d\n",padreArchivoNovedad);
 							strcpy(nuevoArchivo->nombre, nombreArchivoNovedad);
 							nuevoArchivo->padre = padreArchivoNovedad;
 							if ((nbytes = recv(socket_fs, &cantidadBloquesArchivo, sizeof(int), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
@@ -621,7 +623,7 @@ void *connection_handler_jobs(){
 								log_error(logger,"FALLO el Recv de cantidad de bloques del archivo");
 								exit(-1);
 							}
-							printf ("...Cantidad de bloques del archivo: %d\n",cantidadBloquesArchivo);
+//							printf ("...Cantidad de bloques del archivo: %d\n",cantidadBloquesArchivo);
 							nuevoArchivo->bloques = list_create();
 							a=0;
 							while (a < cantidadBloquesArchivo){
@@ -632,7 +634,7 @@ void *connection_handler_jobs(){
 									log_error(logger,"FALLO el Recv de cantidad de copias del bloque del archivo");
 									exit(-1);
 								}
-								printf ("... ...Cantidad de copias del bloque:%d\n",cantCopiasArchivoNovedad);
+//								printf ("... ...Cantidad de copias del bloque:%d\n",cantCopiasArchivoNovedad);
 								b=0;
 								while (b < cantCopiasArchivoNovedad){
 									t_copias* copiaBloqueNovedad = malloc(sizeof(t_copias));
@@ -642,13 +644,13 @@ void *connection_handler_jobs(){
 										log_error(logger,"FALLO el Recv del nodo de la copia del archivo");
 										exit(-1);
 									}
-									printf ("... ... ...Nodo ID: %s\n",nodoId);
+//									printf ("... ... ...Nodo ID: %s\n",nodoId);
 									if ((nbytes = recv(socket_fs, &bloqueNodo, sizeof(int), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
 										perror("recv");
 										log_error(logger,"FALLO el Recv del bloque del nodo donde está el archivo");
 										exit(-1);
 									}
-									printf ("... ... ...Bloque Nodo: %d\n",bloqueNodo);
+//									printf ("... ... ...Bloque Nodo: %d\n",bloqueNodo);
 									copiaBloqueNovedad->nodo=string_new();
 									strcpy(copiaBloqueNovedad->nodo, nodoId);
 									copiaBloqueNovedad->bloqueNodo =bloqueNodo;
@@ -660,33 +662,33 @@ void *connection_handler_jobs(){
 							}
 							list_add(listaArchivos, nuevoArchivo);
 
-							//listar para ver si se agregó bien a la lista
-							int iu,ju,ku, cant_archivosu,cant_bloquesu,cant_copiasu;
-							t_archivo *archiu;
-							t_bloque *bloqueu;
-							t_copias *copiau;
-							cant_archivosu = list_size(listaArchivos);
-							if (cant_archivosu==0){
-								printf ("No hay archivos cargados en MDFS\n");
-							}
-							for (iu = 0; iu < cant_archivosu; iu++) {
-								archiu = list_get(listaArchivos, iu);
-								printf("\n\n");
-								printf("Archivo: %s\nPadre: %d\n",archiu->nombre,archiu->padre);
-								printf("\n");
-								cant_bloquesu=list_size(archiu->bloques);
-								for (ju = 0; ju < cant_bloquesu; ju++){
-									bloqueu=list_get(archiu->bloques,ju);
-									printf ("Numero de bloque: %d\n",ju);
-									cant_copiasu=list_size(bloqueu->copias);
-									for (ku=0;ku<cant_copiasu;ku++){
-										copiau=list_get(bloqueu->copias,ku);
-										printf ("Copia %d del bloque %d\n",ku,ju);
-										printf ("----------------------\n");
-										printf ("	Nodo: %s\n	Bloque: %d\n\n",copiau->nodo,copiau->bloqueNodo);
-									}
-								}
-							}
+//							//listar para ver si se agregó bien a la lista
+//							int iu,ju,ku, cant_archivosu,cant_bloquesu,cant_copiasu;
+//							t_archivo *archiu;
+//							t_bloque *bloqueu;
+//							t_copias *copiau;
+//							cant_archivosu = list_size(listaArchivos);
+//							if (cant_archivosu==0){
+////								printf ("No hay archivos cargados en MDFS\n");
+//							}
+//							for (iu = 0; iu < cant_archivosu; iu++) {
+//								archiu = list_get(listaArchivos, iu);
+////								printf("\n\n");
+////								printf("Archivo: %s\nPadre: %d\n",archiu->nombre,archiu->padre);
+////								printf("\n");
+//								cant_bloquesu=list_size(archiu->bloques);
+//								for (ju = 0; ju < cant_bloquesu; ju++){
+//									bloqueu=list_get(archiu->bloques,ju);
+////									printf ("Numero de bloque: %d\n",ju);
+//									cant_copiasu=list_size(bloqueu->copias);
+//									for (ku=0;ku<cant_copiasu;ku++){
+//										copiau=list_get(bloqueu->copias,ku);
+////										printf ("Copia %d del bloque %d\n",ku,ju);
+////										printf ("----------------------\n");
+////										printf ("	Nodo: %s\n	Bloque: %d\n\n",copiau->nodo,copiau->bloqueNodo);
+//									}
+//								}
+//							}
 
 
 
@@ -694,33 +696,33 @@ void *connection_handler_jobs(){
 						//fin update de CopiarArchivoAMDFS
 
 						if (strcmp(identificacion,"elim_bloque")==0){
-							printf ("Voy a eliminar una copia de un bloque de un archivo a las estructuras\n");
+//							printf ("Voy a eliminar una copia de un bloque de un archivo a las estructuras\n");
 							memset(nombreArchivoNovedad, '\0',200);
 							if ((nbytes = recv(socket_fs, nombreArchivoNovedad,	sizeof(nombreArchivoNovedad), MSG_WAITALL))	< 0) { //si entra aca es porque hubo un error
 								perror("recv");
 								log_error(logger,"FALLO el Recv del nombre del archivo del borrar bloque");
 								exit(-1);
 							}
-							printf("...Nombre del archivo del borrar bloque: %s\n", nombreArchivoNovedad);
+//							printf("...Nombre del archivo del borrar bloque: %s\n", nombreArchivoNovedad);
 							if ((nbytes = recv(socket_fs, &padreArchivoNovedad, sizeof(uint32_t), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
 								perror("recv");
 								log_error(logger,"FALLO el Recv del padre del archivo del borrar bloque");
 								exit(-1);
 							}
-							printf ("...Padre del archivo del borrar bloque: %d\n",padreArchivoNovedad);
+//							printf ("...Padre del archivo del borrar bloque: %d\n",padreArchivoNovedad);
 							memset(nodoId,'\0',6);
 							if ((nbytes = recv(socket_fs, nodoId, sizeof(nodoId), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
 								perror("recv");
 								log_error(logger,"FALLO el Recv del nodo del borrar bloque");
 								exit(-1);
 							}
-							printf("...Nodo del archivo del borrar bloque: %s\n", nodoId);
+//							printf("...Nodo del archivo del borrar bloque: %s\n", nodoId);
 							if ((nbytes = recv(socket_fs, &bloqueNodo, sizeof(int), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
 								perror("recv");
 								log_error(logger,"FALLO el Recv del bloque del nodo del borrar bloque");
 								exit(-1);
 							}
-							printf ("...Bloque del borrar bloque: %d\n",bloqueNodo);
+//							printf ("...Bloque del borrar bloque: %d\n",bloqueNodo);
 							t_list * B;
 							int copiaEncontrada = 0;
 							B = buscarBloques (nombreArchivoNovedad, padreArchivoNovedad);
@@ -751,38 +753,39 @@ void *connection_handler_jobs(){
 
 						// fin de update eliminar bloque
 						if (strcmp(identificacion,"nuevo_bloque")==0){
-							printf ("Voy a agregar una nueva copia de un bloque de un archivo a las estructuras\n");
+//							printf ("Voy a agregar una nueva copia de un bloque de un archivo a las estructuras\n");
 							if ((nbytes = recv(socket_fs, nombreArchivoNovedad,	sizeof(nombreArchivoNovedad), MSG_WAITALL))	< 0) { //si entra aca es porque hubo un error
 								perror("recv");
 								log_error(logger,"FALLO el Recv del nombre del archivo del copiar bloque");
 								exit(-1);
 							}
-							printf("...Nombre del archivo del copiar bloque: %s\n", nombreArchivoNovedad);
+//							printf("...Nombre del archivo del copiar bloque: %s\n", nombreArchivoNovedad);
 							if ((nbytes = recv(socket_fs, &padreArchivoNovedad, sizeof(uint32_t), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
 								perror("recv");
 								log_error(logger,"FALLO el Recv del padre del archivo del copiar bloque");
 								exit(-1);
 							}
-							printf ("...Padre del archivo del copiar bloque: %d\n",padreArchivoNovedad);
+//							printf ("...Padre del archivo del copiar bloque: %d\n",padreArchivoNovedad);
 							if ((nbytes = recv(socket_fs, &bloqueNodo, sizeof(int), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
 								perror("recv");
 								log_error(logger,"FALLO el Recv del bloque del nodo del copiar bloque");
 								exit(-1);
 							}
-							printf ("...Bloque del copiar bloque: %d\n",bloqueNodo);
+//							printf ("...Bloque del copiar bloque: %d\n",bloqueNodo);
 							memset(nodoId,'\0',6);
 							if ((nbytes = recv(socket_fs, nodoId, sizeof(nodoId), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
 								perror("recv");
 								log_error(logger,"FALLO el Recv del nodo del copiar bloque");
 								exit(-1);
 							}
-							printf("...Nodo del archivo del copiar bloque: %s\n", nodoId);
+//							printf("...Nodo del archivo del copiar bloque: %s\n", nodoId);
 							if ((nbytes = recv(socket_fs, &bloqueNodoDestino, sizeof(int), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
 								perror("recv");
 								log_error(logger,"FALLO el Recv del bloque del nodo destino del copiar bloque");
 								exit(-1);
 							}
-							printf ("...Bloque del copiar bloque: %d\n",bloqueNodoDestino);							t_archivo *miArchivo;
+//							printf ("...Bloque del copiar bloque: %d\n",bloqueNodoDestino);
+							t_archivo *miArchivo;
 							t_bloque *miBloque;
 							t_copias *miCopia=malloc(sizeof(t_copias));
 							int g;
@@ -814,7 +817,7 @@ void *connection_handler_jobs(){
 
 						//Fin de update copiar bloque
 						if (strcmp(identificacion,"nodo_desc")==0){
-							printf ("Voy a actualizar el estado de un nodo desconectado\n");
+//							printf ("Voy a actualizar el estado de un nodo desconectado\n");
 							memset(nodoId,'\0',6);
 							if ((nbytes = recv(socket_fs, nodoId, sizeof(nodoId), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
 								perror("recv");
@@ -830,9 +833,10 @@ void *connection_handler_jobs(){
 									break;
 								}
 							}
+							estadoMarta();
 						}
 						if (strcmp(identificacion,"nodo_elim")==0){
-							printf ("Voy a actualizar el estado de un nodo eliminado\n");
+//							printf ("Voy a actualizar el estado de un nodo eliminado\n");
 							memset(nodoId,'\0',6);
 							if ((nbytes = recv(socket_fs, nodoId, sizeof(nodoId), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
 								perror("recv");
@@ -848,9 +852,10 @@ void *connection_handler_jobs(){
 									break;
 								}
 							}
+							estadoMarta();
 						}
 						if (strcmp(identificacion,"nodo_agre")==0){
-							printf ("Voy a actualizar el estado de un nodo agregado\n");
+//							printf ("Voy a actualizar el estado de un nodo agregado\n");
 							memset(nodoId,'\0',6);
 							if ((nbytes = recv(socket_fs, nodoId, sizeof(nodoId), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
 								perror("recv");
@@ -866,9 +871,10 @@ void *connection_handler_jobs(){
 									break;
 								}
 							}
+							estadoMarta();
 						}
 						if (strcmp(identificacion,"nodo_nuevo")==0){
-							printf ("Voy a actualizar la lista de nodos agregando un nodo nuevo\n");
+//							printf ("Voy a actualizar la lista de nodos agregando un nodo nuevo\n");
 							memset(nodoId,'\0',6);
 							if ((nbytes = recv(socket_fs, nodoId, sizeof(nodoId), MSG_WAITALL)) < 0) { //si entra aca es porque hubo un error
 								perror("recv");
@@ -898,6 +904,8 @@ void *connection_handler_jobs(){
 							nodoTemporal->cantReducers=0;
 							list_add(listaNodos, nodoTemporal);
 							i++;
+							estadoMarta();
+
 						}
 					}
 //					else{
@@ -930,14 +938,21 @@ void *atenderJob (int *socketJob) {
 	memset(archivosDelJob, '\0', MENSAJE_SIZE);
 	memset(archivoResultado,'\0', 200);
 	char* stringNroJob=string_new();
+	t_job* nuevoJob=malloc(sizeof(t_job));
+
+	memset(nuevoJob->estado,'\0',10);
+	memset(nuevoJob->resultadoDelJob,'\0',200);
+	memset(nuevoJob->combiner,'\0',3);
+	nuevoJob->mapperPendientes=0;
+	nuevoJob->reducePendientes=0;
 
 	//Mediante un mutex asigno al string "stringNroJob" el numero actual de nroJob y le sumo 1
 	pthread_mutex_lock(&mutexNroJob);
 	string_append(&stringNroJob,string_itoa(nroJob));
+	nuevoJob->nroJob=nroJob;
 	nroJob++;
 	pthread_mutex_unlock(&mutexNroJob);
 
-	estadoNodos();
 
 	//Recibe mensaje de si es o no combiner
 	if(recv(*socketJob,mensajeCombiner,sizeof(mensajeCombiner),MSG_WAITALL)==-1){
@@ -946,7 +961,7 @@ void *atenderJob (int *socketJob) {
 		//exit(-1);
 	}
 	//Para probar que recibio el atributo
-	printf("El Job %s acepta combiner\n",(char*)mensajeCombiner);
+//	printf("El Job %s acepta combiner\n",(char*)mensajeCombiner);
 
 	//Recibe el archivo resultado del Job
 	if(recv(*socketJob,archivoResultado,sizeof(archivoResultado),MSG_WAITALL)==-1){
@@ -955,8 +970,20 @@ void *atenderJob (int *socketJob) {
 	//exit(-1);
 	}
 
+
+	strcpy(nuevoJob->resultadoDelJob,archivoResultado);
+	strcpy(nuevoJob->combiner,mensajeCombiner);
+	strcpy(nuevoJob->estado,"En curso");
+
+	pthread_mutex_lock(&mutexJobs);
+
+	list_add(listaJobs,nuevoJob);
+
+	pthread_mutex_unlock(&mutexJobs);
+
+
 	//Para probar que recibio el archivo resultado final
-	printf("nombre del archivo resultado final %s \n",(char*)archivoResultado);
+//	printf("nombre del archivo resultado final %s \n",(char*)archivoResultado);
 
 	if((recv(*socketJob, archivosDelJob, sizeof(archivosDelJob), MSG_WAITALL)) <= 0) {
 		perror("recv");
@@ -967,8 +994,6 @@ void *atenderJob (int *socketJob) {
 	/*Sumamos la cantidad total de bloques del todos los archivo de un JOB.
 	 * Esa cantidad es la cantida total de los map que se deben ejecutar.*/
 
-	t_job unJob;
-	unJob.mapperPendientes =  cantidadTotalDeBloques(archivosDelJob);
 
 
 	// Separo el mensaje que recibo con los archivos a trabajar (Job envía todos juntos separados con ,)
@@ -990,7 +1015,7 @@ void *atenderJob (int *socketJob) {
 
 		memset(archivoAPedirPadre,'\0',TAM_NOMFINAL);
 
-		printf("Se debe trabajar en el archivo:%s\n",archivos[posicionArchivo]);
+//		printf("Se debe trabajar en el archivo:%s\n",archivos[posicionArchivo]);
 		//Separo el nombre del archivo por barras
 		arrayArchivo = string_split(archivos[posicionArchivo], "/");
 		for(posArray=0;arrayArchivo[posArray]!=NULL;posArray++){
@@ -1043,6 +1068,10 @@ void *atenderJob (int *socketJob) {
 
 			//Si el archivo no está disponible, no se hace el Job
 			if(!archivoDisponible(buscarArchivo(nombreArchivo,padre))){
+				memset(nuevoJob->estado,'\0',10);
+				strcpy(nuevoJob->estado,"Fallido");
+				estadoMarta();
+
 				char msjJob[BUF_SIZE];
 				memset(msjJob,'\0',BUF_SIZE);
 				strcpy(msjJob,"arch no disp");
@@ -1153,6 +1182,8 @@ void *atenderJob (int *socketJob) {
 			sumarCantMapper(nodoAux->nodo_id);
 			pthread_mutex_unlock(&mutexModNodo);
 
+			nuevoJob->mapperPendientes++;
+
 			free(nombreArchivoTemp);
 			free(pathArchivoTemp);
 //			free(tiempo);
@@ -1161,11 +1192,17 @@ void *atenderJob (int *socketJob) {
 		}
 	}
 
-	printf("Se enviaron todos los map --> Se esperan las respuestas\n");
-	estadoNodos();
+	//printf("Se enviaron todos los map --> Se esperan las respuestas\n");
+	memset(nuevoJob->estado,'\0',10);
+	strcpy(nuevoJob->estado,"Maps");
+	estadoMarta();
 	//SE ESPERAN EN UN CICLO FOR LA CANTIDAD DE RESPUESTAS IGUAL A CUANTOS MAPPER SE HALLAN ENVIADO (con tamaño de la listaMappers)
 
 	for(nroRespuesta=0;nroRespuesta<list_size(listaMappers);nroRespuesta++){
+
+		if(nroRespuesta%4==0){ //cada 4 respuestas muestro el estado
+			estadoMarta();
+		}
 
 		t_respuestaMap respuestaMap;
 		//Recibo respuesta del Job de cada map
@@ -1187,9 +1224,9 @@ void *atenderJob (int *socketJob) {
 		map->resultado = respuestaMap.resultado;
 
 		if(map->resultado ==1){
-			printf("La cantidad de map pendiente del job es %d",unJob.mapperPendientes ++);
-			printf("El map %s falló\n",map->archivoResultadoMap);
-			printf("El nodo: %s esta deshabiltado\n", nodoAux->nodo_id);
+//			printf("La cantidad de map pendiente del job es %d",unJob.mapperPendientes ++);
+//			printf("El map %s falló\n",map->archivoResultadoMap);
+//			printf("El nodo: %s esta deshabiltado\n", nodoAux->nodo_id);
 			int posCopia;
 			int cantidadCopias;
 			t_list *bloquesNoMap;
@@ -1214,6 +1251,11 @@ void *atenderJob (int *socketJob) {
 				}
 			}
 
+			if(list_size(nodosQueFallaron)>1){ // Si ya habia maps OK para este Job, y es el primero de un nodo que llego KO
+				nuevoJob->mapperPendientes=nuevoJob->mapperPendientes+(list_size(nodosQueFallaron)-1);
+			}
+
+
 			int posFalla;
 			for(posFalla=0;posFalla<list_size(nodosQueFallaron);posFalla++){
 
@@ -1225,6 +1267,9 @@ void *atenderJob (int *socketJob) {
 
 				//Si el archivo no está disponible, no se hace el Job
 				if(!archivoDisponible(buscarArchivo(nodoAReplanificar->nombreArchivoDelJob,nodoAReplanificar->padreArchivoJob))){
+					memset(nuevoJob->estado,'\0',10);
+					strcpy(nuevoJob->estado,"Fallido");
+					estadoMarta();
 					char msjJob[BUF_SIZE];
 					memset(msjJob,'\0',BUF_SIZE);
 					strcpy(msjJob,"arch no disp");
@@ -1309,8 +1354,8 @@ void *atenderJob (int *socketJob) {
 					log_error(logger,"Fallo el envio de los datos para el mapper");
 					exit(-1);
 				}
-				printf("El estado del nodo %s es habilitado\n", otroNodoAux->nodo_id);
-				printf("El nodo %s está ejecutando map\n", otroNodoAux->nodo_id);
+//				printf("El estado del nodo %s es habilitado\n", otroNodoAux->nodo_id);
+//				printf("El nodo %s está ejecutando map\n", otroNodoAux->nodo_id);
 				//rellenamos un nuevo struct t_replanificar map conlos datos del map que acabamos de enviar y lo agregamos a lista mappers
 				t_replanificarMap *nuevoMap=malloc(sizeof(t_replanificarMap));
 
@@ -1340,23 +1385,25 @@ void *atenderJob (int *socketJob) {
 		}
 		if(map->resultado==0){
 
-			printf("El map %s salio ok\n",map->archivoResultadoMap);
+//			printf("El map %s salio ok\n",map->archivoResultadoMap);
 			// buscar en la lista del struct el nodo_id y luego buscarlo en la lista gral de nodos y restarle 1 a su catMappers
 			pthread_mutex_lock(&mutexModNodo);
 			restarCantMapper(map->nodoId);
 			pthread_mutex_unlock(&mutexModNodo);
+			nuevoJob->mapperPendientes--;
 
 		}
 	}
 
-	printf("Llegaron todas las respuestas --> Se planifican los reduce\n");
-	estadoNodos();
+	//printf("Llegaron todas las respuestas --> Se planifican los reduce\n");
+	memset(nuevoJob->estado,'\0',10);
+	strcpy(nuevoJob->estado,"Reduce");
+	estadoMarta();
 
 /************************************************************************************************************************************************
 * SIN COMBINER
 * ************************************************************************************************************************************************/
-	unJob.reducePendientes = 1;
-	printf("Si es con combiner la cantidad de reduce pendientes es %d\n",unJob.reducePendientes);
+	//printf("Si es con combiner la cantidad de reduce pendientes es %d\n",unJob.reducePendientes);
 	sleep(5);
 
 	//Si es sin combiner manda a hacer reduce al nodo que tenga mas archivos resultados MAP
@@ -1501,8 +1548,10 @@ void *atenderJob (int *socketJob) {
 		sumarCantReducers(nodoASumarReduce->nodo_id);
 		pthread_mutex_unlock(&mutexModNodo);
 
-		printf("Se envio un reduce sin combiner\n");
-		estadoNodos();
+		nuevoJob->reducePendientes++;
+
+//		printf("Se envio un reduce sin combiner\n");
+		estadoMarta();
 
 		//ACA RECIBO LA RESPUESTA DE JOB
 		t_respuestaReduce respuestaReduceFinal;
@@ -1513,8 +1562,9 @@ void *atenderJob (int *socketJob) {
 		}
 
 		if(respuestaReduceFinal.resultado == 1){
-			printf("La cantidad de reduce pendiente del job es %d",unJob.reducePendientes ++);
-			printf("El estado del nodo %s es deshabilitado\n", nodoMasRep );
+
+			memset(nuevoJob->estado,'\0',10);
+			strcpy(nuevoJob->estado,"Fallido");
 			//Se aborta la ejecución de Reduce
 			log_info(logger,"Falló el Reduce %s. Se abortará el job",respuestaReduceFinal.archivoResultadoReduce);
 			char jobAborta[BUF_SIZE];
@@ -1528,23 +1578,30 @@ void *atenderJob (int *socketJob) {
 			restarCantReducers(nodoARestar->nodo_id);
 			pthread_mutex_unlock(&mutexModNodo);
 
+			nuevoJob->reducePendientes--;
+
+			estadoMarta();
+
 			close(*socketJob);
 			pthread_exit((void*)0);
 		}
 
 		if(respuestaReduceFinal.resultado == 0){
 
-			printf("Reduce %s exitoso\n",respuestaReduceFinal.archivoResultadoReduce);
+//			printf("Reduce %s exitoso\n",respuestaReduceFinal.archivoResultadoReduce);
 			t_nodo *nodoARestar = buscarNodoPorIPYPuerto(respuestaReduceFinal.ip_nodo,respuestaReduceFinal.puerto_nodo);
 
 			pthread_mutex_lock(&mutexModNodo);
 			restarCantReducers(nodoARestar->nodo_id);
 			pthread_mutex_unlock(&mutexModNodo);
+			nuevoJob->reducePendientes--;
 
 		}
 
-		printf("Termino el reduce sin combiner\n");
-		estadoNodos();
+//		printf("Termino el reduce sin combiner\n");
+		memset(nuevoJob->estado,'\0',10);
+		strcpy(nuevoJob->estado,"Exitoso");
+		estadoMarta();
 
 
 		//Si llega hasta acá, el Job sin combiner termino OK
@@ -1561,9 +1618,9 @@ void *atenderJob (int *socketJob) {
 		//Buscar el nodo donde está el archivo resultado del reduce para mandarle al FS el nodoID
 		t_nodo* nodoResultado;
 		nodoResultado = buscarNodoPorIPYPuerto(nodoReducer.ip_nodoPpal,nodoReducer.puerto_nodoPpal);
-		printf("El estado del nodo %s donde se va a guardar el archivo resultado esta habilitado\n", nodoResultado->nodo_id);
+//		printf("El estado del nodo %s donde se va a guardar el archivo resultado esta habilitado\n", nodoResultado->nodo_id);
 		//Le digo al FS que se copie el resultado
-		printf("El job sin combiner termino OK\nMandar a FS que busque el resultado %s en el nodo %s\n",nodoReducer.nombreArchivoFinal,nodoResultado->nodo_id);
+		log_info(logger,"El job %d termino OK.",nuevoJob->nroJob);
 
 		char** nombreResSpliteado=string_split(nodoReducer.nombreArchivoFinal,"/");
 		char nombreRes[TAM_NOMFINAL];
@@ -1641,7 +1698,7 @@ void *atenderJob (int *socketJob) {
 				list_add(listaNodosDistintos,nodoId);
 			}
 		}
-		printf("Cuando es con combiner la cantidad de reduce pendientes del job es %d\n", unJob.reducePendientes + 1);
+//		printf("Cuando es con combiner la cantidad de reduce pendientes del job es %d\n", unJob.reducePendientes + 1);
 
 		int i;
 		t_list *listaMapDelNodo;
@@ -1740,6 +1797,7 @@ void *atenderJob (int *socketJob) {
 				pthread_mutex_lock(&mutexModNodo);
 				sumarCantReducers(nodoPrincipal->nodo_id);
 				pthread_mutex_unlock(&mutexModNodo);
+				nuevoJob->reducePendientes++;
 
 				list_add(listaReducerParcial,nodoReducer);
 			}
@@ -1754,8 +1812,8 @@ void *atenderJob (int *socketJob) {
 			list_destroy(listaMapDelNodo);
 		}
 
-		printf("Se enviaron todos los reduce con combiner --> Se esperan las respuestas \n");
-		estadoNodos();
+//		printf("Se enviaron todos los reduce con combiner --> Se esperan las respuestas \n");
+		estadoMarta();
 		//Recibir la respuesta del JOB confirmando que termino con los reduce de los que están en el mismo nodo
 		//SE ESPERAN EN UN CICLO FOR LA CANTIDAD DE RESPUESTAS IGUAL A CUANTOS REDUCE SE HALLAN ENVIADO
 		int posResp;
@@ -1770,30 +1828,36 @@ void *atenderJob (int *socketJob) {
 			}
 
 			if(respuestaReduce.resultado == 1){
-				printf("la cantidad de reduce pendientes del job es %d", unJob.reducePendientes ++);
 				t_nodo *nodoARestar = buscarNodoPorIPYPuerto(respuestaReduce.ip_nodo,respuestaReduce.puerto_nodo);
-				printf("El estado del nodo %s es deshabilitado\n", nodoARestar->nodo_id);
 				//Se aborta la ejecución de Reduce
 				log_info(logger,"Falló el Reduce %s. Se abortará el job",respuestaReduce.archivoResultadoReduce);
 
 				pthread_mutex_lock(&mutexModNodo);
 				restarCantReducers(nodoARestar->nodo_id);
 				pthread_mutex_unlock(&mutexModNodo);
+				nuevoJob->reducePendientes--;
+
 
 				jobAbortado=1; //Se marca el flag del job abortado. Se esperan las demas respuestas para bajar 1 en cantreducers de los nodos
 			}
 			if(respuestaReduce.resultado == 0){
-				printf("El reduce %s salio OK\n",respuestaReduce.archivoResultadoReduce);
+//				printf("El reduce %s salio OK\n",respuestaReduce.archivoResultadoReduce);
 
 				t_nodo *nodoARestar = buscarNodoPorIPYPuerto(respuestaReduce.ip_nodo,respuestaReduce.puerto_nodo);
 				pthread_mutex_lock(&mutexModNodo);
 				restarCantReducers(nodoARestar->nodo_id);
 				pthread_mutex_unlock(&mutexModNodo);
+				nuevoJob->reducePendientes--;
+				estadoMarta();
 
 			}
 		}
 
 		if(jobAbortado==1){
+			memset(nuevoJob->estado,'\0',10);
+			strcpy(nuevoJob->estado,"Fallido");
+			estadoMarta();
+
 			//Si entra acá significa que salio mal algun reduce
 			char jobAborta[BUF_SIZE];
 			memset(jobAborta,'\0',BUF_SIZE);
@@ -1807,8 +1871,8 @@ void *atenderJob (int *socketJob) {
 
 		//Si llega acá, salieron todos los reduce parciales bien//
 
-		printf("Llegaron las respuesta de los reduce --> Se envia reduce final\n");
-		estadoNodos();
+//		printf("Llegaron las respuesta de los reduce --> Se envia reduce final\n");
+		estadoMarta();
 
 		/*************************** R E D U C E   F I N A L **********************************************/
 
@@ -1920,9 +1984,10 @@ void *atenderJob (int *socketJob) {
 		pthread_mutex_lock(&mutexModNodo);
 		sumarCantReducers(nodoRF->nodo_id);
 		pthread_mutex_unlock(&mutexModNodo);
+		nuevoJob->reducePendientes++;
 
-		printf("Se envio reduce final --> Se espera la respuesta\n");
-		estadoNodos();
+//		printf("Se envio reduce final --> Se espera la respuesta\n");
+		estadoMarta();
 
 
 		//ACA RECIBIRIA LA RESPUESTA, A CONTINUACION DE ENVIAR EL ULTIMO REDUCE, PORQUE ES UNA SOLA//
@@ -1934,10 +1999,11 @@ void *atenderJob (int *socketJob) {
 		}
 
 		if(respuestaReduceFinal.resultado == 1){
-			printf("La cantidad de reduce pendiente del job es %d",unJob.reducePendientes ++);
+			memset(nuevoJob->estado,'\0',10);
+			strcpy(nuevoJob->estado,"Fallido");
+
 			//Se aborta la ejecución de Reduce
 			t_nodo *nodoARestar = buscarNodoPorIPYPuerto(respuestaReduceFinal.ip_nodo,respuestaReduceFinal.puerto_nodo);
-			printf("El estado del nodo %s es deshabilitado\n", nodoARestar->nodo_id);
 			char jobAborta[BUF_SIZE];
 			memset(jobAborta,'\0',BUF_SIZE);
 			log_info(logger,"Falló el Reduce %s. Se abortará el job",respuestaReduceFinal.archivoResultadoReduce);
@@ -1948,24 +2014,30 @@ void *atenderJob (int *socketJob) {
 			pthread_mutex_lock(&mutexModNodo);
 			restarCantReducers(nodoARestar->nodo_id);
 			pthread_mutex_unlock(&mutexModNodo);
+			nuevoJob->reducePendientes--;
+			estadoMarta();
 
 			close(*socketJob);
 			pthread_exit((void*)0);
 		}
 		if(respuestaReduceFinal.resultado == 0){
-			printf("La cantidad de reduce pendiente del job es %d",unJob.reducePendientes);
 			t_nodo *nodoARestar = buscarNodoPorIPYPuerto(respuestaReduceFinal.ip_nodo,respuestaReduceFinal.puerto_nodo);
-			printf("En el nodo %s se ejecutó reduce con combiner\n", nodoARestar->nodo_id);
-			printf("El estado del nodo %s es habilitado\n", nodoARestar->nodo_id);
-			printf("Reduce %s exitoso\n",respuestaReduceFinal.archivoResultadoReduce);
+//			printf("En el nodo %s se ejecutó reduce con combiner\n", nodoARestar->nodo_id);
+//			printf("El estado del nodo %s es habilitado\n", nodoARestar->nodo_id);
+//			printf("Reduce %s exitoso\n",respuestaReduceFinal.archivoResultadoReduce);
 			pthread_mutex_lock(&mutexModNodo);
 			restarCantReducers(nodoARestar->nodo_id);
 			pthread_mutex_unlock(&mutexModNodo);
+			nuevoJob->reducePendientes--;
 
 		}
 
-		printf("Termino el reduce con combiner\n");
-		estadoNodos();
+//		printf("Termino el reduce con combiner\n");
+		log_info(logger,"El job %d termino OK.",nuevoJob->nroJob);
+
+		memset(nuevoJob->estado,'\0',10);
+		strcpy(nuevoJob->estado,"Exitoso");
+		estadoMarta();
 
 		//Si llega hasta acá, el Job con combiner termino OK
 		//Le digo al Job que finalice
@@ -1984,7 +2056,7 @@ void *atenderJob (int *socketJob) {
 		nodoResultadoCC = buscarNodoPorIPYPuerto(nodoReduceFinal.ip_nodoPpal,nodoReduceFinal.puerto_nodoPpal);
 
 		//Le digo al FS que se copie el resultado
-		printf("El job con combiner termino OK\nMandar a FS que busque el resultado %s en el nodo %s\n",nodoReduceFinal.nombreArchivoFinal,nodoResultadoCC->nodo_id);
+//		printf("El job con combiner termino OK\nMandar a FS que busque el resultado %s en el nodo %s\n",nodoReduceFinal.nombreArchivoFinal,nodoResultadoCC->nodo_id);
 
 		char** nombreResSpliteado=string_split(nodoReduceFinal.nombreArchivoFinal,"/");
 		char nombreRes[TAM_NOMFINAL];
@@ -2253,5 +2325,28 @@ void estadoNodos(){
 
 static void eliminarCopia(t_copias *self){
 	free(self);
+}
+
+void estadoJobs(){
+	int tamanio,indice;
+	t_job* unJob;
+	tamanio=list_size(listaJobs);
+	printf("#### ESTADO DE LOS JOBS ####\n\n");
+	for(indice=0;indice<tamanio;indice++){
+		unJob=list_get(listaJobs,indice);
+		printf("Job %d:\n\tArchivo Resultado: %s\n\tCombiner: %s\n\tEstado: %s\n\tMappers pendientes: %d\n\tReduce pendientes: %d\n\n",unJob->nroJob,unJob->resultadoDelJob,unJob->combiner,unJob->estado,unJob->mapperPendientes,unJob->reducePendientes);
+	}
+	printf("############################\n");
+}
+
+
+void estadoMarta(){
+	estadoNodos();
+	if(list_size(listaJobs)>0){
+		estadoJobs();
+	}
+	else{
+		printf("\n* No se lanzo ningún Job *\n");
+	}
 }
 

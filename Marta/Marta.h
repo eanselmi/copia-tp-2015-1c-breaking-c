@@ -30,11 +30,12 @@ typedef struct estructura_manejo_nodos {
 //Estructura para manejar los Jobs
 
 typedef struct estructura_job{
-	int socket;
-	char* ip;
+	char resultadoDelJob[200];
 	int mapperPendientes; //es igual a la cantidad de bloques donde estan divididos los archivos
 	int reducePendientes;
-	char* combiner;
+	char combiner[3];
+	char estado[10];
+	int nroJob;
 } t_job;
 
 
@@ -111,4 +112,6 @@ int cantidadTotalDeBloques(char* archivosJob);
 t_list * buscarBloquesTotales(char* nombreArchivo);
 void estadoNodos();
 static void eliminarCopia(t_copias *self);
+void estadoMarta();
+void estadoJobs();
 
