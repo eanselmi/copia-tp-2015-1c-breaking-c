@@ -594,7 +594,7 @@ void* hilo_mapper(t_mapper* mapperStruct){
 	log_info(logger,"Hilo mapper conectado al Nodo con IP: %s,en el Puerto: %d",mapperStruct->ip_nodo,mapperStruct->puerto_nodo);
 
 	//Envio al nodo de los datos del Map
-	if(send(nodo_sock,&datosParaNodo,sizeof(t_datosMap),MSG_WAITALL)==-1){
+	if(send(nodo_sock,&datosParaNodo,sizeof(t_datosMap),0)==-1){
 		perror("send");
 		log_error(logger,"Fallo el envio de los datos del map hacia el Nodo");
 		respuestaParaMarta.resultado=1;
