@@ -11,6 +11,7 @@ typedef struct datos_y_bloque{
 	char buf_20mb[BLOCK_SIZE];
 } t_datos_y_bloque;
 
+
 typedef struct datos_para_map{
 	uint32_t bloque;
 	char nomArchTemp[TAM_NOMFINAL];
