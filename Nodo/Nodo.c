@@ -195,7 +195,7 @@ int main(int argc , char *argv[]){
 		return 1;
 	}
 
-
+	//munmap();
 	pthread_join(escucha,NULL);
 	log_destroy(logger);
 	log_destroy(logger_archivo);
@@ -855,7 +855,7 @@ char* mapearFileDeDatos(){
 	lectura escritura y ejecucion, los cambios en las direcciones de memoria a donde apunta se verán reflejados
 	 en el archivo*/
 
-	fileDatos=mmap(0,sizeFileDatos,(PROT_WRITE|PROT_READ|PROT_EXEC),MAP_SHARED,fileDescriptor,0);
+	fileDatos=mmap(0,sizeFileDatos,PROT_WRITE|PROT_READ|PROT_EXEC,MAP_SHARED|MAP_NORESERVE,fileDescriptor,0);
 	/*Chequeo de mmap exitoso*/
 		if (fileDatos==MAP_FAILED){
 			perror("mmap");
@@ -941,19 +941,24 @@ void* rutinaMap(int* sckMap){
 		log_error(logger,"Fallo el cambio de permisos para el script de map");
 		pthread_exit((void*)0);
 	}
-	fclose(scriptMap); //cierro el file
+	if(fflush(scriptMap)==EOF){
+		perror("fflush");
+	}
+	if(fclose(scriptMap)==EOF){
+		perror("fclose"); //cierro el file
+	}
 
 
 	log_info(logger,"Hilo map %s: ejecutando map",stringNroMap);
 
-	pthread_mutex_lock(&mutexMap);
+	//pthread_mutex_lock(&mutexMap);
 
 	ejecutarMapper(nombreNuevoMap,datosParaElMap.bloque,resultadoTemporal);
 	log_info(logger_archivo,"Se escribió el archivo termporal %s: resultado de un map",resultadoTemporal);
 	ordenarMapper(resultadoTemporal,datosParaElMap.nomArchTemp);
 	log_info(logger_archivo,"Se escribió el archivo termporal %s: resultado del sort de un map",datosParaElMap.nomArchTemp);
 
-	pthread_mutex_unlock(&mutexMap);
+	//pthread_mutex_unlock(&mutexMap);
 
 	resultado=0;
 
