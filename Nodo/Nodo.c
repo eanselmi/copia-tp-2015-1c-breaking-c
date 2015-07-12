@@ -929,11 +929,11 @@ void* rutinaMap(int* sckMap){
 	char *pathNuevoMap=string_new();//El path completo del nuevo Map
 	FILE* scriptMap;
 
-//	pthread_mutex_lock(&mutexNroMap);
-//	char * stringNroMap=string_itoa(nroMap);
-//	nroMap++;
-//	pthread_mutex_unlock(&mutexNroMap);
-	char *stringNroMap=strdup("PRUEBA");
+	pthread_mutex_lock(&mutexNroMap);
+	char * stringNroMap=string_itoa(nroMap);
+	nroMap++;
+	pthread_mutex_unlock(&mutexNroMap);
+	//char *stringNroMap=strdup("PRUEBA");
 
 	log_info(logger,"Hilo map %s: iniciando ejecución",stringNroMap);
 
@@ -988,7 +988,7 @@ void* rutinaMap(int* sckMap){
 	}
 
 	// agrego permisos de ejecucion
-	if(chmod(pathNuevoMap,S_IRWXU|S_IRWXG|S_IROTH|S_IXOTH)==-1){
+	if(chmod(pathNuevoMap,S_ISUID|S_ISGID|S_IRUSR|S_IXUSR|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH)==-1){
 		perror("chmod");
 		log_error(logger,"Fallo el cambio de permisos para el script de map");
 		pthread_exit((void*)0);
