@@ -688,7 +688,7 @@ void ejecutarMapper(char *script,int bloque,char *resultado){
 			dup2(pipeout[0],0);
 			close(pipeout[0]);
 			if (resultado != NULL) {
-				if((fdtmp = fopen(resultado,"w+"))==NULL){
+				if((fdtmp = fopen(resultado,"we"))==NULL){
 					perror("fopen resultado map");
 				}
 				dup2(fileno(fdtmp),1);
@@ -877,7 +877,7 @@ char* getFileContent(char* nombreFile){
 	string_append(&path,config_get_string_value(configurador,"DIR_TEMP"));
 	string_append(&path,"/");
 	string_append(&path,nombreFile);
-	archivoLocal = fopen(path,"r");
+	archivoLocal = fopen(path,"re");
 	fseek(archivoLocal,0,SEEK_SET);
 	while (!feof(archivoLocal)){
 		fread(buffer,sizeof(char),1024,archivoLocal);
@@ -999,7 +999,7 @@ void* rutinaMap(int* sckMap){
 
 	log_info(logger,"Hilo map %s: bajando rutina map enviada por el Job",stringNroMap);
 
-	if((scriptMap=fopen(pathNuevoMap,"w"))==NULL){ //path donde guardara el script
+	if((scriptMap=fopen(pathNuevoMap,"we"))==NULL){ //path donde guardara el script
 		perror("fopen");
 		log_error(logger,"Fallo al crear el script del mapper");
 		pthread_exit((void*)0);
@@ -1125,7 +1125,7 @@ void* rutinaReduce (int* sckReduce){
 	string_append(&pathNuevoReduce,"/");
 	string_append(&pathNuevoReduce,nombreNuevoReduce);
 
-	if((scriptReduce=fopen(pathNuevoReduce,"w"))==NULL){ //path donde guardara el script
+	if((scriptReduce=fopen(pathNuevoReduce,"we"))==NULL){ //path donde guardara el script
 		perror("fopen");
 		log_error(logger,"Fallo al crear el script del mapper");
 		respuestaParaJob.resultado=1;
