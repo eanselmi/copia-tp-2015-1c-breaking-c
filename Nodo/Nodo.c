@@ -658,17 +658,28 @@ void ordenarMapper(char* pathMapperTemporal, char* nombreMapperOrdenado){
 void ejecutarMapper(char *script,int bloque,char *resultado){
 	int pipein[2];
 	int pipeout[2];
+//	int ret;
 	pid_t pid1;
+	pid_t pid2;
+	FILE *fdtmp;
 	char* bloqueAMapear;
 	char * argumentosSort[]={"/usr/bin/sort",NULL};
 	char * ambienteSort[]={NULL};
 	char * argumentosMap[]={script,NULL};
 	char * ambienteMap[]={NULL};
-	pipe(pipein);
-	pid1 = fork();
+	if(pipe(pipein)==-1){
+		perror("pipein");
+	}
+	if((pid1 = fork())==-1){
+		perror("fork hijo 1");
+	}
 	if (pid1==0) {
-		pipe(pipeout);
-		pid_t pid2 = fork();
+		if(pipe(pipeout)==-1){
+			perror("pipeout");
+		}
+		if((pid2= fork())==-1){
+			perror("fork hijo 2");
+		}
 		if(pid2==0){
 			//HIJO 2: SORT
 			close(pipein[1]);
@@ -676,15 +687,25 @@ void ejecutarMapper(char *script,int bloque,char *resultado){
 			close(pipeout[1]);
 			dup2(pipeout[0],0);
 			close(pipeout[0]);
-			FILE *fdtmp;
 			if (resultado != NULL) {
-				fdtmp = fopen(resultado,"w+");
+				if((fdtmp = fopen(resultado,"w+"))==NULL){
+					perror("fopen resultado map");
+				}
 				dup2(fileno(fdtmp),1);
 			}
+			fclose(fdtmp);
+
 			if (execve(argumentosSort[0],argumentosSort,ambienteSort)==-1){
 				perror("execve sort");
 			}
-			fclose(fdtmp);
+//			while(1){
+//				if((ret=system("sort"))==-1){
+//					perror("system");
+//				}
+//				if (WIFSIGNALED(ret) &&
+//						(WTERMSIG(ret) == SIGINT || WTERMSIG(ret) == SIGQUIT))
+//					break;
+//			}
 		}
 		else{
 			//HIJO 1: MAPPER
@@ -694,7 +715,9 @@ void ejecutarMapper(char *script,int bloque,char *resultado){
 			close(pipein[0]);
 			dup2(pipeout[1],1);
 			close(pipeout[1]);
-			execve(argumentosMap[0],argumentosMap,ambienteMap);
+			if(execve(argumentosMap[0],argumentosMap,ambienteMap)==-1){
+				perror("execve map");
+			}
 		}
 	}else{
 		close(pipein[0]);
@@ -920,7 +943,7 @@ void* rutinaMap(int* sckMap){
 		perror("pthread detach map");
 	}
 	char** arrayTiempo;
-	int resultado=1;
+	int resultado=0;
 	t_datosMap datosParaElMap;
 
 	char *resultadoTemporal=string_new();
@@ -933,7 +956,7 @@ void* rutinaMap(int* sckMap){
 	char * stringNroMap=string_itoa(nroMap);
 	nroMap++;
 	pthread_mutex_unlock(&mutexNroMap);
-	//char *stringNroMap=strdup("PRUEBA");
+//	char *stringNroMap=strdup("PRUEBA");
 
 	log_info(logger,"Hilo map %s: iniciando ejecución",stringNroMap);
 
@@ -976,21 +999,14 @@ void* rutinaMap(int* sckMap){
 
 	log_info(logger,"Hilo map %s: bajando rutina map enviada por el Job",stringNroMap);
 
-	if((scriptMap=fopen(pathNuevoMap,"w+"))==NULL){ //path donde guardara el script
+	if((scriptMap=fopen(pathNuevoMap,"w"))==NULL){ //path donde guardara el script
 		perror("fopen");
 		log_error(logger,"Fallo al crear el script del mapper");
 		pthread_exit((void*)0);
 	}
-	if(fputs(datosParaElMap.rutinaMap,scriptMap)==EOF){
+	if(fprintf(scriptMap,"%s",datosParaElMap.rutinaMap)<0){
 		perror("fputs");
 		log_error(logger,"Fallo el fputs en una rutina map");
-		pthread_exit((void*)0);
-	}
-
-	// agrego permisos de ejecucion
-	if(chmod(pathNuevoMap,S_ISUID|S_ISGID|S_IRUSR|S_IXUSR|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH)==-1){
-		perror("chmod");
-		log_error(logger,"Fallo el cambio de permisos para el script de map");
 		pthread_exit((void*)0);
 	}
 	if(fflush(scriptMap)==EOF){
@@ -999,6 +1015,19 @@ void* rutinaMap(int* sckMap){
 	if(fclose(scriptMap)==EOF){
 		perror("fclose"); //cierro el file
 	}
+	// agrego permisos de ejecucion
+//	if(chmod(pathNuevoMap,S_ISUID|S_ISGID|S_IRUSR|S_IXUSR|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH)==-1){
+//		perror("chmod");
+//		log_error(logger,"Fallo el cambio de permisos para el script de map");
+//		pthread_exit((void*)0);
+//	}
+	if(chmod(pathNuevoMap,S_IRUSR|S_IXUSR|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH)==-1){
+		perror("chmod");
+		log_error(logger,"Fallo el cambio de permisos para el script de map");
+		pthread_exit((void*)0);
+	}
+	//sleep(4);
+
 
 
 	log_info(logger,"Hilo map %s: ejecutando map",stringNroMap);
@@ -1013,16 +1042,16 @@ void* rutinaMap(int* sckMap){
 
 	//pthread_mutex_unlock(&mutexMap);
 
-	resultado=0;
 
-	if(send(*sckMap,&resultado,sizeof(int),MSG_WAITALL)==-1){
-		perror("send");
-		log_error(logger,"Fallo el envío del resultado al map");
-		pthread_exit((void*)0);
-	}
+
+//	if(send(*sckMap,&resultado,sizeof(int),MSG_WAITALL)==-1){
+//		perror("send");
+//		log_error(logger,"Fallo el envío del resultado al map");
+//		pthread_exit((void*)0);
+//	}
 
 	log_info(logger,"Hilo map %s: finalizado con ÉXITO",stringNroMap);
-	sleep(2);
+	//sleep(2);
 //	printf("Se envío el resultado:%d \n",0);
 
 //	free(arrayTiempo);
@@ -1096,7 +1125,7 @@ void* rutinaReduce (int* sckReduce){
 	string_append(&pathNuevoReduce,"/");
 	string_append(&pathNuevoReduce,nombreNuevoReduce);
 
-	if((scriptReduce=fopen(pathNuevoReduce,"w+"))==NULL){ //path donde guardara el script
+	if((scriptReduce=fopen(pathNuevoReduce,"w"))==NULL){ //path donde guardara el script
 		perror("fopen");
 		log_error(logger,"Fallo al crear el script del mapper");
 		respuestaParaJob.resultado=1;
