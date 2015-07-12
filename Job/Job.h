@@ -1,6 +1,6 @@
 #define BUF_SIZE 15
 #define REDUCE_SIZE 4096
-#define MAPPER_SIZE 1024
+#define MAPPER_SIZE 8192
 #define MENSAJE_SIZE 4096
 #define TAM_NOMFINAL 60
 
@@ -60,4 +60,4 @@ typedef struct estructura_respuesta_reduce_delnodo{
 //Declaración de funciones
 void* hilo_mapper(t_mapper*);
 void* hilo_reduce(t_hiloReduce*);
-char* getFileContent(char*); //Devuelve el contenido de un file, hasta 4096 bytes -> 4 KB (MAPPER_SIZE)
+char* getFileContent(char*); //Devuelve el contenido de un file, hasta 8192 bytes -> 8 KB (MAPPER_SIZE)
