@@ -656,63 +656,112 @@ void ordenarMapper(char* pathMapperTemporal, char* nombreMapperOrdenado){
 
 
 void ejecutarMapper(char *script,int bloque,char *resultado){
-	int outfd[2];
-	int bak,pid,archivo_resultado;
-//	int tamanioAMapear;
-	bak=0;
-	char *path;
-	char *bloqueAMapear;
-//	sem_t terminoElMap;
-//	sem_init(&terminoElMap,0,1);
-	pipe(outfd); /* Donde escribe el padre */
-	if((pid=fork())==-1){
-		perror("fork mapper");
+	int pipein[2];
+	int pipeout[2];
+	pid_t pid1;
+	char* bloqueAMapear;
+	char * argumentosSort[]={"/usr/bin/sort",NULL};
+	char * ambienteSort[]={NULL};
+	char * argumentosMap[]={script,NULL};
+	char * ambienteMap[]={NULL};
+	pipe(pipein);
+	pid1 = fork();
+	if (pid1==0) {
+		pipe(pipeout);
+		pid_t pid2 = fork();
+		if(pid2==0){
+			//HIJO 2: SORT
+			close(pipein[1]);
+			close(pipein[0]);
+			close(pipeout[1]);
+			dup2(pipeout[0],0);
+			close(pipeout[0]);
+			FILE *fdtmp;
+			if (resultado != NULL) {
+				fdtmp = fopen(resultado,"w+");
+				dup2(fileno(fdtmp),1);
+			}
+			if (execve(argumentosSort[0],argumentosSort,ambienteSort)==-1){
+				perror("execve sort");
+			}
+			fclose(fdtmp);
+		}
+		else{
+			//HIJO 1: MAPPER
+			close(pipein[1]);
+			close(pipeout[0]);
+			dup2(pipein[0],0);
+			close(pipein[0]);
+			dup2(pipeout[1],1);
+			close(pipeout[1]);
+			execve(argumentosMap[0],argumentosMap,ambienteMap);
+		}
+	}else{
+		close(pipein[0]);
+		bloqueAMapear=getBloque(bloque);
+		int len = strlen(bloqueAMapear);
+		write(pipein[1],bloqueAMapear,len);
+		close(pipein[1]);
+		wait(NULL);
 	}
-	else if(pid==0)
-	{
 
-	if((archivo_resultado=open(resultado,O_RDWR|O_CREAT,S_IRWXU|S_IRWXG))==-1){
-		perror("open map"); //abro file resultado, si no esta lo crea, asigno permisos
-		log_error(logger,"Fallo al abrir una rutina map que envia el job");
-	}
-	fflush(stdout);
-	bak=dup(STDOUT_FILENO);
-	dup2(archivo_resultado,STDOUT_FILENO); //STDOUT de este proceso se grabara en el file resultado
-	close(archivo_resultado);
-	close(STDIN_FILENO);
-	dup2(outfd[0], STDIN_FILENO); //STDIN de este proceso será STDOUT del proceso padre
-	close(outfd[0]); /* innecesarios para el hijo */
-	close(outfd[1]);
-	path=string_new();
-	string_append(&path,config_get_string_value(configurador,"PATHMAPPERS"));
-	string_append(&path,"/");
-	string_append(&path,script);
-	char *ejecucion []={path,script,NULL};
-	if(execvp(ejecucion[0],ejecucion)==-1){
-		perror("Ejecucion map:");
-		log_error(logger,"Error en la ejecucion de un map");
-	}
-//	sem_post(&terminoElMap);
-	}
-	else
-	{
-
-	bloqueAMapear=getBloque(bloque);
-
-//	for(tamanioAMapear=BLOCK_SIZE;tamanioAMapear>=0;tamanioAMapear--){
-//		if(bloqueAMapear[tamanioAMapear]=='\n'){
-//			break;
-//		}
+//	int outfd[2];
+//	int bak,pid,archivo_resultado;
+////	int tamanioAMapear;
+//	bak=0;
+//	char *path;
+//	char *bloqueAMapear;
+////	sem_t terminoElMap;
+////	sem_init(&terminoElMap,0,1);
+//	pipe(outfd); /* Donde escribe el padre */
+//	if((pid=fork())==-1){
+//		perror("fork mapper");
 //	}
-
-	write(outfd[1],bloqueAMapear,strlen(bloqueAMapear));/* Escribe en el stdin del hijo el contenido del bloque*/
-
-	close(outfd[0]); /* Estan siendo usados por el hijo */
-	close(outfd[1]);
-	waitpid(pid,NULL,0);
-//	sem_wait(&terminoElMap);
-	dup2(bak,STDOUT_FILENO);
-	}
+//	else if(pid==0)
+//	{
+//
+//	if((archivo_resultado=open(resultado,O_RDWR|O_CREAT,S_IRWXU|S_IRWXG))==-1){
+//		perror("open map"); //abro file resultado, si no esta lo crea, asigno permisos
+//		log_error(logger,"Fallo al abrir una rutina map que envia el job");
+//	}
+//	fflush(stdout);
+//	bak=dup(STDOUT_FILENO);
+//	dup2(archivo_resultado,STDOUT_FILENO); //STDOUT de este proceso se grabara en el file resultado
+//	close(archivo_resultado);
+//	close(STDIN_FILENO);
+//	dup2(outfd[0], STDIN_FILENO); //STDIN de este proceso será STDOUT del proceso padre
+//	close(outfd[0]); /* innecesarios para el hijo */
+//	close(outfd[1]);
+//	path=string_new();
+//	string_append(&path,config_get_string_value(configurador,"PATHMAPPERS"));
+//	string_append(&path,"/");
+//	string_append(&path,script);
+//	char *ejecucion []={path,script,NULL};
+//	if(execvp(ejecucion[0],ejecucion)==-1){
+//		perror("Ejecucion map:");
+//		log_error(logger,"Error en la ejecucion de un map");
+//	}
+////	sem_post(&terminoElMap);
+//	}
+//	else
+//	{
+//
+//	bloqueAMapear=getBloque(bloque);
+//
+////	for(tamanioAMapear=BLOCK_SIZE;tamanioAMapear>=0;tamanioAMapear--){
+////		if(bloqueAMapear[tamanioAMapear]=='\n'){
+////			break;
+////		}
+////	}
+//
+//	write(outfd[1],bloqueAMapear,strlen(bloqueAMapear));/* Escribe en el stdin del hijo el contenido del bloque*/
+//
+//	close(outfd[0]); /* Estan siendo usados por el hijo */
+//	close(outfd[1]);
+//	waitpid(pid,NULL,0);
+////	sem_wait(&terminoElMap);
+//	dup2(bak,STDOUT_FILENO);
+//	}
 
 }
 
@@ -867,7 +916,9 @@ char* mapearFileDeDatos(){
 }
 
 void* rutinaMap(int* sckMap){
-	pthread_detach(pthread_self());
+	if(pthread_detach(pthread_self())!=0){
+		perror("pthread detach map");
+	}
 	char** arrayTiempo;
 	int resultado=1;
 	t_datosMap datosParaElMap;
@@ -878,10 +929,11 @@ void* rutinaMap(int* sckMap){
 	char *pathNuevoMap=string_new();//El path completo del nuevo Map
 	FILE* scriptMap;
 
-	pthread_mutex_lock(&mutexNroMap);
-	char * stringNroMap=string_itoa(nroMap);
-	nroMap++;
-	pthread_mutex_unlock(&mutexNroMap);
+//	pthread_mutex_lock(&mutexNroMap);
+//	char * stringNroMap=string_itoa(nroMap);
+//	nroMap++;
+//	pthread_mutex_unlock(&mutexNroMap);
+	char *stringNroMap=strdup("PRUEBA");
 
 	log_info(logger,"Hilo map %s: iniciando ejecución",stringNroMap);
 
@@ -953,10 +1005,11 @@ void* rutinaMap(int* sckMap){
 
 	//pthread_mutex_lock(&mutexMap);
 
-	ejecutarMapper(nombreNuevoMap,datosParaElMap.bloque,resultadoTemporal);
-	log_info(logger_archivo,"Se escribió el archivo termporal %s: resultado de un map",resultadoTemporal);
-	ordenarMapper(resultadoTemporal,datosParaElMap.nomArchTemp);
-	log_info(logger_archivo,"Se escribió el archivo termporal %s: resultado del sort de un map",datosParaElMap.nomArchTemp);
+	ejecutarMapper(pathNuevoMap,datosParaElMap.bloque,datosParaElMap.nomArchTemp);
+//	ejecutarMapper(nombreNuevoMap,datosParaElMap.bloque,resultadoTemporal);
+//	log_info(logger_archivo,"Se escribió el archivo termporal %s: resultado de un map",resultadoTemporal);
+//	ordenarMapper(resultadoTemporal,datosParaElMap.nomArchTemp);
+//	log_info(logger_archivo,"Se escribió el archivo termporal %s: resultado del sort de un map",datosParaElMap.nomArchTemp);
 
 	//pthread_mutex_unlock(&mutexMap);
 
@@ -972,11 +1025,11 @@ void* rutinaMap(int* sckMap){
 	sleep(2);
 //	printf("Se envío el resultado:%d \n",0);
 
-	free(arrayTiempo);
-	free(resultadoTemporal);
-	free(nombreNuevoMap);
-	free(tiempo);
-	free(pathNuevoMap);
+//	free(arrayTiempo);
+//	free(resultadoTemporal);
+//	free(nombreNuevoMap);
+//	free(tiempo);
+//	free(pathNuevoMap);
 
 
 	pthread_exit((void*)0);
