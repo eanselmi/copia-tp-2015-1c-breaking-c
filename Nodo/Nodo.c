@@ -1,5 +1,5 @@
 #define _FILE_OFFSET_BITS 64
-
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <commons/config.h>
@@ -96,7 +96,7 @@ int main(int argc , char *argv[]){
 	puerto_escucha=malloc(sizeof(int));
 	*puerto_escucha=config_get_int_value(configurador,"PUERTO_NODO");
 	strcpy(nodo_id,config_get_string_value(configurador,"NODO_ID"));
-	if ((conectorFS = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
+	if ((conectorFS = socket(AF_INET, SOCK_STREAM|SOCK_CLOEXEC, 0)) == -1) {
 		perror ("socket");
 		log_error(logger,"FALLO la creacion del socket");
 		exit (-1);
@@ -155,7 +155,7 @@ int main(int argc , char *argv[]){
 	El nodo ya se conectó al FS, ahora queda a la espera de conexiones de hilos mapper/hilos reduce/otros nodos
 	*/
 
-	if ((listener = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
+	if ((listener = socket(AF_INET, SOCK_STREAM|SOCK_CLOEXEC, 0)) == -1) {
 			perror("socket");
 			log_error(logger,"FALLO la creacion del socket");
 			exit(-1);
@@ -243,7 +243,7 @@ void *manejador_de_escuchas(){
 
 				if(socketModificado==listener){
 					addrlen=sizeof(struct sockaddr_in);
-					if ((newfd = accept(listener, (struct sockaddr*)&remote_client,(socklen_t*)&addrlen)) == -1) {
+					if ((newfd = accept4(listener, (struct sockaddr*)&remote_client,(socklen_t*)&addrlen,SOCK_CLOEXEC)) == -1) {
 						perror("accept");
 						log_error(logger,"FALLO el ACCEPT");
 						exit(-1);
@@ -362,7 +362,7 @@ void *manejador_de_escuchas(){
 								exit(-1);
 							}
 							strcat(ruta_local,nombreArchivoResultado);
-							FILE *archivo_resultado = fopen(ruta_local, "r");
+							FILE *archivo_resultado = fopen(ruta_local, "re");
 							if(archivo_resultado == NULL){
 								perror ("fopen archivo resultado");
 								exit(1);
@@ -446,7 +446,7 @@ void *manejador_de_escuchas(){
 								log_info(logger,"Me van a estar pidiendo renglones del archivo %s para algún reduce",archivoAPasar);
 
 								//Abro el nuevo archivo
-								archParaPasar=fopen(archivoAPasar,"r");
+								archParaPasar=fopen(archivoAPasar,"re");
 								//Agrego al nuevo archivo abierto a la lista de archivos abiertos
 								archAbiertoNuevo->archivoAbierto=archParaPasar;
 								strcpy(archAbiertoNuevo->nombreArchivo,archivoAPasar);
@@ -624,7 +624,7 @@ void ordenarMapper(char* pathMapperTemporal, char* nombreMapperOrdenado){
 	}
 	else if(pid==0)
 	{
-		if((archivo_resultado=open(nombreMapperOrdenado,O_RDWR|O_CREAT,S_IRWXU|S_IRWXG))==-1){
+		if((archivo_resultado=open(nombreMapperOrdenado,O_RDWR|O_CREAT|O_CLOEXEC,S_IRWXU|S_IRWXG))==-1){
 			perror("sort map"); //abro file resultado, si no esta lo crea, asigno permisos
 			log_error(logger,"Fallo el open del resultado de un map");
 		}
@@ -909,7 +909,7 @@ char* mapearFileDeDatos(){
 	 * Por ejemplo el que use para las pruebas: truncate -s 50 datos.bin --> crea un file de 50 bytes
 	 */
 
-	int fileDescriptor = open((config_get_string_value(configurador,"ARCHIVO_BIN")),O_RDWR);
+	int fileDescriptor = open((config_get_string_value(configurador,"ARCHIVO_BIN")),O_CLOEXEC|O_RDWR);
 	/*Chequeo de apertura del file exitosa*/
 		if (fileDescriptor==-1){
 			perror("open");
@@ -1028,6 +1028,8 @@ void* rutinaMap(int* sckMap){
 	}
 	//sleep(4);
 
+//	printf("EL SCRIPT MAP ES: %s\n",pathNuevoMap);
+//	printf("EL RESULTADO SE GUARDA EN: %s\n",datosParaElMap.nomArchTemp);
 
 
 	log_info(logger,"Hilo map %s: ejecutando map",stringNroMap);
@@ -1044,11 +1046,11 @@ void* rutinaMap(int* sckMap){
 
 
 
-//	if(send(*sckMap,&resultado,sizeof(int),MSG_WAITALL)==-1){
-//		perror("send");
-//		log_error(logger,"Fallo el envío del resultado al map");
-//		pthread_exit((void*)0);
-//	}
+	if(send(*sckMap,&resultado,sizeof(int),MSG_WAITALL)==-1){
+		perror("send");
+		log_error(logger,"Fallo el envío del resultado al map");
+		pthread_exit((void*)0);
+	}
 
 	log_info(logger,"Hilo map %s: finalizado con ÉXITO",stringNroMap);
 	//sleep(2);
@@ -1354,7 +1356,7 @@ void ejecutarReduce(t_list* archivosApareando,char* script,char* resultado, int*
 	}
 	else if(pid==0)
 	{
-		archivo_resultado=open(resultado,O_RDWR|O_CREAT,S_IRWXU|S_IRWXG); //abro file resultado, si no esta lo crea, asigno permisos
+		archivo_resultado=open(resultado,O_RDWR|O_CREAT|O_CLOEXEC,S_IRWXU|S_IRWXG); //abro file resultado, si no esta lo crea, asigno permisos
 		fflush(stdout);
 		bak=dup(STDOUT_FILENO);
 		dup2(archivo_resultado,STDOUT_FILENO); //STDOUT de este proceso se grabara en el file resultado
