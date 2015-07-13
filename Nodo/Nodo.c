@@ -42,8 +42,6 @@ t_list* archivosAbiertos; //Archivos ya abiertos que otro nodo me pide que pase 
 //sem_t semBloques[205]; //Soporta nodos de hasta 4GB 205 *20MB = 4100 MB --> ~4GB  (serían 205 bloques)
 int nroMap; //Maps totales
 int nroReduce; //Reduce totales
-pthread_mutex_t mutexMap=PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t mutexReduce=PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutexNroMap=PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutexNroReduce=PTHREAD_MUTEX_INITIALIZER;
 
@@ -1136,35 +1134,43 @@ void* rutinaReduce (int* sckReduce){
 	string_append(&pathNuevoReduce,"/");
 	string_append(&pathNuevoReduce,nombreNuevoReduce);
 
-	if((scriptReduce=fopen(pathNuevoReduce,"w"))==NULL){ //path donde guardara el script
-		perror("fopen");
-		log_error(logger,"Fallo al crear el script del mapper");
-		respuestaParaJob.resultado=1;
-		respuestaParaJob.puerto_nodoFallido=config_get_int_value(configurador,"PUERTO_NODO");
-		strcpy(respuestaParaJob.ip_nodoFallido,config_get_string_value(configurador,"IP_NODO"));
-		if(send(*sckReduce,&respuestaParaJob,sizeof(t_respuestaNodoReduce),MSG_WAITALL)==-1){
-			perror("send");
-			log_error(logger,"Fallo el envio de la respues KO al Reduce");
-		}
-		pthread_exit((void*)0);
-	}
-	fputs(rutinaReduce,scriptReduce);
+        int tamaniorutina=strlen(rutinaReduce);
+        if((fdScript=open(pathNuevoReduce,O_WRONLY|O_CLOEXEC|O_CREAT,S_IRUSR|S_IXUSR|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH))==-1){
+                perror("open fd rutina reduce");
+        }
+        write(fdScript,rutinaReduce,tamaniorutina);
+        close(fdScript);
+        sleep(3);
+
+//	if((scriptReduce=fopen(pathNuevoReduce,"we"))==NULL){ //path donde guardara el script
+//		perror("fopen");
+//		log_error(logger,"Fallo al crear el script del mapper");
+//		respuestaParaJob.resultado=1;
+//		respuestaParaJob.puerto_nodoFallido=config_get_int_value(configurador,"PUERTO_NODO");
+//		strcpy(respuestaParaJob.ip_nodoFallido,config_get_string_value(configurador,"IP_NODO"));
+//		if(send(*sckReduce,&respuestaParaJob,sizeof(t_respuestaNodoReduce),MSG_WAITALL)==-1){
+//			perror("send");
+//			log_error(logger,"Fallo el envio de la respues KO al Reduce");
+//		}
+//		pthread_exit((void*)0);
+//	}
+//	fputs(rutinaReduce,scriptReduce);
 
 //	printf("Nombre del nuevo reduce: %s\n",nombreNuevoReduce);
 	// agrego permisos de ejecucion
-	if(chmod(pathNuevoReduce,S_IRWXU|S_IRWXG|S_IROTH|S_IXOTH)==-1){
-		perror("chmod");
-		log_error(logger,"Fallo el cambio de permisos para el script de map");
-		respuestaParaJob.resultado=1;
-		respuestaParaJob.puerto_nodoFallido=config_get_int_value(configurador,"PUERTO_NODO");
-		strcpy(respuestaParaJob.ip_nodoFallido,config_get_string_value(configurador,"IP_NODO"));
-		if(send(*sckReduce,&respuestaParaJob,sizeof(t_respuestaNodoReduce),MSG_WAITALL)==-1){
-			perror("send");
-			log_error(logger,"Fallo el envio de la respues KO al Reduce");
-		}
-		pthread_exit((void*)0);
-	}
-	fclose(scriptReduce); //cierro el file
+//	if(chmod(pathNuevoReduce,S_IRWXU|S_IRWXG|S_IROTH|S_IXOTH)==-1){
+//		perror("chmod");
+//		log_error(logger,"Fallo el cambio de permisos para el script de map");
+//		respuestaParaJob.resultado=1;
+//		respuestaParaJob.puerto_nodoFallido=config_get_int_value(configurador,"PUERTO_NODO");
+//		strcpy(respuestaParaJob.ip_nodoFallido,config_get_string_value(configurador,"IP_NODO"));
+//		if(send(*sckReduce,&respuestaParaJob,sizeof(t_respuestaNodoReduce),MSG_WAITALL)==-1){
+//			perror("send");
+//			log_error(logger,"Fallo el envio de la respues KO al Reduce");
+//		}
+//		pthread_exit((void*)0);
+//	}
+//	fclose(scriptReduce); //cierro el file
 
 	if(recv(*sckReduce,&cantidadArchivos,sizeof(int),MSG_WAITALL)==-1){
 		perror("recv");
@@ -1212,7 +1218,7 @@ void* rutinaReduce (int* sckReduce){
 				&& unArchivoReduce->puerto_nodo==config_get_int_value(configurador,"PUERTO_NODO")){
 			FILE * nuevoFileStream;
 			t_archivoEnApareo *nuevoArchivoEnApareo=malloc(sizeof(t_archivoEnApareo));
-			if((nuevoFileStream=fopen(unArchivoReduce->archivoAAplicarReduce,"r"))==NULL){
+			if((nuevoFileStream=fopen(unArchivoReduce->archivoAAplicarReduce,"re"))==NULL){
 				perror("fopen:");
 				respuestaParaJob.resultado=1;
 				respuestaParaJob.puerto_nodoFallido=config_get_int_value(configurador,"PUERTO_NODO");
@@ -1248,7 +1254,7 @@ void* rutinaReduce (int* sckReduce){
 			t_archivoEnApareo *nuevoArchivoEnApareo=malloc(sizeof(t_archivoEnApareo));
 //			memset(nombreArchivo,'\0',TAM_NOMFINAL);
 			memset(identificacion,'\0',BUF_SIZE);
-			if((otroNodoSock=socket(AF_INET,SOCK_STREAM,0))==-1){ //si función socket devuelve -1 es error
+			if((otroNodoSock=socket(AF_INET,SOCK_STREAM|SOCK_CLOEXEC,0))==-1){ //si función socket devuelve -1 es error
 				perror("socket");
 				log_error(logger,"Fallo la creación del socket (conexión nodo-nodo)");
 				respuestaParaJob.resultado=1;
@@ -1317,10 +1323,10 @@ void* rutinaReduce (int* sckReduce){
 
 	log_info(logger,"Hilo reduce %s: ejecutando reduce",stringNroReduce);
 
-	pthread_mutex_lock(&mutexReduce);
+//	pthread_mutex_lock(&mutexReduce);
 	ejecutarReduce(archivosEnApareo,nombreNuevoReduce,nombreFinalReduce,sckReduce);
 	log_info(logger_archivo,"Se escribió el archivo temporal %s: resultado de un reduce",nombreFinalReduce);
-	pthread_mutex_unlock(&mutexReduce);
+//	pthread_mutex_unlock(&mutexReduce);
 
 	//Si llego hasta acá --> El reduce termino OK, enviar respuesta al Job
 
@@ -1365,7 +1371,7 @@ void ejecutarReduce(t_list* archivosApareando,char* script,char* resultado, int*
 	}
 	else if(pid==0)
 	{
-		archivo_resultado=open(resultado,O_RDWR|O_CREAT,S_IRWXU|S_IRWXG); //abro file resultado, si no esta lo crea, asigno permisos
+		archivo_resultado=open(resultado,O_RDWR|O_CREAT|O_CLOEXEC,S_IRWXU|S_IRWXG); //abro file resultado, si no esta lo crea, asigno permisos
 		fflush(stdout);
 		bak=dup(STDOUT_FILENO);
 		dup2(archivo_resultado,STDOUT_FILENO); //STDOUT de este proceso se grabara en el file resultado
