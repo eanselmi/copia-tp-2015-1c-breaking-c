@@ -289,6 +289,7 @@ void *manejador_de_escuchas(){
 									perror("pthread_create");
 									log_error(logger,"Fallo la creación del hilo manejador de escuchas");
 								}
+								sleep(3);
 							}
 						}
 					}
