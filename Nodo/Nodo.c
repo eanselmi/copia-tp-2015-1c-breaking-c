@@ -446,7 +446,7 @@ void *manejador_de_escuchas(){
 								log_info(logger,"Me van a estar pidiendo renglones del archivo %s para algún reduce",archivoAPasar);
 
 								//Abro el nuevo archivo
-								archParaPasar=fopen(archivoAPasar,"re");
+								archParaPasar=fopen(archivoAPasar,"r");
 								//Agrego al nuevo archivo abierto a la lista de archivos abiertos
 								archAbiertoNuevo->archivoAbierto=archParaPasar;
 								strcpy(archAbiertoNuevo->nombreArchivo,archivoAPasar);
@@ -1023,6 +1023,7 @@ void* rutinaMap(int* sckMap){
 	}
 	write(fdScript,datosParaElMap.rutinaMap,tamaniorutina);
 	close(fdScript);
+	sleep(3);
 	// agrego permisos de ejecucion
 //	if(chmod(pathNuevoMap,S_ISUID|S_ISGID|S_IRUSR|S_IXUSR|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH)==-1){
 //		perror("chmod");
@@ -1135,7 +1136,7 @@ void* rutinaReduce (int* sckReduce){
 	string_append(&pathNuevoReduce,"/");
 	string_append(&pathNuevoReduce,nombreNuevoReduce);
 
-	if((scriptReduce=fopen(pathNuevoReduce,"we"))==NULL){ //path donde guardara el script
+	if((scriptReduce=fopen(pathNuevoReduce,"w"))==NULL){ //path donde guardara el script
 		perror("fopen");
 		log_error(logger,"Fallo al crear el script del mapper");
 		respuestaParaJob.resultado=1;
@@ -1364,7 +1365,7 @@ void ejecutarReduce(t_list* archivosApareando,char* script,char* resultado, int*
 	}
 	else if(pid==0)
 	{
-		archivo_resultado=open(resultado,O_RDWR|O_CREAT|O_CLOEXEC,S_IRWXU|S_IRWXG); //abro file resultado, si no esta lo crea, asigno permisos
+		archivo_resultado=open(resultado,O_RDWR|O_CREAT,S_IRWXU|S_IRWXG); //abro file resultado, si no esta lo crea, asigno permisos
 		fflush(stdout);
 		bak=dup(STDOUT_FILENO);
 		dup2(archivo_resultado,STDOUT_FILENO); //STDOUT de este proceso se grabara en el file resultado
