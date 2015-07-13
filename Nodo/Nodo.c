@@ -1081,7 +1081,8 @@ void* rutinaReduce (int* sckReduce){
 	int cantidadArchivos;
 	int posicionEnListaArchivos=0;
 	int indice=0;
-	FILE* scriptReduce;
+	int fdScript;
+//	FILE* scriptReduce;
 	t_respuestaNodoReduce respuestaParaJob;
 	t_list* listaArchivosReduce;
 	t_list* archivosEnApareo;
