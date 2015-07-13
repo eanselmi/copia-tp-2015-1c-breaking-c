@@ -1050,7 +1050,7 @@ void* rutinaMap(int* sckMap){
 //	log_info(logger_archivo,"Se escribió el archivo termporal %s: resultado de un map",resultadoTemporal);
 //	ordenarMapper(resultadoTemporal,datosParaElMap.nomArchTemp);
 //	log_info(logger_archivo,"Se escribió el archivo termporal %s: resultado del sort de un map",datosParaElMap.nomArchTemp);
-
+	sleep(25);
 	//pthread_mutex_unlock(&mutexMap);
 
 
