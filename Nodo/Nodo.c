@@ -667,14 +667,14 @@ void ejecutarMapper(char *script,int bloque,char *resultado){
 	char * ambienteSort[]={NULL};
 	char * argumentosMap[]={script,NULL};
 	char * ambienteMap[]={NULL};
-	if(pipe(pipein)==-1){
+	if(pipe2(pipein,O_CLOEXEC)==-1){
 		perror("pipein");
 	}
 	if((pid1 = fork())==-1){
 		perror("fork hijo 1");
 	}
 	if (pid1==0) {
-		if(pipe(pipeout)==-1){
+		if(pipe2(pipeout,O_CLOEXEC)==-1){
 			perror("pipeout");
 		}
 		if((pid2= fork())==-1){
@@ -698,6 +698,7 @@ void ejecutarMapper(char *script,int bloque,char *resultado){
 			if (execve(argumentosSort[0],argumentosSort,ambienteSort)==-1){
 				perror("execve sort");
 			}
+
 //			while(1){
 //				if((ret=system("sort"))==-1){
 //					perror("system");
@@ -950,7 +951,8 @@ void* rutinaMap(int* sckMap){
 	char *nombreNuevoMap=string_new(); //será el nombre del nuevo map
 	char *tiempo=string_new(); //string que tendrá la hora
 	char *pathNuevoMap=string_new();//El path completo del nuevo Map
-	FILE* scriptMap;
+	//FILE* scriptMap;
+	int fdScript;
 
 	pthread_mutex_lock(&mutexNroMap);
 	char * stringNroMap=string_itoa(nroMap);
@@ -999,33 +1001,39 @@ void* rutinaMap(int* sckMap){
 
 	log_info(logger,"Hilo map %s: bajando rutina map enviada por el Job",stringNroMap);
 
-	if((scriptMap=fopen(pathNuevoMap,"we"))==NULL){ //path donde guardara el script
-		perror("fopen");
-		log_error(logger,"Fallo al crear el script del mapper");
-		pthread_exit((void*)0);
+//	if((scriptMap=fopen(pathNuevoMap,"we"))==NULL){ //path donde guardara el script
+//		perror("fopen");
+//		log_error(logger,"Fallo al crear el script del mapper");
+//		pthread_exit((void*)0);
+//	}
+//	if(fprintf(scriptMap,"%s",datosParaElMap.rutinaMap)<0){
+//		perror("fputs");
+//		log_error(logger,"Fallo el fputs en una rutina map");
+//		pthread_exit((void*)0);
+//	}
+//	if(fflush(scriptMap)==EOF){
+//		perror("fflush");
+//	}
+//	if(fclose(scriptMap)==EOF){
+//		perror("fclose"); //cierro el file
+//	}
+	int tamaniorutina=strlen(datosParaElMap.rutinaMap);
+	if((fdScript=open(pathNuevoMap,O_WRONLY|O_CLOEXEC|O_CREAT,S_IRUSR|S_IXUSR|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH))==-1){
+		perror("open fd rutina map");
 	}
-	if(fprintf(scriptMap,"%s",datosParaElMap.rutinaMap)<0){
-		perror("fputs");
-		log_error(logger,"Fallo el fputs en una rutina map");
-		pthread_exit((void*)0);
-	}
-	if(fflush(scriptMap)==EOF){
-		perror("fflush");
-	}
-	if(fclose(scriptMap)==EOF){
-		perror("fclose"); //cierro el file
-	}
+	write(fdScript,datosParaElMap.rutinaMap,tamaniorutina);
+	close(fdScript);
 	// agrego permisos de ejecucion
 //	if(chmod(pathNuevoMap,S_ISUID|S_ISGID|S_IRUSR|S_IXUSR|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH)==-1){
 //		perror("chmod");
 //		log_error(logger,"Fallo el cambio de permisos para el script de map");
 //		pthread_exit((void*)0);
 //	}
-	if(chmod(pathNuevoMap,S_IRUSR|S_IXUSR|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH)==-1){
-		perror("chmod");
-		log_error(logger,"Fallo el cambio de permisos para el script de map");
-		pthread_exit((void*)0);
-	}
+//	if(chmod(pathNuevoMap,S_IRUSR|S_IXUSR|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH)==-1){
+//		perror("chmod");
+//		log_error(logger,"Fallo el cambio de permisos para el script de map");
+//		pthread_exit((void*)0);
+//	}
 	//sleep(4);
 
 //	printf("EL SCRIPT MAP ES: %s\n",pathNuevoMap);
