@@ -1,7 +1,7 @@
 #define BLOCK_SIZE 20971520 //block size 20MB
 #define BUF_SIZE 15
 #define MAPPER_SIZE 8192
-#define REDUCE_SIZE 4096
+#define REDUCE_SIZE 8192
 #define TAM_NOMFINAL 60
 #define TAM_RENGLONES 10240
 

@@ -24,9 +24,9 @@ t_config* configurador;
 t_log* logger;
 t_log* logger_archivo;
 char bufGetArchivo[MAPPER_SIZE];
-sem_t obtenerRutinaMap;
 int marta_sock; //socket de conexión a MaRTA
 char rutinaMap[MAPPER_SIZE];
+char rutinaReduce[REDUCE_SIZE];
 
 int main(void){
 	configurador= config_create("resources/jobConfig.conf"); //se asigna el archivo de configuración especificado en la ruta
@@ -53,17 +53,22 @@ int main(void){
 	t_mapper* punteroMapper;
 	t_reduce datosReduce;
 	t_hiloReduce* hiloReduce;
-	char * contMapper;
+	char * contMapper=string_new();
+	char * contReducer=string_new();
+
 	memset(rutinaMap,'\0',MAPPER_SIZE);
-	sem_init(&obtenerRutinaMap,0,1);
+	memset(rutinaReduce,'\0',REDUCE_SIZE);
 	memset(handshake,'\0', BUF_SIZE);
 	FD_ZERO(&read_fds);
 	memset(archivoResultado,'\0',200);
 
-	contMapper=getFileContent(config_get_string_value(configurador,"MAPPER"));
+	string_append(&contMapper,getFileContent(config_get_string_value(configurador,"MAPPER")));
+	string_append(&contReducer,getFileContent(config_get_string_value(configurador,"REDUCE")));
 
 
 	strcpy(rutinaMap,contMapper);
+	strcpy(rutinaReduce,contReducer);
+
 
 	/* Se conecta a MaRTA */
 	if((marta_sock=socket(AF_INET,SOCK_STREAM,0))==-1){ //si función socket devuelve -1 es error
@@ -315,12 +320,12 @@ void* hilo_reduce(t_hiloReduce* reduceStruct){
 	struct sockaddr_in nodo_addr;
 	int nodo_sock;
 	char identificacion[BUF_SIZE];
-	char rutinaReduce[REDUCE_SIZE];
-	char* contReduce;
+	//char rutinaReduce[REDUCE_SIZE];
+	//char* contReduce;
 	t_respuestaReduce respuestaParaMarta;
 	t_respuestaNodoReduce respuestaNodo;
 	memset(identificacion,'\0',BUF_SIZE);
-	memset(rutinaReduce,'\0',REDUCE_SIZE);
+	//memset(rutinaReduce,'\0',REDUCE_SIZE);
 	int ind;
 	int cantidadArchivos=list_size(reduceStruct->listaNodos);
 
@@ -412,8 +417,8 @@ void* hilo_reduce(t_hiloReduce* reduceStruct){
 	}
 
 	//envio el contenido de la rutina reduce al nodo
-	contReduce=getFileContent(config_get_string_value(configurador,"REDUCE"));
-	strcpy(rutinaReduce,contReduce);
+//	contReduce=getFileContent(config_get_string_value(configurador,"REDUCE"));
+//	strcpy(rutinaReduce,contReduce);
 
 	if(send(nodo_sock,rutinaReduce,sizeof(rutinaReduce),MSG_WAITALL)==-1){
 		perror("send");
@@ -540,6 +545,8 @@ void* hilo_mapper(t_mapper* mapperStruct){
 
 	log_info(logger,"Se creó un hilo con motivo ejecución de un MAP.\n\tParametros recibidos:\n\t\tIP del Nodo a conectarse: %s.\n\t\tPuerto del Nodo: %d\n\t\tBloque a ejecutar el map: %d\n\t\tNombre del archivo resultado del map: %s",mapperStruct->ip_nodo,mapperStruct->puerto_nodo,mapperStruct->bloque,mapperStruct->archivoResultadoMap);
 
+	memset(datosParaNodo.rutinaMap,'\0',MAPPER_SIZE);
+	memset(datosParaNodo.nomArchTemp,'\0',60);
 
 	datosParaNodo.bloque=mapperStruct->bloque;
 	strcpy(datosParaNodo.nomArchTemp,mapperStruct->archivoResultadoMap);
@@ -654,4 +661,30 @@ char* getFileContent(char* path){
 	}
 	fclose(archivoLocal);
 	return bufGetArchivo;
+//	FILE * archivoLocal;
+//	int i=0;
+//	char* contenido;
+//	char buffer[1024];
+//	memset(buffer,'\0',1024);
+//	contenido=string_new();
+//	archivoLocal = fopen(path,"re");
+//	fseek(archivoLocal,0,SEEK_SET);
+//	while (!feof(archivoLocal)){
+//		fread(buffer,sizeof(char),1024,archivoLocal);
+//		if(feof(archivoLocal)){
+//			for(i=1023;i>=0;i--){
+//				if(buffer[i]==EOF){
+//					strncat(contenido,buffer,i+1);
+//					break;
+//				}
+//			}
+//		}else{
+//			string_append(&contenido,buffer);
+//		}
+//		memset(buffer,'\0',1024);
+//	}
+//	fclose(archivoLocal);
+//	//printf("tamaño de contenido %d\n",strlen(contenido));
+//	//free(path);
+//	return contenido;
 }

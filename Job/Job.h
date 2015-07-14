@@ -1,5 +1,5 @@
 #define BUF_SIZE 15
-#define REDUCE_SIZE 4096
+#define REDUCE_SIZE 8192
 #define MAPPER_SIZE 8192
 #define MENSAJE_SIZE 4096
 #define TAM_NOMFINAL 60
