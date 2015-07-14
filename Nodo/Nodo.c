@@ -1049,7 +1049,7 @@ void* rutinaMap(int* sckMap){
 //	log_info(logger_archivo,"Se escribió el archivo termporal %s: resultado de un map",resultadoTemporal);
 //	ordenarMapper(resultadoTemporal,datosParaElMap.nomArchTemp);
 //	log_info(logger_archivo,"Se escribió el archivo termporal %s: resultado del sort de un map",datosParaElMap.nomArchTemp);
-	sleep(25);
+	sleep(5);
 	//pthread_mutex_unlock(&mutexMap);
 
 
@@ -1360,33 +1360,41 @@ void ejecutarReduce(t_list* archivosApareando,char* script,char* resultado, int*
 	strcpy(dameRenglones,"Dame renglones");
 	//Leer una linea de cada uno, guardar en el buffer
 	int outfd[2];
-	int bak,pid,archivo_resultado;
-	bak=0;
+	pid_t pid;
+	FILE* fdtmp;
 	char *path;
-//	sem_t terminoElReduce;
+	path=string_new();
+	string_append(&path,config_get_string_value(configurador,"PATHREDUCERS"));
+	string_append(&path,"/");
+	string_append(&path,script);
+	char* argumentosReduce[]={path,NULL};
+	char* ambienteReduce[]={NULL};
 	t_respuestaNodoReduce respuestaNR;
 	memset(respuestaNR.ip_nodoFallido,'\0',20);
-//	sem_init(&terminoElReduce,0,1);
 	pipe(outfd); /* Donde escribe el padre */
 	if((pid=fork())==-1){
 		perror("fork reduce");
 	}
 	else if(pid==0)
 	{
-		archivo_resultado=open(resultado,O_RDWR|O_CREAT|O_CLOEXEC,S_IRWXU|S_IRWXG); //abro file resultado, si no esta lo crea, asigno permisos
-		fflush(stdout);
-		bak=dup(STDOUT_FILENO);
-		dup2(archivo_resultado,STDOUT_FILENO); //STDOUT de este proceso se grabara en el file resultado
-		close(archivo_resultado);
+		//archivo_resultado=open(resultado,O_RDWR|O_CREAT|O_CLOEXEC,S_IRWXU|S_IRWXG); //abro file resultado, si no esta lo crea, asigno permisos
+		if((fdtmp = fopen(resultado,"we"))==NULL){
+			perror("fopen resultado map");
+		}
+		dup2(fileno(fdtmp),1);
+		fclose(fdtmp);
+//		fflush(stdout);
+//		bak=dup(STDOUT_FILENO);
+//		dup2(archivo_resultado,STDOUT_FILENO); //STDOUT de este proceso se grabara en el file resultado
+//		close(archivo_resultado);
 		close(STDIN_FILENO);
 		dup2(outfd[0], STDIN_FILENO); //STDIN de este proceso será STDOUT del proceso padre
 		close(outfd[0]); /* innecesarios para el hijo */
 		close(outfd[1]);
-		path=string_new();
-		string_append(&path,config_get_string_value(configurador,"PATHREDUCERS"));
-		string_append(&path,"/");
-		string_append(&path,script);
-		execlp(path,script,NULL); //Ejecuto el script
+		if(execve(argumentosReduce[0],argumentosReduce,ambienteReduce)==-1){
+			perror("execve reduce");
+		}
+//		execlp(path,script,NULL); //Ejecuto el script
 //		sem_post(&terminoElReduce);
 	}
 	else
@@ -1572,8 +1580,9 @@ void ejecutarReduce(t_list* archivosApareando,char* script,char* resultado, int*
 			//cuando alguno de los archivos sea EOF, se tiene que cerrar (fclose ya sea en el nodo o local)
 		}
 		close(outfd[1]);
-		waitpid(pid,NULL,0);
-		dup2(bak,STDOUT_FILENO);
+		wait(NULL);
+//		waitpid(pid,NULL,0);
+//		dup2(bak,STDOUT_FILENO);
 //		sem_wait(&terminoElReduce);
 	}
 }
