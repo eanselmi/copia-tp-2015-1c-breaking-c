@@ -1371,7 +1371,9 @@ void ejecutarReduce(t_list* archivosApareando,char* script,char* resultado, int*
 	char* ambienteReduce[]={NULL};
 	t_respuestaNodoReduce respuestaNR;
 	memset(respuestaNR.ip_nodoFallido,'\0',20);
-	pipe(outfd); /* Donde escribe el padre */
+	if(pipe2(outfd,O_CLOEXEC)==-1){
+		perror("pipe reduce"); /* Donde escribe el padre */
+	}
 	if((pid=fork())==-1){
 		perror("fork reduce");
 	}
