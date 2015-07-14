@@ -1722,7 +1722,7 @@ void *atenderJob (int *socketJob) {
 					list_add(listaMapDelNodo,nodoMapOk);
 				}
 			}
-			if(list_size(listaMapDelNodo)>1){
+			//if(list_size(listaMapDelNodo)>1){
 				// Mando a ejecutar reduce
 				char mensajeReducerParcial[BUF_SIZE];
 				memset(mensajeReducerParcial, '\0', BUF_SIZE);
@@ -1800,15 +1800,15 @@ void *atenderJob (int *socketJob) {
 				nuevoJob->reducePendientes++;
 
 				list_add(listaReducerParcial,nodoReducer);
-			}
-			if(list_size(listaMapDelNodo)==1){
-				t_replanificarMap *nodoMapOkk;
-				nodoMapOkk=list_get(listaMapDelNodo,0);
-				strcpy(nodoReducer->ip_nodoPpal,nodoPrincipal->ip);
-				nodoReducer->puerto_nodoPpal=nodoPrincipal->puerto_escucha_nodo;
-				strcpy(nodoReducer->nombreArchivoFinal,nodoMapOkk->archivoResultadoMap);
-				list_add(listaReducerDeUnSoloArchivo,nodoReducer);
-			}
+//			}
+//			if(list_size(listaMapDelNodo)==1){
+//				t_replanificarMap *nodoMapOkk;
+//				nodoMapOkk=list_get(listaMapDelNodo,0);
+//				strcpy(nodoReducer->ip_nodoPpal,nodoPrincipal->ip);
+//				nodoReducer->puerto_nodoPpal=nodoPrincipal->puerto_escucha_nodo;
+//				strcpy(nodoReducer->nombreArchivoFinal,nodoMapOkk->archivoResultadoMap);
+//				list_add(listaReducerDeUnSoloArchivo,nodoReducer);
+//			}
 			list_destroy(listaMapDelNodo);
 		}
 
@@ -1963,23 +1963,23 @@ void *atenderJob (int *socketJob) {
 		}
 		/*Le mando los datos de cada uno de los archivos de la listaReducerDeUnSoloArchivo:
 		 * IP Nodo, Puerto Nodo, nombreArchivo resultado de map (t_archivosReduce) */
-		for(posNodoOk = 0; posNodoOk < list_size(listaReducerDeUnSoloArchivo); posNodoOk ++){
-			t_archivosReduce archivosReduceFinal;
-			memset(archivosReduceFinal.archivoAAplicarReduce,'\0',TAM_NOMFINAL);
-			memset(archivosReduceFinal.ip_nodo,'\0',20);
-
-			nodoOk = list_get(listaReducerDeUnSoloArchivo,posNodoOk);
-			strcpy(archivosReduceFinal.archivoAAplicarReduce, nodoOk->nombreArchivoFinal);
-			strcpy(archivosReduceFinal.ip_nodo, nodoOk->ip_nodoPpal);
-			archivosReduceFinal.puerto_nodo = nodoOk->puerto_nodoPpal;
-
-			// Mando por cada t_reduce , los datos de cada archivo
-			if(send(*socketJob, &archivosReduceFinal,sizeof(t_archivosReduce),MSG_WAITALL)==-1){
-				perror("send");
-				log_error(logger, "Fallo mandar la archivo a hacer reduce");
-				//exit(-1);
-			}
-		}
+//		for(posNodoOk = 0; posNodoOk < list_size(listaReducerDeUnSoloArchivo); posNodoOk ++){
+//			t_archivosReduce archivosReduceFinal;
+//			memset(archivosReduceFinal.archivoAAplicarReduce,'\0',TAM_NOMFINAL);
+//			memset(archivosReduceFinal.ip_nodo,'\0',20);
+//
+//			nodoOk = list_get(listaReducerDeUnSoloArchivo,posNodoOk);
+//			strcpy(archivosReduceFinal.archivoAAplicarReduce, nodoOk->nombreArchivoFinal);
+//			strcpy(archivosReduceFinal.ip_nodo, nodoOk->ip_nodoPpal);
+//			archivosReduceFinal.puerto_nodo = nodoOk->puerto_nodoPpal;
+//
+//			// Mando por cada t_reduce , los datos de cada archivo
+//			if(send(*socketJob, &archivosReduceFinal,sizeof(t_archivosReduce),MSG_WAITALL)==-1){
+//				perror("send");
+//				log_error(logger, "Fallo mandar la archivo a hacer reduce");
+//				//exit(-1);
+//			}
+//		}
 
 		pthread_mutex_lock(&mutexModNodo);
 		sumarCantReducers(nodoRF->nodo_id);
