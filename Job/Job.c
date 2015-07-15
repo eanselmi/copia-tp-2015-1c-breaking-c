@@ -53,8 +53,8 @@ int main(void){
 	t_mapper* punteroMapper;
 	t_reduce datosReduce;
 	t_hiloReduce* hiloReduce;
-	char * contMapper=string_new();
-	char * contReducer=string_new();
+//	char * contMapper=string_new();
+//	char * contReducer=string_new();
 
 	memset(rutinaMap,'\0',MAPPER_SIZE);
 	memset(rutinaReduce,'\0',REDUCE_SIZE);
@@ -62,12 +62,12 @@ int main(void){
 	FD_ZERO(&read_fds);
 	memset(archivoResultado,'\0',200);
 
-	string_append(&contMapper,getFileContent(config_get_string_value(configurador,"MAPPER")));
-	string_append(&contReducer,getFileContent(config_get_string_value(configurador,"REDUCE")));
+//	string_append(&contMapper,getFileContent(config_get_string_value(configurador,"MAPPER")));
+//	string_append(&contReducer,getFileContent(config_get_string_value(configurador,"REDUCE")));
 
 
-	strcpy(rutinaMap,contMapper);
-	strcpy(rutinaReduce,contReducer);
+	memcpy(rutinaMap,getFileContent(config_get_string_value(configurador,"MAPPER")),MAPPER_SIZE);
+	memcpy(rutinaReduce,getFileContent(config_get_string_value(configurador,"REDUCE")),REDUCE_SIZE);
 
 
 	/* Se conecta a MaRTA */
@@ -550,7 +550,7 @@ void* hilo_mapper(t_mapper* mapperStruct){
 
 	datosParaNodo.bloque=mapperStruct->bloque;
 	strcpy(datosParaNodo.nomArchTemp,mapperStruct->archivoResultadoMap);
-	strcpy(datosParaNodo.rutinaMap,rutinaMap);
+	memcpy(datosParaNodo.rutinaMap,rutinaMap,MAPPER_SIZE);
 
 	if((nodo_sock=socket(AF_INET,SOCK_STREAM,0))==-1){ //si función socket devuelve -1 es error
 		perror("socket");
@@ -646,45 +646,16 @@ void* hilo_mapper(t_mapper* mapperStruct){
 }
 
 char* getFileContent(char* path){
-	FILE * archivoLocal;
-	int i=0;
-	char car;
 	memset(bufGetArchivo,'\0',MAPPER_SIZE);
-	archivoLocal = fopen(path,"r");
-	fseek(archivoLocal,0,SEEK_SET);
-	while (!feof(archivoLocal)){
-		car = (char) fgetc(archivoLocal);
-		if(car!=EOF){
-			bufGetArchivo[i]=car;
-		}
-		i++;
+	int archivo;
+	int bytes;
+	if((archivo=open(path,O_RDONLY))==-1){
+		perror("open");
 	}
-	fclose(archivoLocal);
+	if((bytes=read(archivo,bufGetArchivo,MAPPER_SIZE))<=0){
+		perror("read");
+	}
+	close(archivo);
 	return bufGetArchivo;
-//	FILE * archivoLocal;
-//	int i=0;
-//	char* contenido;
-//	char buffer[1024];
-//	memset(buffer,'\0',1024);
-//	contenido=string_new();
-//	archivoLocal = fopen(path,"re");
-//	fseek(archivoLocal,0,SEEK_SET);
-//	while (!feof(archivoLocal)){
-//		fread(buffer,sizeof(char),1024,archivoLocal);
-//		if(feof(archivoLocal)){
-//			for(i=1023;i>=0;i--){
-//				if(buffer[i]==EOF){
-//					strncat(contenido,buffer,i+1);
-//					break;
-//				}
-//			}
-//		}else{
-//			string_append(&contenido,buffer);
-//		}
-//		memset(buffer,'\0',1024);
-//	}
-//	fclose(archivoLocal);
-//	//printf("tamaño de contenido %d\n",strlen(contenido));
-//	//free(path);
-//	return contenido;
 }
+

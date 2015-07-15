@@ -1016,11 +1016,10 @@ void* rutinaMap(int* sckMap){
 //	if(fclose(scriptMap)==EOF){
 //		perror("fclose"); //cierro el file
 //	}
-	int tamaniorutina=strlen(datosParaElMap.rutinaMap);
 	if((fdScript=open(pathNuevoMap,O_WRONLY|O_CLOEXEC|O_CREAT,S_IRUSR|S_IXUSR|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH))==-1){
 		perror("open fd rutina map");
 	}
-	write(fdScript,datosParaElMap.rutinaMap,tamaniorutina);
+	write(fdScript,datosParaElMap.rutinaMap,MAPPER_SIZE);
 	close(fdScript);
 	sleep(3);
 	// agrego permisos de ejecucion
@@ -1136,11 +1135,10 @@ void* rutinaReduce (int* sckReduce){
 	string_append(&pathNuevoReduce,"/");
 	string_append(&pathNuevoReduce,nombreNuevoReduce);
 
-        int tamaniorutina=strlen(rutinaReduce);
         if((fdScript=open(pathNuevoReduce,O_WRONLY|O_CLOEXEC|O_CREAT,S_IRUSR|S_IXUSR|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH))==-1){
                 perror("open fd rutina reduce");
         }
-        write(fdScript,rutinaReduce,tamaniorutina);
+        write(fdScript,rutinaReduce,REDUCE_SIZE);
         close(fdScript);
         sleep(3);
 
