@@ -510,49 +510,7 @@ void *manejador_de_escuchas(){
 								perror("send");
 								log_error(logger,"Se desconecto un nodo");
 							}
-
 						}
-
-					}
-				}
-
-				//-- Conexión con hilo mapper --//
-
-				if(estaEnListaMappers(socketModificado)==0){
-					if ((nbytes=recv(socketModificado,mensaje,sizeof(mensaje),MSG_WAITALL))==-1){ //da error
-						perror("recv");
-						log_error(logger,"Falló el receive");
-						exit(-1);
-					}
-					if(nbytes==0){ //se desconectó
-						close(socketModificado);
-						FD_CLR(socketModificado,&master);
-//						log_info(logger,"Se fue un mapper");
-					}
-					else{
-						/* -- el mapper envío un mensaje a tratar -- */
-
-
-					}
-				}
-
-
-				//-- Conexión con hilo reducer --//
-
-				if(estaEnListaReducers(socketModificado)==0){
-					if ((nbytes=recv(socketModificado,mensaje,sizeof(mensaje),MSG_WAITALL))==-1){ //da error
-						perror("recv");
-						log_error(logger,"Falló el receive");
-						exit(-1);
-					}
-					if(nbytes==0){ //se desconectó
-						close(socketModificado);
-						FD_CLR(socketModificado,&master);
-					}
-					else{
-
-						/* -- el reducer envío un mensaje a tratar -- */
-
 					}
 				}
 			}
@@ -604,60 +562,9 @@ static void eliminarArchivo(t_archivoAbierto * archivoAbierto) {
     free(archivoAbierto);
 }
 
-void ordenarMapper(char* pathMapperTemporal, char* nombreMapperOrdenado){
-	int outfd[2];
-	int bak,pid,archivo_resultado;
-	bak=0;
-	char** pathMapperSeparado;
-	char* nombreMapperTemporal;
-	char* contenidoDelMapper;
-//	sem_t terminoSort;
-//	sem_init(&terminoSort,0,1);
-	nombreMapperTemporal=string_new();
-	pathMapperSeparado=string_split(pathMapperTemporal,"/");
-	string_append(&nombreMapperTemporal,pathMapperSeparado[1]); // le agrega al nombre mapper lo que hay dps de /tmp
-	// si cada nodo tiene su tmp en una carpeta distinta --> string_append(&nombreMapperTemporal,pathMapperSeparado[2]); // le agrega al nombre mapper lo que hay dps de /tmp/nombredir
-	pipe(outfd);
-	if((pid=fork())==-1){
-		perror("fork sort");
-	}
-	else if(pid==0)
-	{
-		if((archivo_resultado=open(nombreMapperOrdenado,O_RDWR|O_CREAT|O_CLOEXEC,S_IRWXU|S_IRWXG))==-1){
-			perror("sort map"); //abro file resultado, si no esta lo crea, asigno permisos
-			log_error(logger,"Fallo el open del resultado de un map");
-		}
-		fflush(stdout);
-		bak=dup(STDOUT_FILENO);
-		dup2(archivo_resultado,STDOUT_FILENO); //STDOUT de este proceso se grabara en el file resultado
-		close(archivo_resultado);
-		close(STDIN_FILENO);
-		dup2(outfd[0], STDIN_FILENO); //STDIN de este proceso será STDOUT del proceso padre
-		close(outfd[0]); /* innecesarios para el hijo */
-		close(outfd[1]);
-		execlp("/usr/bin/sort","sort",NULL);
-//	    sem_post(&terminoSort);
-	}
-	else
-	{
-		//Se debe escribir el contenido de la rutina Map
-		contenidoDelMapper=getFileContent(nombreMapperTemporal);
-		//printf("Tamaño del contenido que mando al sort: %d",strlen(contenidoDelMapper));
-		write(outfd[1],contenidoDelMapper,strlen(contenidoDelMapper));
-		close(outfd[0]); /* Estan siendo usados por el hijo */
-		close(outfd[1]);
-		free(contenidoDelMapper);
-		waitpid(pid,NULL,0);
-//		sem_wait(&terminoSort);
-		dup2(bak,STDOUT_FILENO);
-	}
-}
-
-
 void ejecutarMapper(char *script,int bloque,char *resultado){
 	int pipein[2];
 	int pipeout[2];
-//	int ret;
 	pid_t pid1;
 	pid_t pid2;
 	FILE *fdtmp;
@@ -680,7 +587,19 @@ void ejecutarMapper(char *script,int bloque,char *resultado){
 			perror("fork hijo 2");
 		}
 		if(pid2==0){
-			//HIJO 2: SORT
+			//HIJO 2: MAPPER
+			close(pipein[1]);
+			close(pipeout[0]);
+			dup2(pipein[0],0);
+			close(pipein[0]);
+			dup2(pipeout[1],1);
+			close(pipeout[1]);
+			if(execve(argumentosMap[0],argumentosMap,ambienteMap)==-1){
+				perror("execve map");
+			}
+		}
+		else{
+			//HIJO 1:SORT
 			close(pipein[1]);
 			close(pipein[0]);
 			close(pipeout[1]);
@@ -697,27 +616,6 @@ void ejecutarMapper(char *script,int bloque,char *resultado){
 			if (execve(argumentosSort[0],argumentosSort,ambienteSort)==-1){
 				perror("execve sort");
 			}
-
-//			while(1){
-//				if((ret=system("sort"))==-1){
-//					perror("system");
-//				}
-//				if (WIFSIGNALED(ret) &&
-//						(WTERMSIG(ret) == SIGINT || WTERMSIG(ret) == SIGQUIT))
-//					break;
-//			}
-		}
-		else{
-			//HIJO 1: MAPPER
-			close(pipein[1]);
-			close(pipeout[0]);
-			dup2(pipein[0],0);
-			close(pipein[0]);
-			dup2(pipeout[1],1);
-			close(pipeout[1]);
-			if(execve(argumentosMap[0],argumentosMap,ambienteMap)==-1){
-				perror("execve map");
-			}
 		}
 	}else{
 		close(pipein[0]);
@@ -727,65 +625,6 @@ void ejecutarMapper(char *script,int bloque,char *resultado){
 		close(pipein[1]);
 		wait(NULL);
 	}
-
-//	int outfd[2];
-//	int bak,pid,archivo_resultado;
-////	int tamanioAMapear;
-//	bak=0;
-//	char *path;
-//	char *bloqueAMapear;
-////	sem_t terminoElMap;
-////	sem_init(&terminoElMap,0,1);
-//	pipe(outfd); /* Donde escribe el padre */
-//	if((pid=fork())==-1){
-//		perror("fork mapper");
-//	}
-//	else if(pid==0)
-//	{
-//
-//	if((archivo_resultado=open(resultado,O_RDWR|O_CREAT,S_IRWXU|S_IRWXG))==-1){
-//		perror("open map"); //abro file resultado, si no esta lo crea, asigno permisos
-//		log_error(logger,"Fallo al abrir una rutina map que envia el job");
-//	}
-//	fflush(stdout);
-//	bak=dup(STDOUT_FILENO);
-//	dup2(archivo_resultado,STDOUT_FILENO); //STDOUT de este proceso se grabara en el file resultado
-//	close(archivo_resultado);
-//	close(STDIN_FILENO);
-//	dup2(outfd[0], STDIN_FILENO); //STDIN de este proceso será STDOUT del proceso padre
-//	close(outfd[0]); /* innecesarios para el hijo */
-//	close(outfd[1]);
-//	path=string_new();
-//	string_append(&path,config_get_string_value(configurador,"PATHMAPPERS"));
-//	string_append(&path,"/");
-//	string_append(&path,script);
-//	char *ejecucion []={path,script,NULL};
-//	if(execvp(ejecucion[0],ejecucion)==-1){
-//		perror("Ejecucion map:");
-//		log_error(logger,"Error en la ejecucion de un map");
-//	}
-////	sem_post(&terminoElMap);
-//	}
-//	else
-//	{
-//
-//	bloqueAMapear=getBloque(bloque);
-//
-////	for(tamanioAMapear=BLOCK_SIZE;tamanioAMapear>=0;tamanioAMapear--){
-////		if(bloqueAMapear[tamanioAMapear]=='\n'){
-////			break;
-////		}
-////	}
-//
-//	write(outfd[1],bloqueAMapear,strlen(bloqueAMapear));/* Escribe en el stdin del hijo el contenido del bloque*/
-//
-//	close(outfd[0]); /* Estan siendo usados por el hijo */
-//	close(outfd[1]);
-//	waitpid(pid,NULL,0);
-////	sem_wait(&terminoElMap);
-//	dup2(bak,STDOUT_FILENO);
-//	}
-
 }
 
 int estaEnListaNodos(int socket){
@@ -795,32 +634,6 @@ int estaEnListaNodos(int socket){
 	for(i=0;i<tamanio;i++){
 		nodoDeLaLista=list_get(listaNodosConectados,i);
 		if(*nodoDeLaLista==socket){
-			return 0;
-		}
-	}
-	return -1;
-}
-
-int estaEnListaMappers(int socket){
-	int i,tamanio;
-	int* mapperDeLaLista;
-	tamanio=list_size(listaMappersConectados);
-	for(i=0;i<tamanio;i++){
-		mapperDeLaLista=list_get(listaMappersConectados,i);
-		if(*mapperDeLaLista==socket){
-			return 0;
-		}
-	}
-	return -1;
-}
-
-int estaEnListaReducers(int socket){
-	int i,tamanio;
-	int* reducerDeLaLista;
-	tamanio=list_size(listaReducersConectados);
-	for(i=0;i<tamanio;i++){
-		reducerDeLaLista=list_get(listaReducersConectados,i);
-		if(*reducerDeLaLista==socket){
 			return 0;
 		}
 	}
@@ -1044,6 +857,7 @@ void* rutinaMap(int* sckMap){
 	//pthread_mutex_lock(&mutexMap);
 
 	ejecutarMapper(pathNuevoMap,datosParaElMap.bloque,datosParaElMap.nomArchTemp);
+	log_info(logger_archivo,"Se escribió el archivo termporal %s: resultado de un map",datosParaElMap.nomArchTemp);
 //	ejecutarMapper(nombreNuevoMap,datosParaElMap.bloque,resultadoTemporal);
 //	log_info(logger_archivo,"Se escribió el archivo termporal %s: resultado de un map",resultadoTemporal);
 //	ordenarMapper(resultadoTemporal,datosParaElMap.nomArchTemp);
