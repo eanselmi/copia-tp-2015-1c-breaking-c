@@ -1,0 +1,21 @@
+  Job                           MD5                 Tamanio
+Weather				    aa90831be6553fa15c305c886d1521fa	5867274
+WordCount			    af4d1d2f282b19fc51f2f11135fde4f9	1013815
+LetterCount			  4b39f56914d5229487d6dd2d7a80f545	273
+TwitterSentiment	f37f4daeb2b98fb3716c3500c7adf90c	1262297
+Insomnio			
+
+
+Instrucciones para twitter sentiment
+  sudo apt-get install python-pip
+  sudo pip install nltk
+  sudo pip install pyyaml
+
+  python
+  	(inside python)
+  	import nltk
+  	nltk.download('punkt')
+  	nltk.download('maxent_treebank_pos_tagger')
+	
+
+  sudo apt-get install python-numpy
