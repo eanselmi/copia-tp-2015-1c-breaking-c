@@ -922,12 +922,10 @@ void *atenderJob (int *socketJob) {
 	char accion[BUF_SIZE];
 	char mensaje_fs[BUF_SIZE];
 	t_list* listaMappers;
-	t_list* listaReducerDeUnSoloArchivo;
 	t_list* listaReducerParcial;
 	memset(mensaje_fs,'\0',BUF_SIZE);
 	memset(accion,'\0',BUF_SIZE);
 	listaMappers = list_create();
-	listaReducerDeUnSoloArchivo=list_create();
 	listaReducerParcial=list_create();
 	char archivoResultado[200];
 	int posicionArchivo;
@@ -1812,6 +1810,8 @@ void *atenderJob (int *socketJob) {
 			list_destroy(listaMapDelNodo);
 		}
 
+		nuevoJob->reducePendientes++;
+
 //		printf("Se enviaron todos los reduce con combiner --> Se esperan las respuestas \n");
 		estadoMarta();
 		//Recibir la respuesta del JOB confirmando que termino con los reduce de los que están en el mismo nodo
@@ -1856,6 +1856,8 @@ void *atenderJob (int *socketJob) {
 		if(jobAbortado==1){
 			memset(nuevoJob->estado,'\0',10);
 			strcpy(nuevoJob->estado,"Fallido");
+			nuevoJob->reducePendientes--;
+
 			estadoMarta();
 
 			//Si entra acá significa que salio mal algun reduce
@@ -1984,7 +1986,7 @@ void *atenderJob (int *socketJob) {
 		pthread_mutex_lock(&mutexModNodo);
 		sumarCantReducers(nodoRF->nodo_id);
 		pthread_mutex_unlock(&mutexModNodo);
-		nuevoJob->reducePendientes++;
+		//nuevoJob->reducePendientes++;
 
 //		printf("Se envio reduce final --> Se espera la respuesta\n");
 		estadoMarta();
