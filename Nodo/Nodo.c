@@ -774,7 +774,7 @@ void* rutinaMap(int* sckMap){
 
 	log_info(logger,"Hilo map %s: iniciando ejecución",stringNroMap);
 
-	if(recv(*sckMap,&datosParaElMap,sizeof(t_datosMap),0)==-1){
+	if(recv(*sckMap,&datosParaElMap,sizeof(t_datosMap),MSG_WAITALL)==-1){
 		perror("recv");
 		log_error(logger,"Fallo al recibir los datos para el map");
 		pthread_exit((void*)0);
